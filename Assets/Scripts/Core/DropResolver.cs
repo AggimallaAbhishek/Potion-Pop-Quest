@@ -57,7 +57,8 @@ namespace PotionPopQuest.Core
             BoardState board,
             IEnumerable<GridPosition> clearPositions,
             IReadOnlyList<IngredientType> activeIngredients,
-            IRandomSource random)
+            IRandomSource random,
+            IEnumerable<GridPosition> impactPositions = null)
         {
             if (board == null)
             {
@@ -65,6 +66,7 @@ namespace PotionPopQuest.Core
             }
 
             var positions = clearPositions?.Where(board.InBounds).Distinct().ToArray() ?? Array.Empty<GridPosition>();
+            var impacts = (impactPositions ?? positions).Where(board.InBounds).Distinct().ToArray();
             var clearedIngredients = new List<ClearedIngredient>();
             var clearedTiles = new List<ObstacleEvent>();
             var destroyedObstacles = new List<ObstacleEvent>();
@@ -77,7 +79,11 @@ namespace PotionPopQuest.Core
                     clearedIngredients.Add(new ClearedIngredient(position, cell.Ingredient));
                     cell.ClearIngredient();
                 }
+            }
 
+            foreach (var position in impacts)
+            {
+                var cell = board.GetCell(position);
                 if (cell.Obstacle == ObstacleType.DarkTile)
                 {
                     clearedTiles.Add(new ObstacleEvent(position, ObstacleType.DarkTile));
@@ -86,7 +92,7 @@ namespace PotionPopQuest.Core
                 }
             }
 
-            DamageAdjacentObstacles(board, positions, destroyedObstacles);
+            DamageAdjacentObstacles(board, impacts, destroyedObstacles);
             var movement = ApplyGravity(board, activeIngredients, random);
 
             return new DropResult(clearedIngredients, destroyedObstacles, clearedTiles, movement.dropped, movement.spawned);
@@ -200,4 +206,3 @@ namespace PotionPopQuest.Core
         }
     }
 }
-

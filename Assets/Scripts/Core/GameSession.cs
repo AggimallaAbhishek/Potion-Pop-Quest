@@ -216,8 +216,12 @@ namespace PotionPopQuest.Core
                 .Where(position => !potionAnchors.ContainsKey(position))
                 .Distinct()
                 .ToArray();
+            var impactPositions = matches
+                .SelectMany(match => match.Positions)
+                .Distinct()
+                .ToArray();
 
-            foreach (var position in matches.SelectMany(match => match.Positions).Distinct())
+            foreach (var position in impactPositions)
             {
                 allCleared.Add(position);
             }
@@ -228,7 +232,7 @@ namespace PotionPopQuest.Core
                 allCreatedPotions.Add(potion);
             }
 
-            var drop = _dropResolver.ClearDropAndSpawn(Board, clearPositions, Level.ActiveIngredients, _random);
+            var drop = _dropResolver.ClearDropAndSpawn(Board, clearPositions, Level.ActiveIngredients, _random, impactPositions);
             foreach (var anchor in potionAnchors)
             {
                 var match = anchor.Value;
