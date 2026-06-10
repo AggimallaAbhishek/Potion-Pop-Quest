@@ -1,8 +1,0 @@
-{
-  "name": "WealthWise Personal Finance Manager",
-  "description": "A sophisticated personal finance tracking application featuring automated budgeting, investment tracking, and AI-powered financial insights.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
-}
