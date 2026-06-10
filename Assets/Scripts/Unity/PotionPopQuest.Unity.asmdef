@@ -1,0 +1,17 @@
+{
+  "name": "PotionPopQuest.Unity",
+  "rootNamespace": "PotionPopQuest.Unity",
+  "references": [
+    "PotionPopQuest.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
+
