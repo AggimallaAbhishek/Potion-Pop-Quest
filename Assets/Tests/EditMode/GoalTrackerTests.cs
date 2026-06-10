@@ -42,6 +42,22 @@ namespace PotionPopQuest.Tests
 
             Assert.That(tracker.IsComplete, Is.True);
         }
+
+        [Test]
+        public void ApplyMatchEvents_CountsEitherLineOrientationForLinePotionGoal()
+        {
+            var tracker = new GoalTracker(new[]
+            {
+                new GoalData(GoalType.CreatePotion, 1, potion: PotionType.LineHorizontal)
+            });
+
+            tracker.ApplyMatchEvents(
+                new ClearedIngredient[0],
+                new ObstacleEvent[0],
+                new ObstacleEvent[0],
+                new[] { PotionType.LineVertical });
+
+            Assert.That(tracker.IsComplete, Is.True);
+        }
     }
 }
-

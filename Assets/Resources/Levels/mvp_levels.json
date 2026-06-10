@@ -45,7 +45,7 @@
       "tutorialLevel": true,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
       "starThresholds": { "oneStar": 1300, "twoStars": 2200, "threeStars": 3300 },
-      "goals": [{ "goalType": "CreatePotion", "goalItem": "None", "goalAmount": 1 }],
+      "goals": [{ "goalType": "CreatePotion", "goalItem": "LineHorizontal", "goalAmount": 1 }],
       "obstacles": []
     },
     {
@@ -162,4 +162,3 @@
     }
   ]
 }
-

@@ -83,6 +83,12 @@ namespace PotionPopQuest.Core
                         {
                             goal.AddProgress(potionCounts.Values.Sum());
                         }
+                        else if (goal.Goal.Potion == PotionType.LineHorizontal || goal.Goal.Potion == PotionType.LineVertical)
+                        {
+                            potionCounts.TryGetValue(PotionType.LineHorizontal, out var horizontalLines);
+                            potionCounts.TryGetValue(PotionType.LineVertical, out var verticalLines);
+                            goal.AddProgress(horizontalLines + verticalLines);
+                        }
                         else if (potionCounts.TryGetValue(goal.Goal.Potion, out var potionAmount))
                         {
                             goal.AddProgress(potionAmount);
@@ -101,4 +107,3 @@ namespace PotionPopQuest.Core
         }
     }
 }
-

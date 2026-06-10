@@ -36,7 +36,7 @@ namespace PotionPopQuest.Core
                     new[] { new GoalData(GoalType.CollectIngredient, 25, IngredientType.GreenLeaf) },
                     new StarThresholds(1200, 2000, 3000), tutorialLevel: true),
                 new LevelData(4, 8, 8, 25, baseIngredients,
-                    new[] { new GoalData(GoalType.CreatePotion, 1) },
+                    new[] { new GoalData(GoalType.CreatePotion, 1, potion: PotionType.LineHorizontal) },
                     new StarThresholds(1300, 2200, 3300), tutorialLevel: true),
                 new LevelData(5, 8, 8, 25, baseIngredients,
                     new[] { new GoalData(GoalType.BreakObstacle, 8, obstacle: ObstacleType.WoodenBox) },
