@@ -11,9 +11,9 @@ namespace PotionPopQuest.Tests
         {
             var session = CreateSessionWithValidMove();
             var before = session.MovesRemaining;
-            var move = FindSwap(session, createsMatch: true);
+            var move = FindValidMove(session);
 
-            var result = session.TrySwap(move.first, move.second);
+            var result = session.TrySwap(move.First, move.Second);
 
             Assert.That(result.ValidMove, Is.True);
             Assert.That(session.MovesRemaining, Is.EqualTo(before - 1));
@@ -24,9 +24,9 @@ namespace PotionPopQuest.Tests
         {
             var session = CreateSessionWithInvalidMove();
             var before = session.MovesRemaining;
-            var move = FindSwap(session, createsMatch: false);
+            var move = FindInvalidMove(session);
 
-            var result = session.TrySwap(move.first, move.second);
+            var result = session.TrySwap(move.First, move.Second);
 
             Assert.That(result.ValidMove, Is.False);
             Assert.That(session.MovesRemaining, Is.EqualTo(before));
@@ -37,7 +37,7 @@ namespace PotionPopQuest.Tests
             for (var seed = 0; seed < 100; seed++)
             {
                 var session = CreateSession(seed);
-                if (TryFindSwap(session, createsMatch: true, out _))
+                if (new BoardMoveFinder().TryFindValidMove(session.Board, out _))
                 {
                     return session;
                 }
@@ -52,7 +52,7 @@ namespace PotionPopQuest.Tests
             for (var seed = 0; seed < 100; seed++)
             {
                 var session = CreateSession(seed);
-                if (TryFindSwap(session, createsMatch: false, out _))
+                if (new BoardMoveFinder().TryFindInvalidAdjacentMove(session.Board, out _))
                 {
                     return session;
                 }
@@ -68,62 +68,26 @@ namespace PotionPopQuest.Tests
             return new GameSession(level, random: new SystemRandomSource(seed), logger: new NullGameLogger());
         }
 
-        private static (GridPosition first, GridPosition second) FindSwap(GameSession session, bool createsMatch)
+        private static CandidateMove FindValidMove(GameSession session)
         {
-            if (TryFindSwap(session, createsMatch, out var move))
+            if (new BoardMoveFinder().TryFindValidMove(session.Board, out var move))
             {
                 return move;
             }
 
-            Assert.Fail($"No swap found with createsMatch={createsMatch}.");
+            Assert.Fail("No valid swap found.");
             return default;
         }
 
-        private static bool TryFindSwap(
-            GameSession session,
-            bool createsMatch,
-            out (GridPosition first, GridPosition second) move)
+        private static CandidateMove FindInvalidMove(GameSession session)
         {
-            var board = session.Board;
-            var matchFinder = new MatchFinder();
-            foreach (var position in board.AllPositions())
+            if (new BoardMoveFinder().TryFindInvalidAdjacentMove(session.Board, out var move))
             {
-                var right = new GridPosition(position.Row, position.Column + 1);
-                if (IsCandidate(board, matchFinder, position, right, createsMatch))
-                {
-                    move = (position, right);
-                    return true;
-                }
-
-                var down = new GridPosition(position.Row + 1, position.Column);
-                if (IsCandidate(board, matchFinder, position, down, createsMatch))
-                {
-                    move = (position, down);
-                    return true;
-                }
+                return move;
             }
 
-            move = default;
-            return false;
-        }
-
-        private static bool IsCandidate(
-            BoardState board,
-            MatchFinder matchFinder,
-            GridPosition first,
-            GridPosition second,
-            bool createsMatch)
-        {
-            if (!BoardRules.CanSwap(board, first, second))
-            {
-                return false;
-            }
-
-            board.SwapIngredients(first, second);
-            var hasMatch = matchFinder.FindMatches(board, second).Count > 0;
-            board.SwapIngredients(first, second);
-            return hasMatch == createsMatch;
+            Assert.Fail("No invalid adjacent swap found.");
+            return default;
         }
     }
 }
-

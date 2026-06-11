@@ -8,10 +8,12 @@ namespace PotionPopQuest.Core
     {
         private const int MaxGenerationAttempts = 100;
         private readonly MatchFinder _matchFinder;
+        private readonly BoardMoveFinder _moveFinder;
 
         public BoardGenerator(MatchFinder matchFinder = null)
         {
             _matchFinder = matchFinder ?? new MatchFinder();
+            _moveFinder = new BoardMoveFinder(_matchFinder);
         }
 
         public BoardState Generate(LevelData level, IRandomSource random)
@@ -40,18 +42,7 @@ namespace PotionPopQuest.Core
 
         public bool HasAnyValidMove(BoardState board)
         {
-            foreach (var position in board.AllPositions())
-            {
-                var right = new GridPosition(position.Row, position.Column + 1);
-                var down = new GridPosition(position.Row + 1, position.Column);
-
-                if (CreatesMatchAfterSwap(board, position, right) || CreatesMatchAfterSwap(board, position, down))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return _moveFinder.TryFindValidMove(board, out _);
         }
 
         private BoardState CreateCandidate(LevelData level, IRandomSource random)
@@ -125,18 +116,5 @@ namespace PotionPopQuest.Core
             return count;
         }
 
-        private bool CreatesMatchAfterSwap(BoardState board, GridPosition first, GridPosition second)
-        {
-            if (!BoardRules.CanSwap(board, first, second))
-            {
-                return false;
-            }
-
-            board.SwapIngredients(first, second);
-            var hasMatch = _matchFinder.FindMatches(board, second).Count > 0;
-            board.SwapIngredients(first, second);
-            return hasMatch;
-        }
     }
 }
-
