@@ -7,8 +7,11 @@ namespace PotionPopQuest.Unity
         Match,
         Cascade,
         Potion,
+        LinePotion,
+        BombPotion,
+        LightningPotion,
+        ObstacleBreak,
         Win,
         Lose
     }
 }
-

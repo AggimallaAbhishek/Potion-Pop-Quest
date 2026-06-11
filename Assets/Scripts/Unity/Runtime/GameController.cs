@@ -17,6 +17,10 @@ namespace PotionPopQuest.Unity
         [SerializeField] private AudioClip matchSfx;
         [SerializeField] private AudioClip cascadeSfx;
         [SerializeField] private AudioClip potionSfx;
+        [SerializeField] private AudioClip linePotionSfx;
+        [SerializeField] private AudioClip bombPotionSfx;
+        [SerializeField] private AudioClip lightningPotionSfx;
+        [SerializeField] private AudioClip obstacleBreakSfx;
         [SerializeField] private AudioClip winSfx;
         [SerializeField] private AudioClip loseSfx;
 
@@ -248,9 +252,28 @@ namespace PotionPopQuest.Unity
 
         private static GameSfxCue SfxFor(MoveResult result)
         {
-            if (result.CreatedPotions.Count > 0)
+            if (result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.ObstacleDestroyed))
             {
-                return GameSfxCue.Potion;
+                return GameSfxCue.ObstacleBreak;
+            }
+
+            var potionEvent = result.AnimationEvents.FirstOrDefault(item =>
+                item.Kind == BoardAnimationEventKind.PotionCreated
+                || item.Kind == BoardAnimationEventKind.PotionActivated);
+            if (potionEvent != null)
+            {
+                switch (potionEvent.Potion)
+                {
+                    case PotionType.LineHorizontal:
+                    case PotionType.LineVertical:
+                        return GameSfxCue.LinePotion;
+                    case PotionType.Bomb:
+                        return GameSfxCue.BombPotion;
+                    case PotionType.Lightning:
+                        return GameSfxCue.LightningPotion;
+                    default:
+                        return GameSfxCue.Potion;
+                }
             }
 
             return result.Cascades > 0 ? GameSfxCue.Cascade : GameSfxCue.Match;
@@ -286,6 +309,14 @@ namespace PotionPopQuest.Unity
                     return cascadeSfx;
                 case GameSfxCue.Potion:
                     return potionSfx;
+                case GameSfxCue.LinePotion:
+                    return linePotionSfx != null ? linePotionSfx : potionSfx;
+                case GameSfxCue.BombPotion:
+                    return bombPotionSfx != null ? bombPotionSfx : potionSfx;
+                case GameSfxCue.LightningPotion:
+                    return lightningPotionSfx != null ? lightningPotionSfx : potionSfx;
+                case GameSfxCue.ObstacleBreak:
+                    return obstacleBreakSfx != null ? obstacleBreakSfx : matchSfx;
                 case GameSfxCue.Win:
                     return winSfx;
                 case GameSfxCue.Lose:
