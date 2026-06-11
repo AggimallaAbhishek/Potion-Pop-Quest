@@ -32,21 +32,30 @@ namespace PotionPopQuest.Core
     {
         public DropResult(
             IEnumerable<ClearedIngredient> clearedIngredients,
+            IEnumerable<ObstacleEvent> damagedObstacles,
             IEnumerable<ObstacleEvent> destroyedObstacles,
             IEnumerable<ObstacleEvent> clearedTiles,
+            IEnumerable<TileMovementEvent> droppedTiles,
+            IEnumerable<TileSpawnEvent> spawnedTiles,
             int droppedCount,
             int spawnedCount)
         {
             ClearedIngredients = clearedIngredients.ToArray();
+            DamagedObstacles = damagedObstacles.ToArray();
             DestroyedObstacles = destroyedObstacles.ToArray();
             ClearedTiles = clearedTiles.ToArray();
+            DroppedTiles = droppedTiles.ToArray();
+            SpawnedTiles = spawnedTiles.ToArray();
             DroppedCount = droppedCount;
             SpawnedCount = spawnedCount;
         }
 
         public IReadOnlyList<ClearedIngredient> ClearedIngredients { get; }
+        public IReadOnlyList<ObstacleEvent> DamagedObstacles { get; }
         public IReadOnlyList<ObstacleEvent> DestroyedObstacles { get; }
         public IReadOnlyList<ObstacleEvent> ClearedTiles { get; }
+        public IReadOnlyList<TileMovementEvent> DroppedTiles { get; }
+        public IReadOnlyList<TileSpawnEvent> SpawnedTiles { get; }
         public int DroppedCount { get; }
         public int SpawnedCount { get; }
     }
@@ -69,6 +78,7 @@ namespace PotionPopQuest.Core
             var impacts = (impactPositions ?? positions).Where(board.InBounds).Distinct().ToArray();
             var clearedIngredients = new List<ClearedIngredient>();
             var clearedTiles = new List<ObstacleEvent>();
+            var damagedObstacles = new List<ObstacleEvent>();
             var destroyedObstacles = new List<ObstacleEvent>();
 
             foreach (var position in positions)
@@ -92,15 +102,24 @@ namespace PotionPopQuest.Core
                 }
             }
 
-            DamageAdjacentObstacles(board, impacts, destroyedObstacles);
+            DamageAdjacentObstacles(board, impacts, damagedObstacles, destroyedObstacles);
             var movement = ApplyGravity(board, activeIngredients, random);
 
-            return new DropResult(clearedIngredients, destroyedObstacles, clearedTiles, movement.dropped, movement.spawned);
+            return new DropResult(
+                clearedIngredients,
+                damagedObstacles,
+                destroyedObstacles,
+                clearedTiles,
+                movement.droppedTiles,
+                movement.spawnedTiles,
+                movement.dropped,
+                movement.spawned);
         }
 
         private static void DamageAdjacentObstacles(
             BoardState board,
             IEnumerable<GridPosition> clearPositions,
+            ICollection<ObstacleEvent> damagedObstacles,
             ICollection<ObstacleEvent> destroyedObstacles)
         {
             var damaged = new HashSet<GridPosition>();
@@ -120,6 +139,7 @@ namespace PotionPopQuest.Core
                     }
 
                     damaged.Add(neighbor);
+                    damagedObstacles.Add(new ObstacleEvent(neighbor, cell.Obstacle));
                     cell.ObstacleHealth--;
                     if (cell.ObstacleHealth <= 0)
                     {
@@ -139,13 +159,15 @@ namespace PotionPopQuest.Core
             yield return new GridPosition(position.Row, position.Column + 1);
         }
 
-        private static (int dropped, int spawned) ApplyGravity(
+        private static (int dropped, int spawned, IReadOnlyList<TileMovementEvent> droppedTiles, IReadOnlyList<TileSpawnEvent> spawnedTiles) ApplyGravity(
             BoardState board,
             IReadOnlyList<IngredientType> activeIngredients,
             IRandomSource random)
         {
             var dropped = 0;
             var spawned = 0;
+            var droppedTiles = new List<TileMovementEvent>();
+            var spawnedTiles = new List<TileSpawnEvent>();
 
             for (var column = 0; column < board.Width; column++)
             {
@@ -186,6 +208,11 @@ namespace PotionPopQuest.Core
                         if (write != item.originalRow)
                         {
                             dropped++;
+                            droppedTiles.Add(new TileMovementEvent(
+                                new GridPosition(item.originalRow, column),
+                                target,
+                                item.ingredient,
+                                item.potion));
                         }
 
                         write--;
@@ -197,12 +224,13 @@ namespace PotionPopQuest.Core
                         var ingredient = activeIngredients[random.Range(0, activeIngredients.Count)];
                         board.SetIngredient(target, ingredient);
                         spawned++;
+                        spawnedTiles.Add(new TileSpawnEvent(target, ingredient));
                         write--;
                     }
                 }
             }
 
-            return (dropped, spawned);
+            return (dropped, spawned, droppedTiles, spawnedTiles);
         }
     }
 }
