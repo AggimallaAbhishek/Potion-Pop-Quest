@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using PotionPopQuest.Core;
@@ -15,6 +16,7 @@ namespace PotionPopQuest.Unity
         private Font _font;
         private Transform _root;
         private UiFeedbackAnimator _feedbackAnimator;
+        private BoardAnimationController _boardAnimationController;
         private GameObject _mainMenu;
         private GameObject _levelSelect;
         private GameObject _game;
@@ -25,6 +27,7 @@ namespace PotionPopQuest.Unity
         private Text _goalText;
         private Text _scoreText;
         private Text _messageText;
+        private readonly Dictionary<GridPosition, RectTransform> _tileViews = new Dictionary<GridPosition, RectTransform>();
 
         private Action _play;
         private Action _showLevels;
@@ -98,6 +101,7 @@ namespace PotionPopQuest.Unity
             EnsureEventSystem();
             var canvasObject = CreateCanvas(parent);
             _feedbackAnimator = canvasObject.AddComponent<UiFeedbackAnimator>();
+            _boardAnimationController = canvasObject.AddComponent<BoardAnimationController>();
             _root = canvasObject.transform;
             _mainMenu = CreateScreen("Main Menu");
             _levelSelect = CreateScreen("Level Select");
@@ -166,6 +170,34 @@ namespace PotionPopQuest.Unity
             UpdateHud(session, message);
             RenderBoard(session.Board, selectedTile, feedbackCue);
             _feedbackAnimator.PlayBoardFeedback(feedbackCue, _boardRoot);
+        }
+
+        public IEnumerator PlayMoveResult(
+            GameSession session,
+            GridPosition? selectedTile,
+            MoveResult result,
+            UiFeedbackCue feedbackCue)
+        {
+            HideAll();
+            _game.SetActive(true);
+            RenderBoard(session.Board, selectedTile, feedbackCue);
+            var finalScore = session.Score;
+            var startingScore = Math.Max(0, finalScore - result.ScoreGained);
+            _movesText.text = $"Moves\n{session.MovesRemaining}";
+            _goalText.text = GoalLabel(session.GoalTracker.Goals);
+            _messageText.text = result.Message ?? string.Empty;
+            _scoreText.text = $"Score\n{startingScore}";
+
+            _feedbackAnimator.PlayBoardFeedback(feedbackCue, _boardRoot);
+            yield return _boardAnimationController.Play(result.AnimationEvents, _tileViews, _boardRoot);
+            yield return AnimateScore(startingScore, finalScore);
+            UpdateHud(session, result.Message);
+        }
+
+        public void ShowLevelIntro(GameSession session)
+        {
+            _messageText.text = $"{session.Level.DisplayName} - {GoalLabel(session.GoalTracker.Goals)} - {session.MovesRemaining} moves";
+            _feedbackAnimator.PlayBoardFeedback(UiFeedbackCue.Cascade, _boardRoot);
         }
 
         public void ShowWin(GameSession session, bool hasNextLevel)
@@ -273,6 +305,7 @@ namespace PotionPopQuest.Unity
         private void RenderBoard(BoardState board, GridPosition? selectedTile, UiFeedbackCue feedbackCue)
         {
             ClearChildren(_boardRoot);
+            _tileViews.Clear();
             var layout = _boardRoot.GetComponent<GridLayoutGroup>();
             ConfigureBoardLayout(board, layout);
 
@@ -283,6 +316,7 @@ namespace PotionPopQuest.Unity
                     var position = new GridPosition(row, column);
                     var cell = board.GetCell(position);
                     var button = CreateTileButton(_boardRoot, cell, () => _tilePressed(position));
+                    _tileViews[position] = button.GetComponent<RectTransform>();
                     button.interactable = cell.CanMoveIngredient;
                     if (feedbackCue != UiFeedbackCue.None)
                     {
@@ -523,6 +557,28 @@ namespace PotionPopQuest.Unity
             layout.spacing = new Vector2(spacing, spacing);
             layout.padding = new RectOffset(padding, padding, padding, padding);
             layout.childAlignment = TextAnchor.MiddleCenter;
+        }
+
+        private IEnumerator AnimateScore(int from, int to)
+        {
+            if (from == to)
+            {
+                _scoreText.text = $"Score\n{to}";
+                yield break;
+            }
+
+            const float duration = 0.22f;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var value = Mathf.RoundToInt(Mathf.Lerp(from, to, t));
+                _scoreText.text = $"Score\n{value}";
+                yield return null;
+            }
+
+            _scoreText.text = $"Score\n{to}";
         }
 
         private void CreateToggle(Transform parent, string label, bool value, Action<bool> changed)

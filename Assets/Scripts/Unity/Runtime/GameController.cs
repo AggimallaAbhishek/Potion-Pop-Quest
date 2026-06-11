@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using PotionPopQuest.Core;
@@ -28,6 +29,7 @@ namespace PotionPopQuest.Unity
         private GridPosition? _selectedTile;
         private int _currentLevelNumber = 1;
         private AudioSource _audioSource;
+        private bool _inputLocked;
 
         private void Start()
         {
@@ -100,6 +102,7 @@ namespace PotionPopQuest.Unity
             _selectedTile = null;
             _session = new GameSession(level, random: new SystemRandomSource(), logger: _logger);
             _ui.ShowGame(_session, _selectedTile);
+            _ui.ShowLevelIntro(_session);
         }
 
         private void RestartCurrentLevel()
@@ -121,7 +124,7 @@ namespace PotionPopQuest.Unity
 
         private void HandleTilePressed(GridPosition position)
         {
-            if (_session == null || _session.State != GameSessionState.Playing)
+            if (_inputLocked || _session == null || _session.State != GameSessionState.Playing)
             {
                 return;
             }
@@ -143,17 +146,24 @@ namespace PotionPopQuest.Unity
 
             var result = _session.TrySwap(first, position);
             _selectedTile = null;
+            StartCoroutine(ResolveMove(result));
+        }
+
+        private IEnumerator ResolveMove(MoveResult result)
+        {
+            _inputLocked = true;
 
             if (!result.ValidMove)
             {
                 PlaySfx(GameSfxCue.InvalidSwap);
-                _ui.ShowGame(_session, _selectedTile, result.Message, UiFeedbackCue.InvalidSwap);
-                return;
+                yield return _ui.PlayMoveResult(_session, _selectedTile, result, UiFeedbackCue.InvalidSwap);
+                _inputLocked = false;
+                yield break;
             }
 
             var feedback = FeedbackFor(result);
             PlaySfx(SfxFor(result));
-            _ui.ShowGame(_session, _selectedTile, result.Message, feedback);
+            yield return _ui.PlayMoveResult(_session, _selectedTile, result, feedback);
 
             if (_session.State == GameSessionState.Won)
             {
@@ -166,6 +176,8 @@ namespace PotionPopQuest.Unity
                 PlaySfx(GameSfxCue.Lose);
                 _ui.ShowLose(_session);
             }
+
+            _inputLocked = false;
         }
 
         private void CompleteCurrentLevel()
