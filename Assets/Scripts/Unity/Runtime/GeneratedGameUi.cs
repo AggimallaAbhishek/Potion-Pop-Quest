@@ -680,25 +680,6 @@ namespace PotionPopQuest.Unity
             }
         }
 
-        private static string ShortPotion(PotionType potion)
-        {
-            switch (potion)
-            {
-                case PotionType.LineHorizontal:
-                    return "H";
-                case PotionType.LineVertical:
-                    return "V";
-                case PotionType.Bomb:
-                    return "X";
-                case PotionType.Lightning:
-                    return "L";
-                case PotionType.Mega:
-                    return "M";
-                default:
-                    return string.Empty;
-            }
-        }
-
         private static Color CellColor(BoardCell cell)
         {
             if (cell.Obstacle == ObstacleType.WoodenBox)

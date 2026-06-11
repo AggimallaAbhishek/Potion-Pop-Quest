@@ -31,6 +31,12 @@ Potion Pop Quest is a Unity 2D match-3 puzzle MVP for Android-first development.
 
 The generated UI includes main menu, level select, game board, HUD, settings, win, and lose flows.
 
+For Android/WebGL defaults, also run:
+
+```text
+Potion Pop Quest > Configure Build Settings
+```
+
 ## Tests
 
 Run the EditMode tests from Unity Test Runner:
@@ -40,6 +46,7 @@ Run the EditMode tests from Unity Test Runner:
 - Run `PotionPopQuest.Tests`
 
 The tests cover board generation, match classification, obstacle clearing, dark tile clearing, and goal tracking.
+They also cover move-count behavior, save progress updates, and PlayerPrefs save/load persistence.
 
 ## Android Build
 
@@ -52,7 +59,7 @@ The tests cover board generation, match classification, obstacle clearing, dark 
 ## Notes
 
 - No backend, ads, IAP, cloud save, or leaderboard is included in the MVP.
-- The UI uses colored placeholder buttons/text instead of final art assets.
-- Debug logs use `[PotionPopQuest][Category]` prefixes and can be toggled on `GameController`.
+- The UI uses generated placeholder ingredient and obstacle icons; final hand-made art can replace these later.
+- Debug logs use `[PotionPopQuest][Category]` prefixes and are disabled by default on `GameController`.
+- SFX hooks are wired on `GameController`; assign clips in the Inspector for tap, swap failure, matches, cascades, potions, win, and lose.
 - This environment does not currently expose `unity` or `dotnet` on PATH, so compile/build/browser verification must be completed inside Unity.
-
