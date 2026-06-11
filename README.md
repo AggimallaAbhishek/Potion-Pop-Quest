@@ -48,6 +48,15 @@ Run the EditMode tests from Unity Test Runner:
 The tests cover board generation, match classification, obstacle clearing, dark tile clearing, and goal tracking.
 They also cover move-count behavior, save progress updates, and PlayerPrefs save/load persistence.
 
+For manual level QA, use:
+
+```text
+Potion Pop Quest > QA > Unlock All MVP Levels
+Potion Pop Quest > QA > Reset Local Progress
+```
+
+These editor actions let you test levels 1-10 without replaying the full unlock sequence.
+
 ## Android Build
 
 1. Install Android Build Support through Unity Hub.

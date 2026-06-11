@@ -8,6 +8,7 @@ The project is split into a pure C# core and a Unity adapter layer.
 - `PotionPopQuest.Unity` adapts that core into Unity runtime behavior: logging, level loading, local save persistence, generated UGUI screens, and the game controller.
 - `PotionPopQuest.Editor` adds a Unity menu item to create the MVP scene and register it in build settings.
 - `TileIconFactory` generates temporary ingredient, obstacle, and potion icons at runtime so the board is visual before final art is ready.
+- `BoardMoveFinder` centralizes valid/invalid move discovery for generation, tests, and future hint/shuffle behavior.
 
 ## Gameplay Flow
 
@@ -36,5 +37,6 @@ The source implementation is complete enough to open in Unity, but this shell do
 - Run EditMode tests.
 - Create and open the MVP scene from the Unity menu.
 - Run `Potion Pop Quest > Configure Build Settings`.
+- Use `Potion Pop Quest > QA > Unlock All MVP Levels` before testing later levels.
 - Build WebGL and run browser smoke checks.
 - Build Android APK/AAB and test touch input on device/emulator.
