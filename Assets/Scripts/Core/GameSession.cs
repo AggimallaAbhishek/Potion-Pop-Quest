@@ -30,7 +30,8 @@ namespace PotionPopQuest.Core
             int cascades,
             IReadOnlyList<GridPosition> clearedPositions,
             IReadOnlyList<PotionType> createdPotions,
-            GameSessionState state)
+            GameSessionState state,
+            IReadOnlyList<BoardAnimationEvent> animationEvents = null)
         {
             ValidMove = validMove;
             Message = message;
@@ -39,6 +40,7 @@ namespace PotionPopQuest.Core
             ClearedPositions = clearedPositions;
             CreatedPotions = createdPotions;
             State = state;
+            AnimationEvents = animationEvents ?? Array.Empty<BoardAnimationEvent>();
         }
 
         public bool ValidMove { get; }
@@ -48,6 +50,7 @@ namespace PotionPopQuest.Core
         public IReadOnlyList<GridPosition> ClearedPositions { get; }
         public IReadOnlyList<PotionType> CreatedPotions { get; }
         public GameSessionState State { get; }
+        public IReadOnlyList<BoardAnimationEvent> AnimationEvents { get; }
     }
 
     public sealed class GameSession
@@ -103,17 +106,21 @@ namespace PotionPopQuest.Core
             if (!BoardRules.CanSwap(Board, first, second))
             {
                 _logger.Warn(LogCategory.Swap, $"Rejected non-adjacent or blocked swap {first} -> {second}.");
-                return Invalid("Tiles are not swappable.");
+                return Invalid("Tiles are not swappable.", first, second);
             }
 
             var firstPotionBefore = Board.GetCell(first).Potion;
             var secondPotionBefore = Board.GetCell(second).Potion;
             Board.SwapIngredients(first, second);
             _logger.Log(LogCategory.Swap, $"Swapped {first} and {second}.");
+            var animationEvents = new List<BoardAnimationEvent>
+            {
+                new BoardAnimationEvent(BoardAnimationEventKind.Swap, new[] { first, second }, first, second)
+            };
 
             if (firstPotionBefore != PotionType.None || secondPotionBefore != PotionType.None)
             {
-                return ResolvePotionSwap(first, second, firstPotionBefore, secondPotionBefore);
+                return ResolvePotionSwap(first, second, firstPotionBefore, secondPotionBefore, animationEvents);
             }
 
             var matches = _matchFinder.FindMatches(Board, second);
@@ -121,18 +128,20 @@ namespace PotionPopQuest.Core
             {
                 Board.SwapIngredients(first, second);
                 _logger.Log(LogCategory.Swap, $"Invalid swap {first} -> {second}; swap reversed.");
-                return Invalid("Swap did not create a match.");
+                animationEvents.Add(new BoardAnimationEvent(BoardAnimationEventKind.InvalidSwap, new[] { first, second }, first, second));
+                return Invalid("Swap did not create a match.", animationEvents);
             }
 
             MovesRemaining--;
-            return ResolveMatches(matches, second);
+            return ResolveMatches(matches, second, animationEvents);
         }
 
         private MoveResult ResolvePotionSwap(
             GridPosition first,
             GridPosition second,
             PotionType firstPotionBefore,
-            PotionType secondPotionBefore)
+            PotionType secondPotionBefore,
+            List<BoardAnimationEvent> animationEvents)
         {
             MovesRemaining--;
             var activationPosition = firstPotionBefore != PotionType.None ? second : first;
@@ -143,8 +152,16 @@ namespace PotionPopQuest.Core
             }
 
             var activation = _potionResolver.Resolve(Board, activationPosition, activatedPotion);
+            animationEvents.Add(new BoardAnimationEvent(
+                BoardAnimationEventKind.PotionActivated,
+                activation.AffectedPositions,
+                activationPosition,
+                activationPosition,
+                potion: activatedPotion));
+
             Board.GetCell(activationPosition).Potion = PotionType.None;
             var drop = _dropResolver.ClearDropAndSpawn(Board, activation.AffectedPositions, Level.ActiveIngredients, _random);
+            AppendDropAnimationEvents(drop, animationEvents, 0);
             GoalTracker.ApplyMatchEvents(
                 drop.ClearedIngredients,
                 drop.DestroyedObstacles,
@@ -155,29 +172,30 @@ namespace PotionPopQuest.Core
             Score += scoreGained;
             _logger.Log(LogCategory.Potion, $"Activated {activatedPotion} at {activationPosition}, cleared {activation.AffectedPositions.Count} cells.");
 
-            var cascadeScore = ResolveCascades(new List<GridPosition>(activation.AffectedPositions), new List<PotionType>(), out var cascades);
+            var cascadeScore = ResolveCascades(new List<GridPosition>(activation.AffectedPositions), new List<PotionType>(), animationEvents, out var cascades);
             Score += cascadeScore;
             scoreGained += cascadeScore;
-            UpdateState();
-            return new MoveResult(true, "Potion activated.", scoreGained, cascades, activation.AffectedPositions, Array.Empty<PotionType>(), State);
+            UpdateState(animationEvents);
+            return new MoveResult(true, "Potion activated.", scoreGained, cascades, activation.AffectedPositions, Array.Empty<PotionType>(), State, animationEvents);
         }
 
-        private MoveResult ResolveMatches(IReadOnlyList<MatchGroup> initialMatches, GridPosition priorityAnchor)
+        private MoveResult ResolveMatches(IReadOnlyList<MatchGroup> initialMatches, GridPosition priorityAnchor, List<BoardAnimationEvent> animationEvents)
         {
             var allCleared = new List<GridPosition>();
             var allCreatedPotions = new List<PotionType>();
-            var scoreGained = ApplyMatchPass(initialMatches, 0, allCleared, allCreatedPotions);
-            scoreGained += ResolveCascades(allCleared, allCreatedPotions, out var cascades);
+            var scoreGained = ApplyMatchPass(initialMatches, 0, allCleared, allCreatedPotions, animationEvents);
+            scoreGained += ResolveCascades(allCleared, allCreatedPotions, animationEvents, out var cascades);
             Score += scoreGained;
-            UpdateState();
+            UpdateState(animationEvents);
 
             _logger.Log(LogCategory.Match, $"Move resolved with {allCleared.Count} cleared positions, {cascades} cascades, +{scoreGained} score.");
-            return new MoveResult(true, "Match resolved.", scoreGained, cascades, allCleared, allCreatedPotions, State);
+            return new MoveResult(true, "Match resolved.", scoreGained, cascades, allCleared, allCreatedPotions, State, animationEvents);
         }
 
         private int ResolveCascades(
             List<GridPosition> allCleared,
             List<PotionType> allCreatedPotions,
+            List<BoardAnimationEvent> animationEvents,
             out int cascades)
         {
             var scoreGained = 0;
@@ -192,7 +210,7 @@ namespace PotionPopQuest.Core
                 }
 
                 cascades++;
-                scoreGained += ApplyMatchPass(matches, cascade, allCleared, allCreatedPotions);
+                scoreGained += ApplyMatchPass(matches, cascade, allCleared, allCreatedPotions, animationEvents);
             }
 
             if (cascades >= MaxCascadePasses)
@@ -207,8 +225,17 @@ namespace PotionPopQuest.Core
             IReadOnlyList<MatchGroup> matches,
             int cascadeIndex,
             ICollection<GridPosition> allCleared,
-            ICollection<PotionType> allCreatedPotions)
+            ICollection<PotionType> allCreatedPotions,
+            List<BoardAnimationEvent> animationEvents)
         {
+            if (cascadeIndex > 0)
+            {
+                animationEvents.Add(new BoardAnimationEvent(
+                    BoardAnimationEventKind.CascadeStarted,
+                    matches.SelectMany(match => match.Positions),
+                    cascadeIndex: cascadeIndex));
+            }
+
             var potionAnchors = matches
                 .Where(match => match.CreatedPotion != PotionType.None)
                 .ToDictionary(match => match.Anchor, match => match);
@@ -227,6 +254,11 @@ namespace PotionPopQuest.Core
                 allCleared.Add(position);
             }
 
+            animationEvents.Add(new BoardAnimationEvent(
+                BoardAnimationEventKind.Clear,
+                impactPositions,
+                cascadeIndex: cascadeIndex));
+
             var createdPotions = potionAnchors.Values.Select(match => match.CreatedPotion).ToArray();
             foreach (var potion in createdPotions)
             {
@@ -242,8 +274,18 @@ namespace PotionPopQuest.Core
                 {
                     cell.Ingredient = match.Ingredient;
                     cell.Potion = match.CreatedPotion;
+                    animationEvents.Add(new BoardAnimationEvent(
+                        BoardAnimationEventKind.PotionCreated,
+                        new[] { anchor.Key },
+                        anchor.Key,
+                        anchor.Key,
+                        match.Ingredient,
+                        match.CreatedPotion,
+                        cascadeIndex: cascadeIndex));
                 }
             }
+
+            AppendDropAnimationEvents(drop, animationEvents, cascadeIndex);
 
             GoalTracker.ApplyMatchEvents(
                 matches.SelectMany(match => match.Positions).Select(position => new ClearedIngredient(position, matches.First(m => m.Positions.Contains(position)).Ingredient)),
@@ -255,11 +297,68 @@ namespace PotionPopQuest.Core
             return _scoreManager.CalculateMatchScore(matches, cascadeIndex);
         }
 
-        private void UpdateState()
+        private static void AppendDropAnimationEvents(
+            DropResult drop,
+            ICollection<BoardAnimationEvent> animationEvents,
+            int cascadeIndex)
+        {
+            foreach (var damaged in drop.DamagedObstacles)
+            {
+                animationEvents.Add(new BoardAnimationEvent(
+                    BoardAnimationEventKind.ObstacleDamaged,
+                    new[] { damaged.Position },
+                    obstacle: damaged.ObstacleType,
+                    cascadeIndex: cascadeIndex));
+            }
+
+            foreach (var destroyed in drop.DestroyedObstacles)
+            {
+                animationEvents.Add(new BoardAnimationEvent(
+                    BoardAnimationEventKind.ObstacleDestroyed,
+                    new[] { destroyed.Position },
+                    obstacle: destroyed.ObstacleType,
+                    cascadeIndex: cascadeIndex));
+            }
+
+            foreach (var tile in drop.ClearedTiles)
+            {
+                animationEvents.Add(new BoardAnimationEvent(
+                    BoardAnimationEventKind.ObstacleDestroyed,
+                    new[] { tile.Position },
+                    obstacle: tile.ObstacleType,
+                    cascadeIndex: cascadeIndex));
+            }
+
+            foreach (var movement in drop.DroppedTiles)
+            {
+                animationEvents.Add(new BoardAnimationEvent(
+                    BoardAnimationEventKind.TileDropped,
+                    new[] { movement.To },
+                    movement.From,
+                    movement.To,
+                    movement.Ingredient,
+                    movement.Potion,
+                    cascadeIndex: cascadeIndex));
+            }
+
+            foreach (var spawn in drop.SpawnedTiles)
+            {
+                animationEvents.Add(new BoardAnimationEvent(
+                    BoardAnimationEventKind.TileSpawned,
+                    new[] { spawn.Position },
+                    new GridPosition(-1, spawn.Position.Column),
+                    spawn.Position,
+                    spawn.Ingredient,
+                    cascadeIndex: cascadeIndex));
+            }
+        }
+
+        private void UpdateState(ICollection<BoardAnimationEvent> animationEvents)
         {
             if (GoalTracker.IsComplete)
             {
                 State = GameSessionState.Won;
+                animationEvents.Add(new BoardAnimationEvent(BoardAnimationEventKind.Win));
                 _logger.Log(LogCategory.Goals, $"Level {Level.LevelNumber} complete with {Score} score and {Stars} stars.");
                 return;
             }
@@ -267,13 +366,22 @@ namespace PotionPopQuest.Core
             if (MovesRemaining <= 0)
             {
                 State = GameSessionState.Lost;
+                animationEvents.Add(new BoardAnimationEvent(BoardAnimationEventKind.Lose));
                 _logger.Log(LogCategory.Goals, $"Level {Level.LevelNumber} failed at {Score} score.");
             }
         }
 
-        private MoveResult Invalid(string message)
+        private MoveResult Invalid(string message, GridPosition first, GridPosition second)
         {
-            return new MoveResult(false, message, 0, 0, Array.Empty<GridPosition>(), Array.Empty<PotionType>(), State);
+            return Invalid(message, new[]
+            {
+                new BoardAnimationEvent(BoardAnimationEventKind.InvalidSwap, new[] { first, second }, first, second)
+            });
+        }
+
+        private MoveResult Invalid(string message, IReadOnlyList<BoardAnimationEvent> animationEvents = null)
+        {
+            return new MoveResult(false, message, 0, 0, Array.Empty<GridPosition>(), Array.Empty<PotionType>(), State, animationEvents);
         }
     }
 }
