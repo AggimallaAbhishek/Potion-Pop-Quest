@@ -1,4 +1,5 @@
 using System.IO;
+using PotionPopQuest.Core;
 using PotionPopQuest.Unity;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -59,6 +60,39 @@ namespace PotionPopQuest.Editor
             QualitySettings.antiAliasing = 0;
             AssetDatabase.SaveAssets();
             Debug.Log("[PotionPopQuest][Editor] Configured Android/WebGL build settings.");
+        }
+
+        [MenuItem("Potion Pop Quest/QA/Unlock All MVP Levels")]
+        public static void UnlockAllMvpLevels()
+        {
+            var levels = MvpLevelCatalog.CreateLevels();
+            var saveData = new SaveData
+            {
+                highestUnlockedLevel = levels.Count,
+                musicEnabled = true,
+                sfxEnabled = true
+            };
+
+            foreach (var level in levels)
+            {
+                var score = level.StarThresholds.ThreeStars;
+                SaveProgressService.ApplyLevelCompleted(
+                    saveData,
+                    level.LevelNumber,
+                    score,
+                    3,
+                    hasNextLevel: level.LevelNumber < levels.Count);
+            }
+
+            new PlayerPrefsSaveRepository(new NullGameLogger()).Save(saveData);
+            Debug.Log("[PotionPopQuest][Editor] Unlocked all MVP levels for local QA.");
+        }
+
+        [MenuItem("Potion Pop Quest/QA/Reset Local Progress")]
+        public static void ResetLocalProgress()
+        {
+            new PlayerPrefsSaveRepository(new NullGameLogger()).Reset();
+            Debug.Log("[PotionPopQuest][Editor] Reset local Potion Pop Quest progress.");
         }
 
         private static void RegisterSceneInBuildSettings()
