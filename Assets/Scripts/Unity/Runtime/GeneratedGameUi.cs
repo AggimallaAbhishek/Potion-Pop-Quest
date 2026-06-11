@@ -370,6 +370,99 @@ namespace PotionPopQuest.Unity
             return label;
         }
 
+        private Button CreateTileButton(Transform parent, BoardCell cell, Action action)
+        {
+            var buttonObject = new GameObject("Tile", typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+            var background = buttonObject.GetComponent<Image>();
+            background.color = CellColor(cell);
+
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = background;
+            button.onClick.AddListener(() =>
+            {
+                _playSfx?.Invoke(GameSfxCue.Tap);
+                action?.Invoke();
+            });
+
+            if (cell.Obstacle == ObstacleType.DarkTile)
+            {
+                CreateIconImage(
+                    buttonObject.transform,
+                    _iconFactory.GetObstacleSprite(ObstacleType.DarkTile),
+                    new Vector2(0.08f, 0.08f),
+                    new Vector2(0.92f, 0.92f),
+                    new Color(1f, 1f, 1f, 0.65f));
+            }
+
+            if (cell.BlocksIngredientSpace)
+            {
+                CreateIconImage(
+                    buttonObject.transform,
+                    _iconFactory.GetObstacleSprite(cell.Obstacle),
+                    new Vector2(0.13f, 0.13f),
+                    new Vector2(0.87f, 0.87f),
+                    Color.white);
+                CreateAnchoredText(buttonObject.transform, cell.ObstacleHealth.ToString(), 22, TextAnchor.LowerRight);
+                return button;
+            }
+
+            if (cell.Ingredient != IngredientType.None)
+            {
+                CreateIconImage(
+                    buttonObject.transform,
+                    _iconFactory.GetIngredientSprite(cell.Ingredient),
+                    new Vector2(0.14f, 0.14f),
+                    new Vector2(0.86f, 0.86f),
+                    Color.white);
+            }
+
+            if (cell.Potion != PotionType.None)
+            {
+                CreateIconImage(
+                    buttonObject.transform,
+                    _iconFactory.GetPotionSprite(cell.Potion),
+                    new Vector2(0.58f, 0.58f),
+                    new Vector2(0.98f, 0.98f),
+                    Color.white);
+            }
+
+            return button;
+        }
+
+        private static void CreateIconImage(
+            Transform parent,
+            Sprite sprite,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Color color)
+        {
+            var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+            iconObject.transform.SetParent(parent, false);
+            var rect = iconObject.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var image = iconObject.GetComponent<Image>();
+            image.sprite = sprite;
+            image.color = color;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+        }
+
+        private Text CreateAnchoredText(Transform parent, string text, int size, TextAnchor anchor)
+        {
+            var label = CreateLabel(parent, text, size, anchor);
+            label.rectTransform.anchorMin = Vector2.zero;
+            label.rectTransform.anchorMax = Vector2.one;
+            label.rectTransform.offsetMin = new Vector2(8, 6);
+            label.rectTransform.offsetMax = new Vector2(-8, -6);
+            label.raycastTarget = false;
+            return label;
+        }
+
         private Button CreateButton(Transform parent, string text, Action action, Color color, Vector2? size = null)
         {
             var buttonObject = new GameObject($"Button - {text}", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -395,6 +488,37 @@ namespace PotionPopQuest.Unity
             label.rectTransform.offsetMax = new Vector2(-8, -6);
             label.raycastTarget = false;
             return button;
+        }
+
+        private void ConfigureBoardLayout(BoardState board, GridLayoutGroup layout)
+        {
+            var portrait = Screen.height >= Screen.width;
+            var boardSize = portrait ? 820f : 640f;
+            if (Screen.width <= 0 || Screen.height <= 0)
+            {
+                boardSize = 720f;
+            }
+
+            boardSize = Mathf.Clamp(boardSize, 560f, 840f);
+            _boardRoot.sizeDelta = new Vector2(boardSize, boardSize);
+            var layoutElement = _boardRoot.GetComponent<LayoutElement>();
+            if (layoutElement != null)
+            {
+                layoutElement.preferredWidth = boardSize;
+                layoutElement.preferredHeight = boardSize;
+            }
+
+            const int padding = 24;
+            var spacing = board.Width >= 8 ? 8f : 10f;
+            var inner = boardSize - padding * 2f - spacing * (board.Width - 1);
+            var cellSize = Mathf.Floor(inner / board.Width);
+
+            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            layout.constraintCount = board.Width;
+            layout.cellSize = new Vector2(cellSize, cellSize);
+            layout.spacing = new Vector2(spacing, spacing);
+            layout.padding = new RectOffset(padding, padding, padding, padding);
+            layout.childAlignment = TextAnchor.MiddleCenter;
         }
 
         private void CreateToggle(Transform parent, string label, bool value, Action<bool> changed)
@@ -438,6 +562,21 @@ namespace PotionPopQuest.Unity
             });
         }
 
+        private static LayoutElement AddLayoutElement(GameObject target, float preferredWidth, float preferredHeight)
+        {
+            var element = target.GetComponent<LayoutElement>();
+            if (element == null)
+            {
+                element = target.AddComponent<LayoutElement>();
+            }
+
+            element.preferredWidth = preferredWidth;
+            element.preferredHeight = preferredHeight;
+            element.flexibleWidth = 0;
+            element.flexibleHeight = 0;
+            return element;
+        }
+
         private void HideAll()
         {
             _mainMenu.SetActive(false);
@@ -476,6 +615,64 @@ namespace PotionPopQuest.Unity
                     return "Restore Potion Lab";
                 default:
                     return "Goal";
+            }
+        }
+
+        private static string IngredientName(IngredientType ingredient)
+        {
+            switch (ingredient)
+            {
+                case IngredientType.RedHerb:
+                    return "Red Herb";
+                case IngredientType.BlueCrystal:
+                    return "Blue Crystal";
+                case IngredientType.GreenLeaf:
+                    return "Green Leaf";
+                case IngredientType.YellowStarDust:
+                    return "Yellow Star Dust";
+                case IngredientType.PurpleMushroom:
+                    return "Purple Mushroom";
+                case IngredientType.OrangeFireDrop:
+                    return "Orange Fire Drop";
+                default:
+                    return "Ingredient";
+            }
+        }
+
+        private static string ObstacleName(ObstacleType obstacle)
+        {
+            switch (obstacle)
+            {
+                case ObstacleType.WoodenBox:
+                    return "Wooden Box";
+                case ObstacleType.StoneBlock:
+                    return "Stone Block";
+                case ObstacleType.DarkTile:
+                    return "Dark Tile";
+                case ObstacleType.FrozenIngredient:
+                    return "Frozen Ingredient";
+                case ObstacleType.MagicChain:
+                    return "Magic Chain";
+                default:
+                    return "Obstacle";
+            }
+        }
+
+        private static string PotionName(PotionType potion)
+        {
+            switch (potion)
+            {
+                case PotionType.LineHorizontal:
+                case PotionType.LineVertical:
+                    return "Line Potion";
+                case PotionType.Bomb:
+                    return "Bomb Potion";
+                case PotionType.Lightning:
+                    return "Lightning Potion";
+                case PotionType.Mega:
+                    return "Mega Potion";
+                default:
+                    return "Potion";
             }
         }
 

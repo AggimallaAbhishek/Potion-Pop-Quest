@@ -32,15 +32,41 @@ namespace PotionPopQuest.Editor
             runtime.AddComponent<GameController>();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorBuildSettings.scenes = new[]
-            {
-                new EditorBuildSettingsScene(ScenePath, true)
-            };
+            RegisterSceneInBuildSettings();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[PotionPopQuest][Editor] Created MVP scene and registered it in build settings.");
         }
+
+        [MenuItem("Potion Pop Quest/Configure Build Settings")]
+        public static void ConfigureBuildSettings()
+        {
+            RegisterSceneInBuildSettings();
+            PlayerSettings.companyName = "Potion Pop Quest";
+            PlayerSettings.productName = "Potion Pop Quest";
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.potionpopquest.game");
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+            PlayerSettings.allowedAutorotateToPortrait = true;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = false;
+            PlayerSettings.allowedAutorotateToLandscapeRight = false;
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel23;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
+            PlayerSettings.WebGL.nameFilesAsHashes = true;
+            QualitySettings.vSyncCount = 0;
+            QualitySettings.antiAliasing = 0;
+            AssetDatabase.SaveAssets();
+            Debug.Log("[PotionPopQuest][Editor] Configured Android/WebGL build settings.");
+        }
+
+        private static void RegisterSceneInBuildSettings()
+        {
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(ScenePath, true)
+            };
+        }
     }
 }
-
