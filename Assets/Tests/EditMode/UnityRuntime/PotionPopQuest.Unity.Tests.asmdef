@@ -1,0 +1,23 @@
+{
+  "name": "PotionPopQuest.Unity.Tests",
+  "rootNamespace": "PotionPopQuest.Unity.Tests",
+  "references": [
+    "PotionPopQuest.Core",
+    "PotionPopQuest.Unity"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "noEngineReferences": false
+}
+

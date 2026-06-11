@@ -164,7 +164,7 @@ namespace PotionPopQuest.Unity
             HideAll();
             _game.SetActive(true);
             UpdateHud(session, message);
-            RenderBoard(session.Board, selectedTile);
+            RenderBoard(session.Board, selectedTile, feedbackCue);
             _feedbackAnimator.PlayBoardFeedback(feedbackCue, _boardRoot);
         }
 
@@ -270,7 +270,7 @@ namespace PotionPopQuest.Unity
             _messageText.text = message ?? string.Empty;
         }
 
-        private void RenderBoard(BoardState board, GridPosition? selectedTile)
+        private void RenderBoard(BoardState board, GridPosition? selectedTile, UiFeedbackCue feedbackCue)
         {
             ClearChildren(_boardRoot);
             var layout = _boardRoot.GetComponent<GridLayoutGroup>();
@@ -284,6 +284,10 @@ namespace PotionPopQuest.Unity
                     var cell = board.GetCell(position);
                     var button = CreateTileButton(_boardRoot, cell, () => _tilePressed(position));
                     button.interactable = cell.CanMoveIngredient;
+                    if (feedbackCue != UiFeedbackCue.None)
+                    {
+                        button.gameObject.AddComponent<UiTileAnimator>().PlayIntro((row * board.Width + column) * 0.0025f, feedbackCue);
+                    }
 
                     if (selectedTile.HasValue && selectedTile.Value == position)
                     {
