@@ -11,8 +11,10 @@ namespace PotionPopQuest.Unity
     public sealed class GeneratedGameUi
     {
         private readonly IGameLogger _logger;
+        private readonly TileIconFactory _iconFactory;
         private Font _font;
         private Transform _root;
+        private UiFeedbackAnimator _feedbackAnimator;
         private GameObject _mainMenu;
         private GameObject _levelSelect;
         private GameObject _game;
@@ -36,10 +38,12 @@ namespace PotionPopQuest.Unity
         private Action _resetProgress;
         private Action<bool> _toggleMusic;
         private Action<bool> _toggleSfx;
+        private Action<GameSfxCue> _playSfx;
 
         public GeneratedGameUi(IGameLogger logger)
         {
             _logger = logger;
+            _iconFactory = new TileIconFactory();
         }
 
         private Font Font
@@ -74,7 +78,8 @@ namespace PotionPopQuest.Unity
             Action mainMenu,
             Action resetProgress,
             Action<bool> toggleMusic,
-            Action<bool> toggleSfx)
+            Action<bool> toggleSfx,
+            Action<GameSfxCue> playSfx)
         {
             _play = play;
             _showLevels = showLevels;
@@ -88,9 +93,12 @@ namespace PotionPopQuest.Unity
             _resetProgress = resetProgress;
             _toggleMusic = toggleMusic;
             _toggleSfx = toggleSfx;
+            _playSfx = playSfx;
 
             EnsureEventSystem();
-            _root = CreateCanvas(parent).transform;
+            var canvasObject = CreateCanvas(parent);
+            _feedbackAnimator = canvasObject.AddComponent<UiFeedbackAnimator>();
+            _root = canvasObject.transform;
             _mainMenu = CreateScreen("Main Menu");
             _levelSelect = CreateScreen("Level Select");
             _game = CreateScreen("Game");
@@ -147,12 +155,17 @@ namespace PotionPopQuest.Unity
             CreateButton(_settings.transform, "Back", _mainMenuAction, new Color(0.28f, 0.22f, 0.32f), new Vector2(260, 72));
         }
 
-        public void ShowGame(GameSession session, GridPosition? selectedTile, string message = null)
+        public void ShowGame(
+            GameSession session,
+            GridPosition? selectedTile,
+            string message = null,
+            UiFeedbackCue feedbackCue = UiFeedbackCue.None)
         {
             HideAll();
             _game.SetActive(true);
             UpdateHud(session, message);
             RenderBoard(session.Board, selectedTile);
+            _feedbackAnimator.PlayBoardFeedback(feedbackCue, _boardRoot);
         }
 
         public void ShowWin(GameSession session, bool hasNextLevel)
@@ -205,6 +218,10 @@ namespace PotionPopQuest.Unity
             var hud = CreatePanel(_game.transform, "HUD", new Color(0.10f, 0.13f, 0.17f, 0.92f));
             var hudRect = hud.GetComponent<RectTransform>();
             hudRect.sizeDelta = new Vector2(920, 150);
+            var hudElement = hud.AddComponent<LayoutElement>();
+            hudElement.preferredWidth = 920;
+            hudElement.preferredHeight = 150;
+            hudElement.flexibleWidth = 0;
             var hudLayout = hud.AddComponent<HorizontalLayoutGroup>();
             hudLayout.childAlignment = TextAnchor.MiddleCenter;
             hudLayout.spacing = 20;
@@ -212,21 +229,31 @@ namespace PotionPopQuest.Unity
             _movesText = CreateLabel(hud.transform, "Moves 0", 26, TextAnchor.MiddleCenter);
             _goalText = CreateLabel(hud.transform, "Goal", 24, TextAnchor.MiddleCenter);
             _scoreText = CreateLabel(hud.transform, "Score 0", 26, TextAnchor.MiddleCenter);
+            AddLayoutElement(_movesText.gameObject, 190, 110);
+            AddLayoutElement(_goalText.gameObject, 480, 110);
+            AddLayoutElement(_scoreText.gameObject, 190, 110);
 
             var boardPanel = CreatePanel(_game.transform, "Board Panel", new Color(0.16f, 0.18f, 0.21f, 0.94f));
             _boardRoot = boardPanel.GetComponent<RectTransform>();
             _boardRoot.sizeDelta = new Vector2(720, 720);
+            var boardElement = boardPanel.AddComponent<LayoutElement>();
+            boardElement.preferredWidth = 720;
+            boardElement.preferredHeight = 720;
+            boardElement.flexibleWidth = 0;
+            boardElement.flexibleHeight = 0;
             var boardLayout = boardPanel.AddComponent<GridLayoutGroup>();
             boardLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             boardLayout.constraintCount = 8;
             boardLayout.cellSize = new Vector2(78, 78);
             boardLayout.spacing = new Vector2(8, 8);
             boardLayout.padding = new RectOffset(24, 24, 24, 24);
+            boardLayout.childAlignment = TextAnchor.MiddleCenter;
 
             _messageText = CreateLabel(_game.transform, "", 24, TextAnchor.MiddleCenter);
             _messageText.rectTransform.sizeDelta = new Vector2(840, 64);
 
             var actions = CreatePanel(_game.transform, "Game Actions", new Color(0, 0, 0, 0));
+            AddLayoutElement(actions, 720, 76);
             var actionsLayout = actions.AddComponent<HorizontalLayoutGroup>();
             actionsLayout.childAlignment = TextAnchor.MiddleCenter;
             actionsLayout.spacing = 18;
@@ -247,11 +274,7 @@ namespace PotionPopQuest.Unity
         {
             ClearChildren(_boardRoot);
             var layout = _boardRoot.GetComponent<GridLayoutGroup>();
-            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = board.Width;
-            layout.cellSize = new Vector2(78, 78);
-            layout.spacing = new Vector2(8, 8);
-            layout.padding = new RectOffset(24, 24, 24, 24);
+            ConfigureBoardLayout(board, layout);
 
             for (var row = 0; row < board.Height; row++)
             {
@@ -259,7 +282,7 @@ namespace PotionPopQuest.Unity
                 {
                     var position = new GridPosition(row, column);
                     var cell = board.GetCell(position);
-                    var button = CreateButton(_boardRoot, CellLabel(cell), () => _tilePressed(position), CellColor(cell), new Vector2(78, 78));
+                    var button = CreateTileButton(_boardRoot, cell, () => _tilePressed(position));
                     button.interactable = cell.CanMoveIngredient;
 
                     if (selectedTile.HasValue && selectedTile.Value == position)
@@ -280,6 +303,7 @@ namespace PotionPopQuest.Unity
             var panel = CreatePanel(_modal.transform, "Modal Panel", new Color(0.08f, 0.10f, 0.13f, 0.96f));
             var rect = panel.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(680, 620);
+            panel.AddComponent<CanvasGroup>();
             var layout = panel.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.spacing = 18;
@@ -289,6 +313,7 @@ namespace PotionPopQuest.Unity
             CreateButton(panel.transform, primaryLabel, primaryAction, new Color(0.24f, 0.52f, 0.46f), new Vector2(300, 78));
             CreateButton(panel.transform, "Replay", _restart, new Color(0.24f, 0.42f, 0.62f), new Vector2(300, 72));
             CreateButton(panel.transform, "Menu", _mainMenuAction, new Color(0.28f, 0.22f, 0.32f), new Vector2(300, 72));
+            _feedbackAnimator.PlayModalIntro(rect);
         }
 
         private GameObject CreateScreen(string name)
@@ -357,7 +382,11 @@ namespace PotionPopQuest.Unity
 
             var button = buttonObject.GetComponent<Button>();
             button.targetGraphic = image;
-            button.onClick.AddListener(() => action?.Invoke());
+            button.onClick.AddListener(() =>
+            {
+                _playSfx?.Invoke(GameSfxCue.Tap);
+                action?.Invoke();
+            });
 
             var label = CreateLabel(buttonObject.transform, text, 28, TextAnchor.MiddleCenter);
             label.rectTransform.anchorMin = Vector2.zero;
@@ -402,7 +431,11 @@ namespace PotionPopQuest.Unity
             toggle.targetGraphic = background.GetComponent<Image>();
             toggle.graphic = check.GetComponent<Image>();
             toggle.isOn = value;
-            toggle.onValueChanged.AddListener(enabled => changed?.Invoke(enabled));
+            toggle.onValueChanged.AddListener(enabled =>
+            {
+                _playSfx?.Invoke(GameSfxCue.Tap);
+                changed?.Invoke(enabled);
+            });
         }
 
         private void HideAll()
@@ -424,7 +457,7 @@ namespace PotionPopQuest.Unity
 
         private static string GoalLabel(IReadOnlyList<GoalProgress> goals)
         {
-            return string.Join("\n", goals.Select(goal => $"{GoalName(goal.Goal)} {goal.CurrentAmount}/{goal.Goal.Amount}"));
+            return string.Join("\n", goals.Select(goal => $"{GoalName(goal.Goal)}  {goal.CurrentAmount}/{goal.Goal.Amount}"));
         }
 
         private static string GoalName(GoalData goal)
@@ -432,56 +465,17 @@ namespace PotionPopQuest.Unity
             switch (goal.GoalType)
             {
                 case GoalType.CollectIngredient:
-                    return ShortIngredient(goal.Ingredient);
+                    return $"Collect {IngredientName(goal.Ingredient)}";
                 case GoalType.BreakObstacle:
-                    return "Break";
+                    return $"Break {ObstacleName(goal.Obstacle)}";
                 case GoalType.ClearTile:
-                    return "Clear";
+                    return $"Clear {ObstacleName(goal.Obstacle)}";
                 case GoalType.CreatePotion:
-                    return goal.Potion == PotionType.None ? "Potion" : goal.Potion.ToString();
+                    return goal.Potion == PotionType.None ? "Create Potion" : $"Create {PotionName(goal.Potion)}";
                 case GoalType.RestorePotionLab:
-                    return "Restore";
+                    return "Restore Potion Lab";
                 default:
                     return "Goal";
-            }
-        }
-
-        private static string CellLabel(BoardCell cell)
-        {
-            if (cell.Obstacle == ObstacleType.WoodenBox)
-            {
-                return $"BOX\n{cell.ObstacleHealth}";
-            }
-
-            if (cell.Obstacle == ObstacleType.StoneBlock)
-            {
-                return $"STN\n{cell.ObstacleHealth}";
-            }
-
-            var ingredient = ShortIngredient(cell.Ingredient);
-            var potion = ShortPotion(cell.Potion);
-            var dark = cell.Obstacle == ObstacleType.DarkTile ? "*" : string.Empty;
-            return $"{ingredient}{potion}{dark}";
-        }
-
-        private static string ShortIngredient(IngredientType ingredient)
-        {
-            switch (ingredient)
-            {
-                case IngredientType.RedHerb:
-                    return "R";
-                case IngredientType.BlueCrystal:
-                    return "B";
-                case IngredientType.GreenLeaf:
-                    return "G";
-                case IngredientType.YellowStarDust:
-                    return "Y";
-                case IngredientType.PurpleMushroom:
-                    return "P";
-                case IngredientType.OrangeFireDrop:
-                    return "O";
-                default:
-                    return "-";
             }
         }
 

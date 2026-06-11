@@ -156,6 +156,7 @@ namespace PotionPopQuest.Core
             _logger.Log(LogCategory.Potion, $"Activated {activatedPotion} at {activationPosition}, cleared {activation.AffectedPositions.Count} cells.");
 
             var cascadeScore = ResolveCascades(new List<GridPosition>(activation.AffectedPositions), new List<PotionType>(), out var cascades);
+            Score += cascadeScore;
             scoreGained += cascadeScore;
             UpdateState();
             return new MoveResult(true, "Potion activated.", scoreGained, cascades, activation.AffectedPositions, Array.Empty<PotionType>(), State);

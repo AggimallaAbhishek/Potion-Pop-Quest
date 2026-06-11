@@ -8,8 +8,16 @@ namespace PotionPopQuest.Unity
 {
     public sealed class GameController : MonoBehaviour
     {
-        [SerializeField] private bool verboseLogs = true;
+        [SerializeField] private bool verboseLogs;
         [SerializeField] private LevelDefinition[] levelDefinitions = Array.Empty<LevelDefinition>();
+        [Header("Audio Feedback")]
+        [SerializeField] private AudioClip tapSfx;
+        [SerializeField] private AudioClip invalidSwapSfx;
+        [SerializeField] private AudioClip matchSfx;
+        [SerializeField] private AudioClip cascadeSfx;
+        [SerializeField] private AudioClip potionSfx;
+        [SerializeField] private AudioClip winSfx;
+        [SerializeField] private AudioClip loseSfx;
 
         private PPQLogger _logger;
         private IReadOnlyList<LevelData> _levels;
@@ -19,13 +27,17 @@ namespace PotionPopQuest.Unity
         private GameSession _session;
         private GridPosition? _selectedTile;
         private int _currentLevelNumber = 1;
+        private AudioSource _audioSource;
 
         private void Start()
         {
+            ConfigureRuntime();
             _logger = new PPQLogger(verboseLogs);
             _levels = new LevelCatalogLoader(_logger).LoadLevels(levelDefinitions).OrderBy(level => level.LevelNumber).ToArray();
             _saveRepository = new PlayerPrefsSaveRepository(_logger);
             _saveData = _saveRepository.Load();
+            _audioSource = gameObject.AddComponent<AudioSource>();
+            _audioSource.playOnAwake = false;
 
             _ui = new GeneratedGameUi(_logger);
             _ui.Build(
@@ -41,7 +53,8 @@ namespace PotionPopQuest.Unity
                 ShowMainMenu,
                 ResetProgress,
                 ToggleMusic,
-                ToggleSfx);
+                ToggleSfx,
+                PlaySfx);
 
             ShowMainMenu();
         }
@@ -116,7 +129,7 @@ namespace PotionPopQuest.Unity
             if (!_selectedTile.HasValue)
             {
                 _selectedTile = position;
-                _ui.ShowGame(_session, _selectedTile);
+                _ui.ShowGame(_session, _selectedTile, "Select an adjacent tile to swap.");
                 return;
             }
 
@@ -130,35 +143,34 @@ namespace PotionPopQuest.Unity
 
             var result = _session.TrySwap(first, position);
             _selectedTile = null;
-            _ui.ShowGame(_session, _selectedTile, result.Message);
 
             if (!result.ValidMove)
             {
+                PlaySfx(GameSfxCue.InvalidSwap);
+                _ui.ShowGame(_session, _selectedTile, result.Message, UiFeedbackCue.InvalidSwap);
                 return;
             }
+
+            var feedback = FeedbackFor(result);
+            PlaySfx(SfxFor(result));
+            _ui.ShowGame(_session, _selectedTile, result.Message, feedback);
 
             if (_session.State == GameSessionState.Won)
             {
                 CompleteCurrentLevel();
+                PlaySfx(GameSfxCue.Win);
                 _ui.ShowWin(_session, HasNextLevel());
             }
             else if (_session.State == GameSessionState.Lost)
             {
+                PlaySfx(GameSfxCue.Lose);
                 _ui.ShowLose(_session);
             }
         }
 
         private void CompleteCurrentLevel()
         {
-            var progress = _saveData.GetOrCreateLevelProgress(_currentLevelNumber);
-            progress.bestScore = Math.Max(progress.bestScore, _session.Score);
-            progress.stars = Math.Max(progress.stars, _session.Stars);
-
-            if (HasNextLevel())
-            {
-                _saveData.highestUnlockedLevel = Math.Max(_saveData.highestUnlockedLevel, _currentLevelNumber + 1);
-            }
-
+            SaveProgressService.ApplyLevelCompleted(_saveData, _currentLevelNumber, _session.Score, _session.Stars, HasNextLevel());
             _saveRepository.Save(_saveData);
         }
 
@@ -196,6 +208,79 @@ namespace PotionPopQuest.Unity
             _logger.Log(LogCategory.UI, "Quit requested.");
             Application.Quit();
         }
+
+        private static void ConfigureRuntime()
+        {
+            Application.targetFrameRate = 60;
+            if (Application.isMobilePlatform)
+            {
+                Screen.sleepTimeout = SleepTimeout.NeverSleep;
+                Screen.orientation = ScreenOrientation.Portrait;
+            }
+        }
+
+        private static UiFeedbackCue FeedbackFor(MoveResult result)
+        {
+            if (result.CreatedPotions.Count > 0)
+            {
+                return UiFeedbackCue.Potion;
+            }
+
+            if (result.Cascades > 0)
+            {
+                return UiFeedbackCue.Cascade;
+            }
+
+            return UiFeedbackCue.Match;
+        }
+
+        private static GameSfxCue SfxFor(MoveResult result)
+        {
+            if (result.CreatedPotions.Count > 0)
+            {
+                return GameSfxCue.Potion;
+            }
+
+            return result.Cascades > 0 ? GameSfxCue.Cascade : GameSfxCue.Match;
+        }
+
+        private void PlaySfx(GameSfxCue cue)
+        {
+            if (_saveData != null && !_saveData.sfxEnabled)
+            {
+                return;
+            }
+
+            var clip = ClipFor(cue);
+            if (clip == null || _audioSource == null)
+            {
+                return;
+            }
+
+            _audioSource.PlayOneShot(clip);
+        }
+
+        private AudioClip ClipFor(GameSfxCue cue)
+        {
+            switch (cue)
+            {
+                case GameSfxCue.Tap:
+                    return tapSfx;
+                case GameSfxCue.InvalidSwap:
+                    return invalidSwapSfx;
+                case GameSfxCue.Match:
+                    return matchSfx;
+                case GameSfxCue.Cascade:
+                    return cascadeSfx;
+                case GameSfxCue.Potion:
+                    return potionSfx;
+                case GameSfxCue.Win:
+                    return winSfx;
+                case GameSfxCue.Lose:
+                    return loseSfx;
+                default:
+                    return null;
+            }
+        }
     }
 }
-
