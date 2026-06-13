@@ -17,7 +17,8 @@ namespace PotionPopQuest.Core
         TileDropped = 8,
         TileSpawned = 9,
         Win = 10,
-        Lose = 11
+        Lose = 11,
+        BoardShuffled = 12
     }
 
     public sealed class BoardAnimationEvent
@@ -80,4 +81,3 @@ namespace PotionPopQuest.Core
         public IngredientType Ingredient { get; }
     }
 }
-

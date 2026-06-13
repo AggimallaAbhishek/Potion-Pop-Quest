@@ -29,7 +29,7 @@ namespace PotionPopQuest.Unity
                         yield return ShakePositions(tileViews, animationEvent.Positions);
                         break;
                     case BoardAnimationEventKind.CascadeStarted:
-                        yield return new WaitForSecondsRealtime(0.08f);
+                        yield return new WaitForSecondsRealtime(GameplayPresentationConfig.CascadeDelay);
                         break;
                     case BoardAnimationEventKind.Clear:
                         yield return PopPositions(tileViews, animationEvent.Positions, new Color(1f, 0.95f, 0.55f, 1f));
@@ -54,7 +54,10 @@ namespace PotionPopQuest.Unity
                         break;
                     case BoardAnimationEventKind.Win:
                     case BoardAnimationEventKind.Lose:
-                        yield return Pulse(boardRoot, 1.035f, 0.16f);
+                        yield return Pulse(boardRoot, 1.035f, GameplayPresentationConfig.BoardPulseDuration);
+                        break;
+                    case BoardAnimationEventKind.BoardShuffled:
+                        yield return ShuffleBoard(tileViews, animationEvent.Positions, boardRoot);
                         break;
                 }
             }
@@ -74,7 +77,7 @@ namespace PotionPopQuest.Unity
             var secondStart = secondRect.localScale;
             var firstEndPosition = firstRect.anchoredPosition;
             var secondEndPosition = secondRect.anchoredPosition;
-            const float duration = 0.12f;
+            var duration = GameplayPresentationConfig.SwapDuration;
             var elapsed = 0f;
             firstRect.anchoredPosition = secondEndPosition;
             secondRect.anchoredPosition = firstEndPosition;
@@ -115,7 +118,7 @@ namespace PotionPopQuest.Unity
                 starts[target] = target.anchoredPosition;
             }
 
-            const float duration = 0.18f;
+            var duration = GameplayPresentationConfig.InvalidShakeDuration;
             var elapsed = 0f;
             while (elapsed < duration)
             {
@@ -157,7 +160,7 @@ namespace PotionPopQuest.Unity
                 StartCoroutine(Flash(target, flashColor));
             }
 
-            yield return new WaitForSecondsRealtime(0.12f);
+            yield return new WaitForSecondsRealtime(GameplayPresentationConfig.ClearPopDuration);
         }
 
         private static IEnumerator DropTile(
@@ -174,7 +177,7 @@ namespace PotionPopQuest.Unity
             var start = tileViews.TryGetValue(from, out var source) && source != null && source != target
                 ? source.anchoredPosition
                 : end + new Vector2(0f, CellPitch(target, vertical: true) * Mathf.Max(1, to.Row - from.Row));
-            yield return MoveAnchored(target, start, end, 0.12f);
+            yield return MoveAnchored(target, start, end, GameplayPresentationConfig.DropDuration);
         }
 
         private static IEnumerator SpawnTile(
@@ -191,8 +194,8 @@ namespace PotionPopQuest.Unity
             var rowDistance = Mathf.Max(1, to.Row - from.Row);
             var start = end + new Vector2(0f, CellPitch(target, vertical: true) * rowDistance);
             target.localScale = Vector3.one * 0.72f;
-            yield return MoveAnchored(target, start, end, 0.14f);
-            yield return Scale(target, Vector3.one * 0.72f, Vector3.one, 0.08f);
+            yield return MoveAnchored(target, start, end, GameplayPresentationConfig.SpawnDropDuration);
+            yield return Scale(target, Vector3.one * 0.72f, Vector3.one, GameplayPresentationConfig.SpawnScaleDuration);
         }
 
         private IEnumerator PotionBurst(RectTransform boardRoot, BoardAnimationEvent animationEvent)
@@ -219,7 +222,7 @@ namespace PotionPopQuest.Unity
             image.color = new Color(color.r, color.g, color.b, 0.45f);
             image.raycastTarget = false;
 
-            yield return Scale(rect, Vector3.one * 0.35f, Vector3.one * 1.35f, 0.20f);
+            yield return Scale(rect, Vector3.one * 0.35f, Vector3.one * 1.35f, GameplayPresentationConfig.PotionBurstDuration);
             Object.Destroy(burst);
         }
 
@@ -234,8 +237,49 @@ namespace PotionPopQuest.Unity
             var image = beam.GetComponent<Image>();
             image.color = new Color(0.74f, 0.94f, 1f, 0.72f);
             image.raycastTarget = false;
-            yield return Scale(rect, horizontal ? new Vector3(0.08f, 1f, 1f) : new Vector3(1f, 0.08f, 1f), Vector3.one, 0.14f);
+            yield return Scale(rect, horizontal ? new Vector3(0.08f, 1f, 1f) : new Vector3(1f, 0.08f, 1f), Vector3.one, GameplayPresentationConfig.BeamDuration);
             Object.Destroy(beam);
+        }
+
+        private static IEnumerator ShuffleBoard(
+            IReadOnlyDictionary<GridPosition, RectTransform> tileViews,
+            IReadOnlyList<GridPosition> positions,
+            RectTransform boardRoot)
+        {
+            yield return Pulse(boardRoot, 1.04f, GameplayPresentationConfig.BoardPulseDuration);
+            var targets = ResolveTargets(tileViews, positions);
+            foreach (var target in targets)
+            {
+                if (target != null)
+                {
+                    target.localScale = Vector3.one * 0.88f;
+                }
+            }
+
+            var elapsed = 0f;
+            const float duration = 0.18f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Smooth(Mathf.Clamp01(elapsed / duration));
+                foreach (var target in targets)
+                {
+                    if (target != null)
+                    {
+                        target.localScale = Vector3.Lerp(Vector3.one * 0.88f, Vector3.one, t);
+                    }
+                }
+
+                yield return null;
+            }
+
+            foreach (var target in targets)
+            {
+                if (target != null)
+                {
+                    target.localScale = Vector3.one;
+                }
+            }
         }
 
         private static IEnumerator Pulse(RectTransform target, float scale, float duration)

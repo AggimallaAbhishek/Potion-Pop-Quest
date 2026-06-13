@@ -27,7 +27,14 @@ namespace PotionPopQuest.Unity
         private Text _goalText;
         private Text _scoreText;
         private Text _messageText;
+        private Image _starProgressFill;
+        private Text _starProgressText;
+        private GameObject _tutorialPanel;
+        private Text _tutorialText;
+        private RectTransform _floatingLayer;
         private readonly Dictionary<GridPosition, RectTransform> _tileViews = new Dictionary<GridPosition, RectTransform>();
+        private readonly Stack<Button> _tileButtonPool = new Stack<Button>();
+        private readonly List<Outline> _hintOutlines = new List<Outline>();
 
         private Action _play;
         private Action _showLevels;
@@ -35,6 +42,7 @@ namespace PotionPopQuest.Unity
         private Action _quit;
         private Action<int> _startLevel;
         private Action<GridPosition> _tilePressed;
+        private Action _hintRequested;
         private Action _restart;
         private Action _nextLevel;
         private Action _mainMenuAction;
@@ -76,6 +84,7 @@ namespace PotionPopQuest.Unity
             Action quit,
             Action<int> startLevel,
             Action<GridPosition> tilePressed,
+            Action hintRequested,
             Action restart,
             Action nextLevel,
             Action mainMenu,
@@ -90,6 +99,7 @@ namespace PotionPopQuest.Unity
             _quit = quit;
             _startLevel = startLevel;
             _tilePressed = tilePressed;
+            _hintRequested = hintRequested;
             _restart = restart;
             _nextLevel = nextLevel;
             _mainMenuAction = mainMenu;

@@ -60,6 +60,8 @@ namespace PotionPopQuest.Core
         private readonly DropResolver _dropResolver;
         private readonly PotionResolver _potionResolver;
         private readonly ScoreManager _scoreManager;
+        private readonly BoardMoveFinder _moveFinder;
+        private readonly BoardShuffler _boardShuffler;
         private readonly IRandomSource _random;
         private readonly IGameLogger _logger;
 
@@ -70,6 +72,7 @@ namespace PotionPopQuest.Core
             DropResolver dropResolver = null,
             PotionResolver potionResolver = null,
             ScoreManager scoreManager = null,
+            BoardShuffler boardShuffler = null,
             IRandomSource random = null,
             IGameLogger logger = null)
         {
@@ -79,6 +82,8 @@ namespace PotionPopQuest.Core
             _dropResolver = dropResolver ?? new DropResolver();
             _potionResolver = potionResolver ?? new PotionResolver();
             _scoreManager = scoreManager ?? new ScoreManager();
+            _moveFinder = new BoardMoveFinder(_matchFinder);
+            _boardShuffler = boardShuffler ?? new BoardShuffler(_matchFinder, _moveFinder);
             _logger = logger ?? new NullGameLogger();
 
             Board = (boardGenerator ?? new BoardGenerator(_matchFinder)).Generate(Level, _random);
@@ -136,6 +141,30 @@ namespace PotionPopQuest.Core
             return ResolveMatches(matches, second, animationEvents);
         }
 
+        public MoveResult TryShuffleIfNeeded()
+        {
+            if (State != GameSessionState.Playing)
+            {
+                return Invalid($"Level is already {State}.");
+            }
+
+            var animationEvents = new List<BoardAnimationEvent>();
+            if (!TryShuffleBoardIfNeeded(animationEvents))
+            {
+                return Invalid("Board already has a valid move.", animationEvents);
+            }
+
+            return new MoveResult(
+                true,
+                "No moves available. Shuffled the board.",
+                0,
+                0,
+                Array.Empty<GridPosition>(),
+                Array.Empty<PotionType>(),
+                State,
+                animationEvents);
+        }
+
         private MoveResult ResolvePotionSwap(
             GridPosition first,
             GridPosition second,
@@ -176,6 +205,7 @@ namespace PotionPopQuest.Core
             Score += cascadeScore;
             scoreGained += cascadeScore;
             UpdateState(animationEvents);
+            TryShuffleBoardIfNeeded(animationEvents);
             return new MoveResult(true, "Potion activated.", scoreGained, cascades, activation.AffectedPositions, Array.Empty<PotionType>(), State, animationEvents);
         }
 
@@ -187,9 +217,28 @@ namespace PotionPopQuest.Core
             scoreGained += ResolveCascades(allCleared, allCreatedPotions, animationEvents, out var cascades);
             Score += scoreGained;
             UpdateState(animationEvents);
+            TryShuffleBoardIfNeeded(animationEvents);
 
             _logger.Log(LogCategory.Match, $"Move resolved with {allCleared.Count} cleared positions, {cascades} cascades, +{scoreGained} score.");
             return new MoveResult(true, "Match resolved.", scoreGained, cascades, allCleared, allCreatedPotions, State, animationEvents);
+        }
+
+        private bool TryShuffleBoardIfNeeded(ICollection<BoardAnimationEvent> animationEvents)
+        {
+            if (State != GameSessionState.Playing || _moveFinder.TryFindValidMove(Board, out _))
+            {
+                return false;
+            }
+
+            if (_boardShuffler.TryShuffle(Board, _random, out var shuffledPositions))
+            {
+                animationEvents.Add(new BoardAnimationEvent(BoardAnimationEventKind.BoardShuffled, shuffledPositions));
+                _logger.Log(LogCategory.Board, $"No valid moves remained; shuffled {shuffledPositions.Count} movable tiles.");
+                return true;
+            }
+
+            _logger.Warn(LogCategory.Board, "No valid moves remained, but board shuffle could not find a playable layout.");
+            return false;
         }
 
         private int ResolveCascades(
