@@ -134,6 +134,7 @@ namespace PotionPopQuest.Unity
             HideAll();
             ClearHint();
             ClearChildren(_levelSelect.transform);
+            CreatePotionLabBackdrop(_levelSelect.transform);
             _levelSelect.SetActive(true);
 
             CreateTitle(_levelSelect.transform, "Level Select", 50);
@@ -164,6 +165,7 @@ namespace PotionPopQuest.Unity
             HideAll();
             ClearHint();
             ClearChildren(_settings.transform);
+            CreatePotionLabBackdrop(_settings.transform);
             _settings.SetActive(true);
             CreateTitle(_settings.transform, "Settings", 50);
             CreateToggle(_settings.transform, "Music", musicEnabled, _toggleMusic);
@@ -255,13 +257,13 @@ namespace PotionPopQuest.Unity
             }
 
             var thresholds = session.Level.StarThresholds;
-            var maxScore = Mathf.Max(1, thresholds.ThreeStar);
+            var maxScore = Mathf.Max(1, thresholds.ThreeStars);
             var progress = Mathf.Clamp01((float)session.Score / maxScore);
             var fillRect = _starProgressFill.rectTransform;
             fillRect.anchorMax = new Vector2(progress, 1f);
             fillRect.offsetMin = Vector2.zero;
             fillRect.offsetMax = Vector2.zero;
-            _starProgressText.text = $"Stars {StarLabel(session.Stars)}  {session.Score}/{thresholds.ThreeStar}";
+            _starProgressText.text = $"Stars {StarLabel(session.Stars)}  {session.Score}/{thresholds.ThreeStars}";
         }
 
         public void ShowWin(GameSession session, bool hasNextLevel)
@@ -303,6 +305,7 @@ namespace PotionPopQuest.Unity
                 return;
             }
 
+            _floatingLayer.SetAsLastSibling();
             var label = CreateLabel(_floatingLayer, cascades > 0 ? $"+{scoreGained}\nCombo x{cascades + 1}" : $"+{scoreGained}", 32, TextAnchor.MiddleCenter);
             label.color = cascades > 0 ? new Color(1f, 0.82f, 0.28f) : new Color(0.74f, 1f, 0.82f);
             label.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
@@ -413,6 +416,7 @@ namespace PotionPopQuest.Unity
         private void BuildGameScreen()
         {
             ClearChildren(_game.transform);
+            CreatePotionLabBackdrop(_game.transform);
             var hud = CreatePanel(_game.transform, "HUD", new Color(0.10f, 0.13f, 0.17f, 0.92f));
             var hudRect = hud.GetComponent<RectTransform>();
             hudRect.sizeDelta = new Vector2(920, 150);
