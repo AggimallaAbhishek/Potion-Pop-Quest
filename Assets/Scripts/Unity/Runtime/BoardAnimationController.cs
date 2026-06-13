@@ -47,10 +47,10 @@ namespace PotionPopQuest.Unity
                         yield return PopPositions(tileViews, animationEvent.Positions, new Color(0.78f, 0.54f, 1f, 1f));
                         break;
                     case BoardAnimationEventKind.TileDropped:
-                        yield return DropTile(tileViews, animationEvent.To);
+                        yield return DropTile(tileViews, animationEvent.From, animationEvent.To);
                         break;
                     case BoardAnimationEventKind.TileSpawned:
-                        yield return SpawnTile(tileViews, animationEvent.To);
+                        yield return SpawnTile(tileViews, animationEvent.From, animationEvent.To);
                         break;
                     case BoardAnimationEventKind.Win:
                     case BoardAnimationEventKind.Lose:
@@ -72,25 +72,34 @@ namespace PotionPopQuest.Unity
 
             var firstStart = firstRect.localScale;
             var secondStart = secondRect.localScale;
+            var firstEndPosition = firstRect.anchoredPosition;
+            var secondEndPosition = secondRect.anchoredPosition;
             const float duration = 0.12f;
             var elapsed = 0f;
+            firstRect.anchoredPosition = secondEndPosition;
+            secondRect.anchoredPosition = firstEndPosition;
 
             while (elapsed < duration && firstRect != null && secondRect != null)
             {
                 elapsed += Time.unscaledDeltaTime;
-                var t = Mathf.Sin(Mathf.Clamp01(elapsed / duration) * Mathf.PI);
-                firstRect.localScale = firstStart * Mathf.Lerp(1f, 1.10f, t);
-                secondRect.localScale = secondStart * Mathf.Lerp(1f, 1.10f, t);
+                var progress = Smooth(Mathf.Clamp01(elapsed / duration));
+                var pulse = Mathf.Sin(progress * Mathf.PI);
+                firstRect.anchoredPosition = Vector2.LerpUnclamped(secondEndPosition, firstEndPosition, progress);
+                secondRect.anchoredPosition = Vector2.LerpUnclamped(firstEndPosition, secondEndPosition, progress);
+                firstRect.localScale = firstStart * Mathf.Lerp(1f, 1.08f, pulse);
+                secondRect.localScale = secondStart * Mathf.Lerp(1f, 1.08f, pulse);
                 yield return null;
             }
 
             if (firstRect != null)
             {
+                firstRect.anchoredPosition = firstEndPosition;
                 firstRect.localScale = firstStart;
             }
 
             if (secondRect != null)
             {
+                secondRect.anchoredPosition = secondEndPosition;
                 secondRect.localScale = secondStart;
             }
         }
@@ -153,6 +162,7 @@ namespace PotionPopQuest.Unity
 
         private static IEnumerator DropTile(
             IReadOnlyDictionary<GridPosition, RectTransform> tileViews,
+            GridPosition from,
             GridPosition to)
         {
             if (!tileViews.TryGetValue(to, out var target) || target == null)
@@ -160,13 +170,16 @@ namespace PotionPopQuest.Unity
                 yield break;
             }
 
-            var start = target.anchoredPosition + new Vector2(0f, 26f);
             var end = target.anchoredPosition;
+            var start = tileViews.TryGetValue(from, out var source) && source != null && source != target
+                ? source.anchoredPosition
+                : end + new Vector2(0f, CellPitch(target, vertical: true) * Mathf.Max(1, to.Row - from.Row));
             yield return MoveAnchored(target, start, end, 0.12f);
         }
 
         private static IEnumerator SpawnTile(
             IReadOnlyDictionary<GridPosition, RectTransform> tileViews,
+            GridPosition from,
             GridPosition to)
         {
             if (!tileViews.TryGetValue(to, out var target) || target == null)
@@ -174,8 +187,9 @@ namespace PotionPopQuest.Unity
                 yield break;
             }
 
-            var start = target.anchoredPosition + new Vector2(0f, 42f);
             var end = target.anchoredPosition;
+            var rowDistance = Mathf.Max(1, to.Row - from.Row);
+            var start = end + new Vector2(0f, CellPitch(target, vertical: true) * rowDistance);
             target.localScale = Vector3.one * 0.72f;
             yield return MoveAnchored(target, start, end, 0.14f);
             yield return Scale(target, Vector3.one * 0.72f, Vector3.one, 0.08f);
@@ -319,6 +333,15 @@ namespace PotionPopQuest.Unity
         {
             return t * t * (3f - 2f * t);
         }
+
+        private static float CellPitch(RectTransform target, bool vertical)
+        {
+            if (target.parent != null && target.parent.TryGetComponent<GridLayoutGroup>(out var layout))
+            {
+                return vertical ? layout.cellSize.y + layout.spacing.y : layout.cellSize.x + layout.spacing.x;
+            }
+
+            return vertical ? Mathf.Max(32f, target.rect.height + 8f) : Mathf.Max(32f, target.rect.width + 8f);
+        }
     }
 }
-
