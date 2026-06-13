@@ -8,7 +8,7 @@
       "moves": 13,
       "tutorialLevel": true,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
-      "starThresholds": { "oneStar": 800, "twoStars": 1400, "threeStars": 2200 },
+      "starThresholds": { "oneStar": 8000, "twoStars": 12000, "threeStars": 16000 },
       "goals": [{ "goalType": "CollectIngredient", "goalItem": "RedHerb", "goalAmount": 18 }],
       "obstacles": []
     },
@@ -20,7 +20,7 @@
       "moves": 14,
       "tutorialLevel": true,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
-      "starThresholds": { "oneStar": 1000, "twoStars": 1700, "threeStars": 2600 },
+      "starThresholds": { "oneStar": 13000, "twoStars": 18000, "threeStars": 23000 },
       "goals": [{ "goalType": "CollectIngredient", "goalItem": "BlueCrystal", "goalAmount": 24 }],
       "obstacles": []
     },
@@ -32,7 +32,7 @@
       "moves": 16,
       "tutorialLevel": true,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
-      "starThresholds": { "oneStar": 1200, "twoStars": 2000, "threeStars": 3000 },
+      "starThresholds": { "oneStar": 16000, "twoStars": 22000, "threeStars": 24500 },
       "goals": [{ "goalType": "CollectIngredient", "goalItem": "GreenLeaf", "goalAmount": 30 }],
       "obstacles": []
     },
@@ -44,7 +44,7 @@
       "moves": 8,
       "tutorialLevel": true,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
-      "starThresholds": { "oneStar": 1300, "twoStars": 2200, "threeStars": 3300 },
+      "starThresholds": { "oneStar": 2000, "twoStars": 5000, "threeStars": 10500 },
       "goals": [{ "goalType": "CreatePotion", "goalItem": "LineHorizontal", "goalAmount": 1 }],
       "obstacles": []
     },
@@ -56,7 +56,7 @@
       "moves": 10,
       "tutorialLevel": true,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
-      "starThresholds": { "oneStar": 1500, "twoStars": 2500, "threeStars": 3700 },
+      "starThresholds": { "oneStar": 4500, "twoStars": 7500, "threeStars": 12000 },
       "goals": [{ "goalType": "BreakObstacle", "goalItem": "WoodenBox", "goalAmount": 8 }],
       "obstacles": [
         { "row": 3, "column": 0, "type": "WoodenBox" },
@@ -77,7 +77,7 @@
       "moves": 16,
       "tutorialLevel": false,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom", "OrangeFireDrop"],
-      "starThresholds": { "oneStar": 1600, "twoStars": 2600, "threeStars": 3900 },
+      "starThresholds": { "oneStar": 7000, "twoStars": 9000, "threeStars": 11000 },
       "goals": [{ "goalType": "CollectIngredient", "goalItem": "OrangeFireDrop", "goalAmount": 14 }],
       "obstacles": []
     },
@@ -89,7 +89,7 @@
       "moves": 16,
       "tutorialLevel": false,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom", "OrangeFireDrop"],
-      "starThresholds": { "oneStar": 1700, "twoStars": 2800, "threeStars": 4200 },
+      "starThresholds": { "oneStar": 6500, "twoStars": 9000, "threeStars": 12000 },
       "goals": [{ "goalType": "ClearTile", "goalItem": "DarkTile", "goalAmount": 6 }],
       "obstacles": [
         { "row": 2, "column": 2, "type": "DarkTile" },
@@ -105,10 +105,10 @@
       "displayName": "Bomb Potion Lesson",
       "gridWidth": 8,
       "gridHeight": 8,
-      "moves": 16,
+      "moves": 20,
       "tutorialLevel": false,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
-      "starThresholds": { "oneStar": 1800, "twoStars": 3000, "threeStars": 4500 },
+      "starThresholds": { "oneStar": 13000, "twoStars": 21000, "threeStars": 32000 },
       "goals": [{ "goalType": "CreatePotion", "goalItem": "Bomb", "goalAmount": 1 }],
       "obstacles": []
     },
@@ -120,7 +120,7 @@
       "moves": 12,
       "tutorialLevel": false,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
-      "starThresholds": { "oneStar": 2000, "twoStars": 3300, "threeStars": 4900 },
+      "starThresholds": { "oneStar": 7000, "twoStars": 10500, "threeStars": 13500 },
       "goals": [{ "goalType": "BreakObstacle", "goalItem": "WoodenBox", "goalAmount": 12 }],
       "obstacles": [
         { "row": 2, "column": 2, "type": "WoodenBox" },
@@ -145,7 +145,7 @@
       "moves": 16,
       "tutorialLevel": false,
       "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
-      "starThresholds": { "oneStar": 2400, "twoStars": 3800, "threeStars": 5600 },
+      "starThresholds": { "oneStar": 11000, "twoStars": 13500, "threeStars": 16000 },
       "goals": [{ "goalType": "RestorePotionLab", "goalItem": "None", "goalAmount": 100 }],
       "obstacles": [
         { "row": 2, "column": 2, "type": "DarkTile" },
