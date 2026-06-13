@@ -23,6 +23,7 @@ namespace PotionPopQuest.Unity
         [SerializeField] private AudioClip obstacleBreakSfx;
         [SerializeField] private AudioClip winSfx;
         [SerializeField] private AudioClip loseSfx;
+        [SerializeField] private AudioClip musicLoop;
 
         private PPQLogger _logger;
         private IReadOnlyList<LevelData> _levels;
@@ -32,8 +33,12 @@ namespace PotionPopQuest.Unity
         private GameSession _session;
         private GridPosition? _selectedTile;
         private int _currentLevelNumber = 1;
-        private AudioSource _audioSource;
+        private readonly BoardMoveFinder _moveFinder = new BoardMoveFinder();
+        private AudioSource _sfxSource;
+        private AudioSource _musicSource;
         private bool _inputLocked;
+        private bool _hintVisible;
+        private float _idleHintTimer;
 
         private void Start()
         {
@@ -42,8 +47,13 @@ namespace PotionPopQuest.Unity
             _levels = new LevelCatalogLoader(_logger).LoadLevels(levelDefinitions).OrderBy(level => level.LevelNumber).ToArray();
             _saveRepository = new PlayerPrefsSaveRepository(_logger);
             _saveData = _saveRepository.Load();
-            _audioSource = gameObject.AddComponent<AudioSource>();
-            _audioSource.playOnAwake = false;
+            _sfxSource = gameObject.AddComponent<AudioSource>();
+            _sfxSource.playOnAwake = false;
+            _musicSource = gameObject.AddComponent<AudioSource>();
+            _musicSource.playOnAwake = false;
+            _musicSource.loop = true;
+            LoadFallbackAudioClips();
+            ApplyMusicState();
 
             _ui = new GeneratedGameUi(_logger);
             _ui.Build(
@@ -54,6 +64,7 @@ namespace PotionPopQuest.Unity
                 QuitGame,
                 StartLevel,
                 HandleTilePressed,
+                RequestHint,
                 RestartCurrentLevel,
                 StartNextLevel,
                 ShowMainMenu,
@@ -65,20 +76,37 @@ namespace PotionPopQuest.Unity
             ShowMainMenu();
         }
 
+        private void Update()
+        {
+            if (_inputLocked || _hintVisible || _session == null || _session.State != GameSessionState.Playing)
+            {
+                return;
+            }
+
+            _idleHintTimer += Time.unscaledDeltaTime;
+            if (_idleHintTimer >= GameplayPresentationConfig.AutoHintDelay)
+            {
+                RequestHint();
+            }
+        }
+
         public void ShowMainMenu()
         {
+            ClearHintState();
             _selectedTile = null;
             _ui.ShowMainMenu();
         }
 
         private void ShowLevelSelect()
         {
+            ClearHintState();
             _selectedTile = null;
             _ui.ShowLevelSelect(_levels, _saveData.highestUnlockedLevel, StarsForLevel);
         }
 
         private void ShowSettings()
         {
+            ClearHintState();
             _ui.ShowSettings(_saveData.musicEnabled, _saveData.sfxEnabled);
         }
 
@@ -103,10 +131,12 @@ namespace PotionPopQuest.Unity
             }
 
             _currentLevelNumber = levelNumber;
+            ClearHintState();
             _selectedTile = null;
             _session = new GameSession(level, random: new SystemRandomSource(), logger: _logger);
             _ui.ShowGame(_session, _selectedTile);
             _ui.ShowLevelIntro(_session);
+            _ui.ShowTutorial(level);
         }
 
         private void RestartCurrentLevel()
@@ -133,6 +163,7 @@ namespace PotionPopQuest.Unity
                 return;
             }
 
+            ClearHintState();
             if (!_selectedTile.HasValue)
             {
                 _selectedTile = position;
@@ -151,6 +182,27 @@ namespace PotionPopQuest.Unity
             var result = _session.TrySwap(first, position);
             _selectedTile = null;
             StartCoroutine(ResolveMove(result));
+        }
+
+        private void RequestHint()
+        {
+            if (_inputLocked || _session == null || _session.State != GameSessionState.Playing)
+            {
+                return;
+            }
+
+            _idleHintTimer = 0f;
+            if (_moveFinder.TryFindValidMove(_session.Board, out var move))
+            {
+                _ui.ShowHint(move);
+                _hintVisible = true;
+                _logger.Log(LogCategory.UI, $"Hint shown for {move.First} -> {move.Second}.");
+                return;
+            }
+
+            _logger.Log(LogCategory.Board, "Hint requested but no valid move exists; attempting board shuffle.");
+            ClearHintState();
+            StartCoroutine(ResolveMove(_session.TryShuffleIfNeeded()));
         }
 
         private IEnumerator ResolveMove(MoveResult result)
@@ -181,7 +233,15 @@ namespace PotionPopQuest.Unity
                 _ui.ShowLose(_session);
             }
 
+            _idleHintTimer = 0f;
             _inputLocked = false;
+        }
+
+        private void ClearHintState()
+        {
+            _hintVisible = false;
+            _idleHintTimer = 0f;
+            _ui?.ClearHint();
         }
 
         private void CompleteCurrentLevel()
@@ -204,6 +264,7 @@ namespace PotionPopQuest.Unity
         {
             _saveData.musicEnabled = enabled;
             _saveRepository.Save(_saveData);
+            ApplyMusicState();
         }
 
         private void ToggleSfx(bool enabled)
@@ -216,6 +277,7 @@ namespace PotionPopQuest.Unity
         {
             _saveRepository.Reset();
             _saveData = new SaveData();
+            ApplyMusicState();
             ShowMainMenu();
         }
 
@@ -237,6 +299,11 @@ namespace PotionPopQuest.Unity
 
         private static UiFeedbackCue FeedbackFor(MoveResult result)
         {
+            if (result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.BoardShuffled))
+            {
+                return UiFeedbackCue.Cascade;
+            }
+
             if (result.CreatedPotions.Count > 0)
             {
                 return UiFeedbackCue.Potion;
@@ -255,6 +322,11 @@ namespace PotionPopQuest.Unity
             if (result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.ObstacleDestroyed))
             {
                 return GameSfxCue.ObstacleBreak;
+            }
+
+            if (result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.BoardShuffled))
+            {
+                return GameSfxCue.Cascade;
             }
 
             var potionEvent = result.AnimationEvents.FirstOrDefault(item =>
@@ -287,12 +359,12 @@ namespace PotionPopQuest.Unity
             }
 
             var clip = ClipFor(cue);
-            if (clip == null || _audioSource == null)
+            if (clip == null || _sfxSource == null)
             {
                 return;
             }
 
-            _audioSource.PlayOneShot(clip);
+            _sfxSource.PlayOneShot(clip);
         }
 
         private AudioClip ClipFor(GameSfxCue cue)
@@ -324,6 +396,47 @@ namespace PotionPopQuest.Unity
                 default:
                     return null;
             }
+        }
+
+        private void LoadFallbackAudioClips()
+        {
+            tapSfx = tapSfx != null ? tapSfx : Resources.Load<AudioClip>("Audio/SFX/tap");
+            invalidSwapSfx = invalidSwapSfx != null ? invalidSwapSfx : Resources.Load<AudioClip>("Audio/SFX/invalid_swap");
+            matchSfx = matchSfx != null ? matchSfx : Resources.Load<AudioClip>("Audio/SFX/match");
+            cascadeSfx = cascadeSfx != null ? cascadeSfx : Resources.Load<AudioClip>("Audio/SFX/cascade");
+            potionSfx = potionSfx != null ? potionSfx : Resources.Load<AudioClip>("Audio/SFX/potion");
+            linePotionSfx = linePotionSfx != null ? linePotionSfx : Resources.Load<AudioClip>("Audio/SFX/line_potion");
+            bombPotionSfx = bombPotionSfx != null ? bombPotionSfx : Resources.Load<AudioClip>("Audio/SFX/bomb_potion");
+            lightningPotionSfx = lightningPotionSfx != null ? lightningPotionSfx : Resources.Load<AudioClip>("Audio/SFX/lightning_potion");
+            obstacleBreakSfx = obstacleBreakSfx != null ? obstacleBreakSfx : Resources.Load<AudioClip>("Audio/SFX/obstacle_break");
+            winSfx = winSfx != null ? winSfx : Resources.Load<AudioClip>("Audio/SFX/win");
+            loseSfx = loseSfx != null ? loseSfx : Resources.Load<AudioClip>("Audio/SFX/lose");
+            musicLoop = musicLoop != null ? musicLoop : Resources.Load<AudioClip>("Audio/Music/potion_lab_loop");
+        }
+
+        private void ApplyMusicState()
+        {
+            if (_musicSource == null)
+            {
+                return;
+            }
+
+            if (_saveData != null && _saveData.musicEnabled && musicLoop != null)
+            {
+                if (_musicSource.clip != musicLoop)
+                {
+                    _musicSource.clip = musicLoop;
+                }
+
+                if (!_musicSource.isPlaying)
+                {
+                    _musicSource.Play();
+                }
+
+                return;
+            }
+
+            _musicSource.Stop();
         }
     }
 }
