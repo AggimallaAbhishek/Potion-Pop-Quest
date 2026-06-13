@@ -245,6 +245,7 @@ public static class LevelQaSimulator
         Console.WriteLine(
             $"L{report.LevelNumber} {report.Name}: wins {report.Wins}/{report.Attempts} ({report.WinRate:P0}), " +
             $"avg moves left {report.AverageMovesLeft:0.0}, avg score {report.AverageScore:0}, stars {report.AverageStars:0.0}, " +
+            $"score p50/p75/p90 {report.ScorePercentile(0.50f):0}/{report.ScorePercentile(0.75f):0}/{report.ScorePercentile(0.90f):0}, " +
             $"stuck {report.StuckCount}, {report.Difficulty}");
     }
 
@@ -300,8 +301,20 @@ public static class LevelQaSimulator
         public int StuckCount => _outcomes.Count(outcome => outcome.Stuck);
         public float WinRate => Wins / (float)Attempts;
         public float AverageMovesLeft => _outcomes.Where(outcome => outcome.Won).DefaultIfEmpty().Average(outcome => outcome == null ? 0f : outcome.MovesLeft);
-        public float AverageScore => _outcomes.Average(outcome => outcome.Score);
-        public float AverageStars => _outcomes.Average(outcome => outcome.Stars);
+        public float AverageScore => (float)_outcomes.Average(outcome => outcome.Score);
+        public float AverageStars => (float)_outcomes.Average(outcome => outcome.Stars);
+
+        public float ScorePercentile(float percentile)
+        {
+            var scores = _outcomes.Select(outcome => outcome.Score).OrderBy(score => score).ToArray();
+            if (scores.Length == 0)
+            {
+                return 0f;
+            }
+
+            var index = Math.Max(0, Math.Min(scores.Length - 1, (int)Math.Round((scores.Length - 1) * percentile)));
+            return scores[index];
+        }
 
         public string Difficulty
         {
