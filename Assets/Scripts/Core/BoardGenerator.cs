@@ -37,7 +37,10 @@ namespace PotionPopQuest.Core
                 }
             }
 
-            return CreateCandidate(level, random);
+            var fallback = CreateCandidate(level, random);
+            return TrySeedGuaranteedMove(fallback, level.ActiveIngredients, out var seeded)
+                ? seeded
+                : fallback;
         }
 
         public bool HasAnyValidMove(BoardState board)
@@ -116,5 +119,106 @@ namespace PotionPopQuest.Core
             return count;
         }
 
+        private bool TrySeedGuaranteedMove(
+            BoardState board,
+            IReadOnlyList<IngredientType> activeIngredients,
+            out BoardState seeded)
+        {
+            seeded = null;
+            if (activeIngredients.Count < 2)
+            {
+                return false;
+            }
+
+            for (var row = 0; row < board.Height; row++)
+            {
+                for (var column = 0; column < board.Width; column++)
+                {
+                    if (TrySeedHorizontalMove(board, activeIngredients, row, column, out seeded)
+                        || TrySeedVerticalMove(board, activeIngredients, row, column, out seeded))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool TrySeedHorizontalMove(
+            BoardState board,
+            IReadOnlyList<IngredientType> activeIngredients,
+            int row,
+            int column,
+            out BoardState seeded)
+        {
+            seeded = null;
+            var first = new GridPosition(row, column);
+            var second = new GridPosition(row, column + 1);
+            var swapSource = new GridPosition(row, column + 2);
+            var swapTarget = new GridPosition(row + 1, column + 2);
+            return TrySeedPattern(board, activeIngredients, first, second, swapSource, swapTarget, out seeded);
+        }
+
+        private bool TrySeedVerticalMove(
+            BoardState board,
+            IReadOnlyList<IngredientType> activeIngredients,
+            int row,
+            int column,
+            out BoardState seeded)
+        {
+            seeded = null;
+            var first = new GridPosition(row, column);
+            var second = new GridPosition(row + 1, column);
+            var swapSource = new GridPosition(row + 2, column);
+            var swapTarget = new GridPosition(row + 2, column + 1);
+            return TrySeedPattern(board, activeIngredients, first, second, swapSource, swapTarget, out seeded);
+        }
+
+        private bool TrySeedPattern(
+            BoardState board,
+            IReadOnlyList<IngredientType> activeIngredients,
+            GridPosition first,
+            GridPosition second,
+            GridPosition swapSource,
+            GridPosition swapTarget,
+            out BoardState seeded)
+        {
+            seeded = null;
+            if (!CanSeed(board, first)
+                || !CanSeed(board, second)
+                || !CanSeed(board, swapSource)
+                || !CanSeed(board, swapTarget))
+            {
+                return false;
+            }
+
+            foreach (var matchIngredient in activeIngredients)
+            {
+                foreach (var fillerIngredient in activeIngredients.Where(item => item != matchIngredient))
+                {
+                    var candidate = board.Clone();
+                    candidate.SetIngredient(first, matchIngredient);
+                    candidate.SetIngredient(second, matchIngredient);
+                    candidate.SetIngredient(swapSource, fillerIngredient);
+                    candidate.SetIngredient(swapTarget, matchIngredient);
+
+                    if (_matchFinder.FindMatches(candidate).Count == 0 && HasAnyValidMove(candidate))
+                    {
+                        seeded = candidate;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool CanSeed(BoardState board, GridPosition position)
+        {
+            return board.InBounds(position)
+                   && board.GetCell(position).AcceptsIngredient
+                   && !board.GetCell(position).LocksIngredient;
+        }
     }
 }

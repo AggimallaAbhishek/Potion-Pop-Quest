@@ -27,6 +27,7 @@ namespace PotionPopQuest.Tests
         public void FindMatches_ClassifiesTShapeAsLightningPotion()
         {
             var board = CreatePatternBoard(5, 5);
+            board.SetIngredient(new GridPosition(4, 2), IngredientType.BlueCrystal);
             board.SetIngredient(new GridPosition(1, 2), IngredientType.RedHerb);
             board.SetIngredient(new GridPosition(2, 1), IngredientType.RedHerb);
             board.SetIngredient(new GridPosition(2, 2), IngredientType.RedHerb);
@@ -61,4 +62,3 @@ namespace PotionPopQuest.Tests
         }
     }
 }
-
