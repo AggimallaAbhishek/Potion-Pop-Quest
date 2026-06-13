@@ -6,6 +6,8 @@ using PotionPopQuest.Core;
 public static class LevelQaSimulator
 {
     private const int DefaultAttempts = 100;
+    private const float MinimumTargetWinRate = 0.60f;
+    private const float MaximumTargetWinRate = 0.95f;
 
     public static int Main(string[] args)
     {
@@ -325,22 +327,17 @@ public static class LevelQaSimulator
                     return "BROKEN/STUCK";
                 }
 
-                if (WinRate < 0.35f)
+                if (WinRate < MinimumTargetWinRate)
                 {
                     return "TOO HARD";
                 }
 
-                if (WinRate > 0.90f && AverageMovesLeft >= 9f)
+                if (WinRate > MaximumTargetWinRate)
                 {
                     return "TOO EASY";
                 }
 
-                if (WinRate >= 0.55f && WinRate <= 0.90f && AverageMovesLeft >= 2f && AverageMovesLeft <= 8f)
-                {
-                    return "GOOD";
-                }
-
-                return "NEEDS TUNING";
+                return "GOOD";
             }
         }
     }
