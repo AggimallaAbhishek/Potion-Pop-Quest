@@ -208,33 +208,36 @@ namespace PotionPopQuest.Unity
         private IEnumerator ResolveMove(MoveResult result)
         {
             _inputLocked = true;
-
-            if (!result.ValidMove)
+            try
             {
-                PlaySfx(GameSfxCue.InvalidSwap);
-                yield return _ui.PlayMoveResult(_session, _selectedTile, result, UiFeedbackCue.InvalidSwap);
+                if (!result.ValidMove)
+                {
+                    PlaySfx(GameSfxCue.InvalidSwap);
+                    yield return _ui.PlayMoveResult(_session, _selectedTile, result, UiFeedbackCue.InvalidSwap);
+                    yield break;
+                }
+
+                var feedback = FeedbackFor(result);
+                PlaySfx(SfxFor(result));
+                yield return _ui.PlayMoveResult(_session, _selectedTile, result, feedback);
+
+                if (_session.State == GameSessionState.Won)
+                {
+                    CompleteCurrentLevel();
+                    PlaySfx(GameSfxCue.Win);
+                    _ui.ShowWin(_session, HasNextLevel());
+                }
+                else if (_session.State == GameSessionState.Lost)
+                {
+                    PlaySfx(GameSfxCue.Lose);
+                    _ui.ShowLose(_session);
+                }
+            }
+            finally
+            {
+                _idleHintTimer = 0f;
                 _inputLocked = false;
-                yield break;
             }
-
-            var feedback = FeedbackFor(result);
-            PlaySfx(SfxFor(result));
-            yield return _ui.PlayMoveResult(_session, _selectedTile, result, feedback);
-
-            if (_session.State == GameSessionState.Won)
-            {
-                CompleteCurrentLevel();
-                PlaySfx(GameSfxCue.Win);
-                _ui.ShowWin(_session, HasNextLevel());
-            }
-            else if (_session.State == GameSessionState.Lost)
-            {
-                PlaySfx(GameSfxCue.Lose);
-                _ui.ShowLose(_session);
-            }
-
-            _idleHintTimer = 0f;
-            _inputLocked = false;
         }
 
         private void ClearHintState()

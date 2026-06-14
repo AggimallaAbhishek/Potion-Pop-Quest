@@ -218,9 +218,16 @@ namespace PotionPopQuest.Unity
 
             _tileViews[first] = secondRect;
             _tileViews[second] = firstRect;
-            SwapCellSnapshots(first, second);
-            ConfigureTileInteraction(first, secondRect, _viewCells[first]);
-            ConfigureTileInteraction(second, firstRect, _viewCells[second]);
+            if (TrySwapCellSnapshots(first, second))
+            {
+                ConfigureTileInteraction(first, secondRect, _viewCells[first]);
+                ConfigureTileInteraction(second, firstRect, _viewCells[second]);
+            }
+            else
+            {
+                _logger.Warn(LogCategory.UI, $"Could not update swapped cell snapshots for {first} -> {second}; final board sync will recover.");
+            }
+
             KeepFloatingLayerOnTop();
         }
 
@@ -308,31 +315,40 @@ namespace PotionPopQuest.Unity
                         continue;
                     }
 
-                    movements.Add(new TileMotion(rect, animationEvent.From, animationEvent.To, CellPosition(animationEvent.From), CellPosition(animationEvent.To)));
+                    if (!_viewCells.TryGetValue(animationEvent.From, out var cell))
+                    {
+                        _logger.Warn(LogCategory.Drop, $"Missing cell snapshot for drop {animationEvent.From} -> {animationEvent.To}; final board sync will recover.");
+                        continue;
+                    }
+
+                    movements.Add(new TileMotion(rect, animationEvent.From, animationEvent.To, CellPosition(animationEvent.From), CellPosition(animationEvent.To), cell));
                     continue;
                 }
 
                 if (animationEvent.Kind == BoardAnimationEventKind.TileSpawned)
                 {
                     var cell = new BoardCellSnapshot(animationEvent.Ingredient, PotionType.None, ObstacleType.None, 0);
-                    var rect = CreateTileView(animationEvent.To, cell);
+                    var rect = CreateTileView(animationEvent.To, cell, register: false);
                     var end = CellPosition(animationEvent.To);
                     var rowDistance = Mathf.Max(1, animationEvent.To.Row - animationEvent.From.Row);
                     var start = end + new Vector2(0f, CellPitch * rowDistance);
                     rect.anchoredPosition = start;
                     rect.localScale = Vector3.one * 0.72f;
-                    spawned.Add(new TileMotion(rect, animationEvent.From, animationEvent.To, start, end));
+                    spawned.Add(new TileMotion(rect, animationEvent.From, animationEvent.To, start, end, cell));
                 }
             }
 
-            yield return MoveTiles(movements.Concat(spawned).ToArray(), GameplayPresentationConfig.DropDuration);
+            var allMotions = movements.Concat(spawned).ToArray();
+            if (allMotions.Length > 0)
+            {
+                yield return MoveTiles(allMotions, GameplayPresentationConfig.DropDuration);
+            }
 
-            ApplyMovementMappings(movements);
+            ApplyMovementMappings(movements, spawned);
 
             foreach (var movement in spawned)
             {
                 movement.Rect.localScale = Vector3.one;
-                ConfigureTileInteraction(movement.To, movement.Rect, _viewCells[movement.To]);
             }
 
             KeepFloatingLayerOnTop();
@@ -356,7 +372,13 @@ namespace PotionPopQuest.Unity
                     continue;
                 }
 
-                motions.Add(new TileMotion(rect, movement.From, movement.To, CellPosition(movement.From), CellPosition(movement.To)));
+                if (!_viewCells.TryGetValue(movement.From, out var cell))
+                {
+                    _logger.Warn(LogCategory.Board, $"Missing cell snapshot for shuffle {movement.From} -> {movement.To}; final board sync will recover.");
+                    continue;
+                }
+
+                motions.Add(new TileMotion(rect, movement.From, movement.To, CellPosition(movement.From), CellPosition(movement.To), cell));
             }
 
             yield return Pulse(_boardRoot, 1.025f, GameplayPresentationConfig.BoardPulseDuration * 0.5f);
@@ -364,16 +386,20 @@ namespace PotionPopQuest.Unity
             ApplyMovementMappings(motions);
         }
 
-        private RectTransform CreateTileView(GridPosition position, BoardCellSnapshot cell)
+        private RectTransform CreateTileView(GridPosition position, BoardCellSnapshot cell, bool register = true)
         {
             var button = GetTileButton();
             var rect = button.GetComponent<RectTransform>();
             button.gameObject.SetActive(true);
             button.transform.SetParent(_boardRoot, false);
             ConfigureTileRect(rect, position);
-            UpdateTileContent(rect, position, cell);
-            _tileViews[position] = rect;
-            _viewCells[position] = cell;
+            UpdateTileContent(rect, position, cell, register);
+            if (register)
+            {
+                _tileViews[position] = rect;
+                _viewCells[position] = cell;
+            }
+
             KeepFloatingLayerOnTop();
             return rect;
         }
@@ -389,7 +415,7 @@ namespace PotionPopQuest.Unity
             rect.localRotation = Quaternion.identity;
         }
 
-        private void UpdateTileContent(RectTransform rect, GridPosition position, BoardCellSnapshot cell)
+        private void UpdateTileContent(RectTransform rect, GridPosition position, BoardCellSnapshot cell, bool registerCell = true)
         {
             ClearChildren(rect);
             foreach (var animator in rect.GetComponents<UiTileAnimator>())
@@ -417,7 +443,11 @@ namespace PotionPopQuest.Unity
             {
                 CreateIconImage(rect, _iconFactory.GetObstacleSprite(cell.Obstacle), new Vector2(0.13f, 0.13f), new Vector2(0.87f, 0.87f), Color.white);
                 CreateAnchoredText(rect, cell.ObstacleHealth.ToString(), 22, TextAnchor.LowerRight);
-                _viewCells[position] = cell;
+                if (registerCell)
+                {
+                    _viewCells[position] = cell;
+                }
+
                 return;
             }
 
@@ -431,7 +461,10 @@ namespace PotionPopQuest.Unity
                 CreateIconImage(rect, _iconFactory.GetPotionSprite(cell.Potion), new Vector2(0.58f, 0.58f), new Vector2(0.98f, 0.98f), Color.white);
             }
 
-            _viewCells[position] = cell;
+            if (registerCell)
+            {
+                _viewCells[position] = cell;
+            }
         }
 
         private void ConfigureTileInteraction(GridPosition position, RectTransform rect, BoardCellSnapshot cell)
@@ -508,23 +541,26 @@ namespace PotionPopQuest.Unity
             _tileButtonPool.Push(button);
         }
 
-        private void ApplyMovementMappings(IReadOnlyList<TileMotion> motions)
+        private void ApplyMovementMappings(IReadOnlyList<TileMotion> motions, IReadOnlyList<TileMotion> spawnedMotions = null)
         {
+            var moving = motions ?? Array.Empty<TileMotion>();
+            var spawned = spawnedMotions ?? Array.Empty<TileMotion>();
             var nextViews = new Dictionary<GridPosition, RectTransform>(_tileViews);
             var nextCells = new Dictionary<GridPosition, BoardCellSnapshot>(_viewCells);
-            foreach (var motion in motions)
+            foreach (var motion in moving)
             {
                 nextViews.Remove(motion.From);
                 nextCells.Remove(motion.From);
             }
 
-            foreach (var motion in motions)
+            foreach (var motion in moving)
             {
-                nextViews[motion.To] = motion.Rect;
-                if (_viewCells.TryGetValue(motion.From, out var cell))
-                {
-                    nextCells[motion.To] = cell;
-                }
+                ApplyMotionMapping(nextViews, nextCells, motion);
+            }
+
+            foreach (var motion in spawned)
+            {
+                ApplyMotionMapping(nextViews, nextCells, motion);
             }
 
             _tileViews.Clear();
@@ -546,15 +582,42 @@ namespace PotionPopQuest.Unity
                 {
                     ConfigureTileInteraction(item.Key, item.Value, cell);
                 }
+                else
+                {
+                    _logger.Warn(LogCategory.UI, $"Tile view at {item.Key} had no cell snapshot after movement mapping; final board sync will recover.");
+                }
             }
         }
 
-        private void SwapCellSnapshots(GridPosition first, GridPosition second)
+        private void ApplyMotionMapping(
+            IDictionary<GridPosition, RectTransform> nextViews,
+            IDictionary<GridPosition, BoardCellSnapshot> nextCells,
+            TileMotion motion)
         {
-            _viewCells.TryGetValue(first, out var firstCell);
-            _viewCells.TryGetValue(second, out var secondCell);
+            if (motion.Rect == null)
+            {
+                return;
+            }
+
+            if (nextViews.TryGetValue(motion.To, out var existing) && existing != null && existing != motion.Rect)
+            {
+                _logger.Warn(LogCategory.Drop, $"Replacing an existing tile view at {motion.To} during movement mapping; final board sync will recover if this was unexpected.");
+            }
+
+            nextViews[motion.To] = motion.Rect;
+            nextCells[motion.To] = motion.Cell;
+        }
+
+        private bool TrySwapCellSnapshots(GridPosition first, GridPosition second)
+        {
+            if (!_viewCells.TryGetValue(first, out var firstCell) || !_viewCells.TryGetValue(second, out var secondCell))
+            {
+                return false;
+            }
+
             _viewCells[first] = secondCell;
             _viewCells[second] = firstCell;
+            return true;
         }
 
         private void ApplySelection(GridPosition? selectedTile)
@@ -1004,13 +1067,14 @@ namespace PotionPopQuest.Unity
 
         private readonly struct TileMotion
         {
-            public TileMotion(RectTransform rect, GridPosition from, GridPosition to, Vector2 start, Vector2 end)
+            public TileMotion(RectTransform rect, GridPosition from, GridPosition to, Vector2 start, Vector2 end, BoardCellSnapshot cell)
             {
                 Rect = rect;
                 From = from;
                 To = to;
                 Start = start;
                 End = end;
+                Cell = cell;
             }
 
             public RectTransform Rect { get; }
@@ -1018,6 +1082,7 @@ namespace PotionPopQuest.Unity
             public GridPosition To { get; }
             public Vector2 Start { get; }
             public Vector2 End { get; }
+            public BoardCellSnapshot Cell { get; }
         }
     }
 }

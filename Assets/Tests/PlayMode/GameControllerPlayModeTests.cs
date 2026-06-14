@@ -71,18 +71,7 @@ namespace PotionPopQuest.PlayMode.Tests
         [UnityTest]
         public IEnumerator BoardVisualPresenter_SwapReplayPreservesTileViewIdentity()
         {
-            var canvas = new GameObject("Presenter Test Canvas", typeof(Canvas));
-            var boardObject = new GameObject("Board Panel", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-            boardObject.transform.SetParent(canvas.transform, false);
-            var boardRoot = boardObject.GetComponent<RectTransform>();
-            var floatingObject = new GameObject("Floating Feedback Layer", typeof(RectTransform));
-            floatingObject.transform.SetParent(boardObject.transform, false);
-
-            var presenter = new BoardVisualPresenter(
-                new NullGameLogger(),
-                new TileIconFactory(),
-                () => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
-            presenter.Configure(boardRoot, floatingObject.GetComponent<RectTransform>(), _ => { }, _ => { });
+            var presenter = CreatePresenter(out var canvas);
 
             var board = CreatePresenterBoard();
             var first = new GridPosition(0, 0);
@@ -97,6 +86,128 @@ namespace PotionPopQuest.PlayMode.Tests
 
             Assert.That(presenter.TryGetTile(second, out var destinationRect), Is.True);
             Assert.That(destinationRect, Is.SameAs(firstRect));
+            AssertPresenterMatchesSnapshot(presenter, BoardSnapshot.From(board));
+            Object.DestroyImmediate(canvas);
+        }
+
+        [UnityTest]
+        public IEnumerator BoardVisualPresenter_MixedDropAndSpawnDoesNotLoseSpawnTargetCell()
+        {
+            var presenter = CreatePresenter(out var canvas);
+            var board = CreatePresenterBoard();
+            var source = new GridPosition(0, 2);
+            var destination = new GridPosition(1, 2);
+            var droppedIngredient = board.GetCell(source).Ingredient;
+            var spawnedIngredient = IngredientType.OrangeFireDrop;
+
+            presenter.Render(BoardSnapshot.From(board), null, UiFeedbackCue.None);
+            Assert.That(presenter.TryGetTile(source, out var sourceRect), Is.True);
+
+            board.SetIngredient(source, spawnedIngredient);
+            board.SetIngredient(destination, droppedIngredient);
+            var finalSnapshot = BoardSnapshot.From(board);
+
+            yield return presenter.Play(
+                new[]
+                {
+                    new BoardAnimationEvent(BoardAnimationEventKind.TileDropped, new[] { destination }, source, destination, droppedIngredient),
+                    new BoardAnimationEvent(BoardAnimationEventKind.TileSpawned, new[] { source }, new GridPosition(-1, source.Column), source, spawnedIngredient)
+                },
+                finalSnapshot);
+
+            Assert.That(presenter.TryGetTile(destination, out var destinationRect), Is.True);
+            Assert.That(destinationRect, Is.SameAs(sourceRect));
+            Assert.That(presenter.TryGetTile(source, out var spawnedRect), Is.True);
+            Assert.That(spawnedRect, Is.Not.SameAs(sourceRect));
+            AssertPresenterMatchesSnapshot(presenter, finalSnapshot);
+            Object.DestroyImmediate(canvas);
+        }
+
+        [UnityTest]
+        public IEnumerator BoardVisualPresenter_DropOnlyPreservesMovedTileViewIdentity()
+        {
+            var presenter = CreatePresenter(out var canvas);
+            var board = CreatePresenterBoard();
+            var source = new GridPosition(0, 0);
+            var destination = new GridPosition(2, 0);
+            var droppedIngredient = board.GetCell(source).Ingredient;
+
+            presenter.Render(BoardSnapshot.From(board), null, UiFeedbackCue.None);
+            Assert.That(presenter.TryGetTile(source, out var sourceRect), Is.True);
+
+            board.SetIngredient(source, IngredientType.None);
+            board.SetIngredient(destination, droppedIngredient);
+            var finalSnapshot = BoardSnapshot.From(board);
+
+            yield return presenter.Play(
+                new[]
+                {
+                    new BoardAnimationEvent(BoardAnimationEventKind.Clear, new[] { destination }),
+                    new BoardAnimationEvent(BoardAnimationEventKind.TileDropped, new[] { destination }, source, destination, droppedIngredient)
+                },
+                finalSnapshot);
+
+            Assert.That(presenter.TryGetTile(destination, out var destinationRect), Is.True);
+            Assert.That(destinationRect, Is.SameAs(sourceRect));
+            AssertPresenterMatchesSnapshot(presenter, finalSnapshot);
+            Object.DestroyImmediate(canvas);
+        }
+
+        [UnityTest]
+        public IEnumerator BoardVisualPresenter_SpawnOnlyCreatesNewView()
+        {
+            var presenter = CreatePresenter(out var canvas);
+            var board = CreatePresenterBoard();
+            var spawnPosition = new GridPosition(0, 1);
+            var spawnedIngredient = IngredientType.OrangeFireDrop;
+
+            presenter.Render(BoardSnapshot.From(board), null, UiFeedbackCue.None);
+            Assert.That(presenter.TryGetTile(spawnPosition, out var originalRect), Is.True);
+
+            board.SetIngredient(spawnPosition, spawnedIngredient);
+            var finalSnapshot = BoardSnapshot.From(board);
+
+            yield return presenter.Play(
+                new[]
+                {
+                    new BoardAnimationEvent(BoardAnimationEventKind.Clear, new[] { spawnPosition }),
+                    new BoardAnimationEvent(BoardAnimationEventKind.TileSpawned, new[] { spawnPosition }, new GridPosition(-1, spawnPosition.Column), spawnPosition, spawnedIngredient)
+                },
+                finalSnapshot);
+
+            Assert.That(presenter.TryGetTile(spawnPosition, out var spawnedRect), Is.True);
+            Assert.That(spawnedRect, Is.Not.SameAs(originalRect));
+            AssertPresenterMatchesSnapshot(presenter, finalSnapshot);
+            Object.DestroyImmediate(canvas);
+        }
+
+        [UnityTest]
+        public IEnumerator BoardVisualPresenter_ClearDropAndSpawnEndsWithFullEightByEightMap()
+        {
+            var presenter = CreatePresenter(out var canvas);
+            var board = CreatePresenterBoard(8, 8);
+            var source = new GridPosition(0, 2);
+            var destination = new GridPosition(3, 2);
+            var spawnPosition = new GridPosition(0, 2);
+            var droppedIngredient = board.GetCell(source).Ingredient;
+            var spawnedIngredient = IngredientType.OrangeFireDrop;
+
+            presenter.Render(BoardSnapshot.From(board), null, UiFeedbackCue.None);
+            board.SetIngredient(spawnPosition, spawnedIngredient);
+            board.SetIngredient(destination, droppedIngredient);
+            var finalSnapshot = BoardSnapshot.From(board);
+
+            yield return presenter.Play(
+                new[]
+                {
+                    new BoardAnimationEvent(BoardAnimationEventKind.Clear, new[] { destination }),
+                    new BoardAnimationEvent(BoardAnimationEventKind.TileDropped, new[] { destination }, source, destination, droppedIngredient),
+                    new BoardAnimationEvent(BoardAnimationEventKind.TileSpawned, new[] { spawnPosition }, new GridPosition(-1, spawnPosition.Column), spawnPosition, spawnedIngredient)
+                },
+                finalSnapshot);
+
+            Assert.That(presenter.TileViews.Count, Is.EqualTo(64));
+            AssertPresenterMatchesSnapshot(presenter, finalSnapshot);
             Object.DestroyImmediate(canvas);
         }
 
@@ -128,9 +239,25 @@ namespace PotionPopQuest.PlayMode.Tests
             }
         }
 
-        private static BoardState CreatePresenterBoard()
+        private static BoardVisualPresenter CreatePresenter(out GameObject canvas)
         {
-            var board = new BoardState(3, 3);
+            canvas = new GameObject("Presenter Test Canvas", typeof(Canvas));
+            var boardObject = new GameObject("Board Panel", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            boardObject.transform.SetParent(canvas.transform, false);
+            var floatingObject = new GameObject("Floating Feedback Layer", typeof(RectTransform));
+            floatingObject.transform.SetParent(boardObject.transform, false);
+
+            var presenter = new BoardVisualPresenter(
+                new NullGameLogger(),
+                new TileIconFactory(),
+                () => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
+            presenter.Configure(boardObject.GetComponent<RectTransform>(), floatingObject.GetComponent<RectTransform>(), _ => { }, _ => { });
+            return presenter;
+        }
+
+        private static BoardState CreatePresenterBoard(int width = 3, int height = 3)
+        {
+            var board = new BoardState(width, height);
             var ingredients = new[]
             {
                 IngredientType.RedHerb,
@@ -147,6 +274,15 @@ namespace PotionPopQuest.PlayMode.Tests
             }
 
             return board;
+        }
+
+        private static void AssertPresenterMatchesSnapshot(BoardVisualPresenter presenter, BoardSnapshot snapshot)
+        {
+            Assert.That(presenter.TileViews.Count, Is.EqualTo(snapshot.Width * snapshot.Height));
+            foreach (var position in snapshot.AllPositions())
+            {
+                Assert.That(presenter.TryGetTile(position, out _), Is.True, $"Missing tile view at {position}.");
+            }
         }
     }
 }

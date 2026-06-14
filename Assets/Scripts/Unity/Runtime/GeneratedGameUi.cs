@@ -33,8 +33,6 @@ namespace PotionPopQuest.Unity
         private GameObject _tutorialPanel;
         private Text _tutorialText;
         private RectTransform _floatingLayer;
-        private readonly Dictionary<GridPosition, RectTransform> _tileViews = new Dictionary<GridPosition, RectTransform>();
-        private readonly Stack<Button> _tileButtonPool = new Stack<Button>();
         private readonly List<Outline> _hintOutlines = new List<Outline>();
 
         private Action _play;
@@ -509,37 +507,6 @@ namespace PotionPopQuest.Unity
             UpdateStarProgress(session);
         }
 
-        private void RenderBoard(BoardState board, GridPosition? selectedTile, UiFeedbackCue feedbackCue)
-        {
-            ReleaseTileViews();
-            _tileViews.Clear();
-            var layout = _boardRoot.GetComponent<GridLayoutGroup>();
-            ConfigureBoardLayout(board, layout);
-
-            for (var row = 0; row < board.Height; row++)
-            {
-                for (var column = 0; column < board.Width; column++)
-                {
-                    var position = new GridPosition(row, column);
-                    var cell = board.GetCell(position);
-                    var button = CreateTileButton(_boardRoot, cell, () => _tilePressed(position));
-                    _tileViews[position] = button.GetComponent<RectTransform>();
-                    button.interactable = cell.CanMoveIngredient;
-                    if (feedbackCue != UiFeedbackCue.None)
-                    {
-                        button.gameObject.AddComponent<UiTileAnimator>().PlayIntro((row * board.Width + column) * 0.0025f, feedbackCue);
-                    }
-
-                    if (selectedTile.HasValue && selectedTile.Value == position)
-                    {
-                        var outline = button.gameObject.AddComponent<Outline>();
-                        outline.effectColor = new Color(1f, 0.95f, 0.45f);
-                        outline.effectDistance = new Vector2(4, -4);
-                    }
-                }
-            }
-        }
-
         private void ShowModal(string title, string body, string primaryLabel, Action primaryAction)
         {
             _modal.SetActive(true);
@@ -652,152 +619,6 @@ namespace PotionPopQuest.Unity
             return label;
         }
 
-        private Button CreateTileButton(Transform parent, BoardCell cell, Action action)
-        {
-            var button = GetTileButton(parent);
-            var buttonObject = button.gameObject;
-            buttonObject.transform.SetParent(parent, false);
-            buttonObject.transform.SetAsLastSibling();
-            buttonObject.SetActive(true);
-            buttonObject.transform.localScale = Vector3.one;
-            ClearChildren(buttonObject.transform);
-            var background = buttonObject.GetComponent<Image>();
-            background.color = CellColor(cell);
-
-            button.targetGraphic = background;
-            button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(() =>
-            {
-                _playSfx?.Invoke(GameSfxCue.Tap);
-                action?.Invoke();
-            });
-
-            if (cell.Obstacle == ObstacleType.DarkTile)
-            {
-                CreateIconImage(
-                    buttonObject.transform,
-                    _iconFactory.GetObstacleSprite(ObstacleType.DarkTile),
-                    new Vector2(0.08f, 0.08f),
-                    new Vector2(0.92f, 0.92f),
-                    new Color(1f, 1f, 1f, 0.65f));
-            }
-
-            if (cell.BlocksIngredientSpace)
-            {
-                CreateIconImage(
-                    buttonObject.transform,
-                    _iconFactory.GetObstacleSprite(cell.Obstacle),
-                    new Vector2(0.13f, 0.13f),
-                    new Vector2(0.87f, 0.87f),
-                    Color.white);
-                CreateAnchoredText(buttonObject.transform, cell.ObstacleHealth.ToString(), 22, TextAnchor.LowerRight);
-                return button;
-            }
-
-            if (cell.Ingredient != IngredientType.None)
-            {
-                CreateIconImage(
-                    buttonObject.transform,
-                    _iconFactory.GetIngredientSprite(cell.Ingredient),
-                    new Vector2(0.14f, 0.14f),
-                    new Vector2(0.86f, 0.86f),
-                    Color.white);
-            }
-
-            if (cell.Potion != PotionType.None)
-            {
-                CreateIconImage(
-                    buttonObject.transform,
-                    _iconFactory.GetPotionSprite(cell.Potion),
-                    new Vector2(0.58f, 0.58f),
-                    new Vector2(0.98f, 0.98f),
-                    Color.white);
-            }
-
-            return button;
-        }
-
-        private Button GetTileButton(Transform parent)
-        {
-            if (_tileButtonPool.Count > 0)
-            {
-                return _tileButtonPool.Pop();
-            }
-
-            var buttonObject = new GameObject("Tile", typeof(RectTransform), typeof(Image), typeof(Button));
-            buttonObject.transform.SetParent(parent, false);
-            return buttonObject.GetComponent<Button>();
-        }
-
-        private void ReleaseTileViews()
-        {
-            ClearHint();
-            foreach (var rect in _tileViews.Values)
-            {
-                if (rect == null)
-                {
-                    continue;
-                }
-
-                var button = rect.GetComponent<Button>();
-                if (button == null)
-                {
-                    UnityEngine.Object.Destroy(rect.gameObject);
-                    continue;
-                }
-
-                button.onClick.RemoveAllListeners();
-                ClearChildren(rect);
-                foreach (var outline in rect.GetComponents<Outline>())
-                {
-                    outline.enabled = false;
-                    UnityEngine.Object.Destroy(outline);
-                }
-
-                foreach (var animator in rect.GetComponents<UiTileAnimator>())
-                {
-                    animator.enabled = false;
-                    UnityEngine.Object.Destroy(animator);
-                }
-
-                rect.gameObject.SetActive(false);
-                _tileButtonPool.Push(button);
-            }
-        }
-
-        private static void CreateIconImage(
-            Transform parent,
-            Sprite sprite,
-            Vector2 anchorMin,
-            Vector2 anchorMax,
-            Color color)
-        {
-            var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-            iconObject.transform.SetParent(parent, false);
-            var rect = iconObject.GetComponent<RectTransform>();
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-
-            var image = iconObject.GetComponent<Image>();
-            image.sprite = sprite;
-            image.color = color;
-            image.preserveAspect = true;
-            image.raycastTarget = false;
-        }
-
-        private Text CreateAnchoredText(Transform parent, string text, int size, TextAnchor anchor)
-        {
-            var label = CreateLabel(parent, text, size, anchor);
-            label.rectTransform.anchorMin = Vector2.zero;
-            label.rectTransform.anchorMax = Vector2.one;
-            label.rectTransform.offsetMin = new Vector2(8, 6);
-            label.rectTransform.offsetMax = new Vector2(-8, -6);
-            label.raycastTarget = false;
-            return label;
-        }
-
         private Button CreateButton(Transform parent, string text, Action action, Color color, Vector2? size = null)
         {
             var buttonObject = new GameObject($"Button - {text}", typeof(RectTransform), typeof(Image), typeof(Button));
@@ -824,37 +645,6 @@ namespace PotionPopQuest.Unity
             label.rectTransform.offsetMax = new Vector2(-8, -6);
             label.raycastTarget = false;
             return button;
-        }
-
-        private void ConfigureBoardLayout(BoardState board, GridLayoutGroup layout)
-        {
-            var portrait = Screen.height >= Screen.width;
-            var boardSize = portrait ? 820f : 640f;
-            if (Screen.width <= 0 || Screen.height <= 0)
-            {
-                boardSize = 720f;
-            }
-
-            boardSize = Mathf.Clamp(boardSize, 560f, 840f);
-            _boardRoot.sizeDelta = new Vector2(boardSize, boardSize);
-            var layoutElement = _boardRoot.GetComponent<LayoutElement>();
-            if (layoutElement != null)
-            {
-                layoutElement.preferredWidth = boardSize;
-                layoutElement.preferredHeight = boardSize;
-            }
-
-            const int padding = 24;
-            var spacing = board.Width >= 8 ? 8f : 10f;
-            var inner = boardSize - padding * 2f - spacing * (board.Width - 1);
-            var cellSize = Mathf.Floor(inner / board.Width);
-
-            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = board.Width;
-            layout.cellSize = new Vector2(cellSize, cellSize);
-            layout.spacing = new Vector2(spacing, spacing);
-            layout.padding = new RectOffset(padding, padding, padding, padding);
-            layout.childAlignment = TextAnchor.MiddleCenter;
         }
 
         private IEnumerator AnimateScore(int from, int to)
@@ -1033,42 +823,6 @@ namespace PotionPopQuest.Unity
                     return "Mega Potion";
                 default:
                     return "Potion";
-            }
-        }
-
-        private static Color CellColor(BoardCell cell)
-        {
-            if (cell.Obstacle == ObstacleType.WoodenBox)
-            {
-                return new Color(0.50f, 0.32f, 0.18f);
-            }
-
-            if (cell.Obstacle == ObstacleType.StoneBlock)
-            {
-                return new Color(0.36f, 0.38f, 0.42f);
-            }
-
-            if (cell.Obstacle == ObstacleType.DarkTile)
-            {
-                return new Color(0.20f, 0.12f, 0.30f);
-            }
-
-            switch (cell.Ingredient)
-            {
-                case IngredientType.RedHerb:
-                    return new Color(0.75f, 0.22f, 0.24f);
-                case IngredientType.BlueCrystal:
-                    return new Color(0.18f, 0.42f, 0.76f);
-                case IngredientType.GreenLeaf:
-                    return new Color(0.22f, 0.58f, 0.34f);
-                case IngredientType.YellowStarDust:
-                    return new Color(0.86f, 0.68f, 0.22f);
-                case IngredientType.PurpleMushroom:
-                    return new Color(0.48f, 0.28f, 0.68f);
-                case IngredientType.OrangeFireDrop:
-                    return new Color(0.85f, 0.42f, 0.18f);
-                default:
-                    return new Color(0.18f, 0.20f, 0.23f);
             }
         }
 
