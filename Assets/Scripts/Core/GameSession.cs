@@ -31,7 +31,8 @@ namespace PotionPopQuest.Core
             IReadOnlyList<GridPosition> clearedPositions,
             IReadOnlyList<PotionType> createdPotions,
             GameSessionState state,
-            IReadOnlyList<BoardAnimationEvent> animationEvents = null)
+            IReadOnlyList<BoardAnimationEvent> animationEvents = null,
+            BoardSnapshot boardBeforeMove = null)
         {
             ValidMove = validMove;
             Message = message;
@@ -41,6 +42,7 @@ namespace PotionPopQuest.Core
             CreatedPotions = createdPotions;
             State = state;
             AnimationEvents = animationEvents ?? Array.Empty<BoardAnimationEvent>();
+            BoardBeforeMove = boardBeforeMove;
         }
 
         public bool ValidMove { get; }
@@ -51,6 +53,7 @@ namespace PotionPopQuest.Core
         public IReadOnlyList<PotionType> CreatedPotions { get; }
         public GameSessionState State { get; }
         public IReadOnlyList<BoardAnimationEvent> AnimationEvents { get; }
+        public BoardSnapshot BoardBeforeMove { get; }
     }
 
     public sealed class GameSession
@@ -103,15 +106,16 @@ namespace PotionPopQuest.Core
 
         public MoveResult TrySwap(GridPosition first, GridPosition second)
         {
+            var boardBeforeMove = BoardSnapshot.From(Board);
             if (State != GameSessionState.Playing)
             {
-                return Invalid($"Level is already {State}.");
+                return Invalid($"Level is already {State}.", boardBeforeMove);
             }
 
             if (!BoardRules.CanSwap(Board, first, second))
             {
                 _logger.Warn(LogCategory.Swap, $"Rejected non-adjacent or blocked swap {first} -> {second}.");
-                return Invalid("Tiles are not swappable.", first, second);
+                return Invalid("Tiles are not swappable.", first, second, boardBeforeMove);
             }
 
             var firstPotionBefore = Board.GetCell(first).Potion;
@@ -125,7 +129,7 @@ namespace PotionPopQuest.Core
 
             if (firstPotionBefore != PotionType.None || secondPotionBefore != PotionType.None)
             {
-                return ResolvePotionSwap(first, second, firstPotionBefore, secondPotionBefore, animationEvents);
+                return ResolvePotionSwap(first, second, firstPotionBefore, secondPotionBefore, animationEvents, boardBeforeMove);
             }
 
             var matches = _matchFinder.FindMatches(Board, second);
@@ -134,24 +138,25 @@ namespace PotionPopQuest.Core
                 Board.SwapIngredients(first, second);
                 _logger.Log(LogCategory.Swap, $"Invalid swap {first} -> {second}; swap reversed.");
                 animationEvents.Add(new BoardAnimationEvent(BoardAnimationEventKind.InvalidSwap, new[] { first, second }, first, second));
-                return Invalid("Swap did not create a match.", animationEvents);
+                return Invalid("Swap did not create a match.", animationEvents, boardBeforeMove);
             }
 
             MovesRemaining--;
-            return ResolveMatches(matches, second, animationEvents);
+            return ResolveMatches(matches, second, animationEvents, boardBeforeMove);
         }
 
         public MoveResult TryShuffleIfNeeded()
         {
+            var boardBeforeMove = BoardSnapshot.From(Board);
             if (State != GameSessionState.Playing)
             {
-                return Invalid($"Level is already {State}.");
+                return Invalid($"Level is already {State}.", boardBeforeMove);
             }
 
             var animationEvents = new List<BoardAnimationEvent>();
             if (!TryShuffleBoardIfNeeded(animationEvents))
             {
-                return Invalid("Board already has a valid move.", animationEvents);
+                return Invalid("Board already has a valid move.", animationEvents, boardBeforeMove);
             }
 
             return new MoveResult(
@@ -162,7 +167,8 @@ namespace PotionPopQuest.Core
                 Array.Empty<GridPosition>(),
                 Array.Empty<PotionType>(),
                 State,
-                animationEvents);
+                animationEvents,
+                boardBeforeMove);
         }
 
         private MoveResult ResolvePotionSwap(
@@ -170,7 +176,8 @@ namespace PotionPopQuest.Core
             GridPosition second,
             PotionType firstPotionBefore,
             PotionType secondPotionBefore,
-            List<BoardAnimationEvent> animationEvents)
+            List<BoardAnimationEvent> animationEvents,
+            BoardSnapshot boardBeforeMove)
         {
             MovesRemaining--;
             var activationPosition = firstPotionBefore != PotionType.None ? second : first;
@@ -206,10 +213,10 @@ namespace PotionPopQuest.Core
             scoreGained += cascadeScore;
             UpdateState(animationEvents);
             TryShuffleBoardIfNeeded(animationEvents);
-            return new MoveResult(true, "Potion activated.", scoreGained, cascades, activation.AffectedPositions, Array.Empty<PotionType>(), State, animationEvents);
+            return new MoveResult(true, "Potion activated.", scoreGained, cascades, activation.AffectedPositions, Array.Empty<PotionType>(), State, animationEvents, boardBeforeMove);
         }
 
-        private MoveResult ResolveMatches(IReadOnlyList<MatchGroup> initialMatches, GridPosition priorityAnchor, List<BoardAnimationEvent> animationEvents)
+        private MoveResult ResolveMatches(IReadOnlyList<MatchGroup> initialMatches, GridPosition priorityAnchor, List<BoardAnimationEvent> animationEvents, BoardSnapshot boardBeforeMove)
         {
             var allCleared = new List<GridPosition>();
             var allCreatedPotions = new List<PotionType>();
@@ -220,7 +227,7 @@ namespace PotionPopQuest.Core
             TryShuffleBoardIfNeeded(animationEvents);
 
             _logger.Log(LogCategory.Match, $"Move resolved with {allCleared.Count} cleared positions, {cascades} cascades, +{scoreGained} score.");
-            return new MoveResult(true, "Match resolved.", scoreGained, cascades, allCleared, allCreatedPotions, State, animationEvents);
+            return new MoveResult(true, "Match resolved.", scoreGained, cascades, allCleared, allCreatedPotions, State, animationEvents, boardBeforeMove);
         }
 
         private bool TryShuffleBoardIfNeeded(ICollection<BoardAnimationEvent> animationEvents)
@@ -230,9 +237,9 @@ namespace PotionPopQuest.Core
                 return false;
             }
 
-            if (_boardShuffler.TryShuffle(Board, _random, out var shuffledPositions))
+            if (_boardShuffler.TryShuffle(Board, _random, out var shuffledPositions, out var movements))
             {
-                animationEvents.Add(new BoardAnimationEvent(BoardAnimationEventKind.BoardShuffled, shuffledPositions));
+                animationEvents.Add(new BoardAnimationEvent(BoardAnimationEventKind.BoardShuffled, shuffledPositions, movements: movements));
                 _logger.Log(LogCategory.Board, $"No valid moves remained; shuffled {shuffledPositions.Count} movable tiles.");
                 return true;
             }
@@ -305,7 +312,7 @@ namespace PotionPopQuest.Core
 
             animationEvents.Add(new BoardAnimationEvent(
                 BoardAnimationEventKind.Clear,
-                impactPositions,
+                clearPositions,
                 cascadeIndex: cascadeIndex));
 
             var createdPotions = potionAnchors.Values.Select(match => match.CreatedPotion).ToArray();
@@ -420,17 +427,22 @@ namespace PotionPopQuest.Core
             }
         }
 
-        private MoveResult Invalid(string message, GridPosition first, GridPosition second)
+        private MoveResult Invalid(string message, GridPosition first, GridPosition second, BoardSnapshot boardBeforeMove)
         {
             return Invalid(message, new[]
             {
                 new BoardAnimationEvent(BoardAnimationEventKind.InvalidSwap, new[] { first, second }, first, second)
-            });
+            }, boardBeforeMove);
         }
 
-        private MoveResult Invalid(string message, IReadOnlyList<BoardAnimationEvent> animationEvents = null)
+        private MoveResult Invalid(string message, BoardSnapshot boardBeforeMove)
         {
-            return new MoveResult(false, message, 0, 0, Array.Empty<GridPosition>(), Array.Empty<PotionType>(), State, animationEvents);
+            return Invalid(message, null, boardBeforeMove);
+        }
+
+        private MoveResult Invalid(string message, IReadOnlyList<BoardAnimationEvent> animationEvents = null, BoardSnapshot boardBeforeMove = null)
+        {
+            return new MoveResult(false, message, 0, 0, Array.Empty<GridPosition>(), Array.Empty<PotionType>(), State, animationEvents, boardBeforeMove);
         }
     }
 }

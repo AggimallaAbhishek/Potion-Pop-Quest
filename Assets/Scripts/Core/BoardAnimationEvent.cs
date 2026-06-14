@@ -31,7 +31,8 @@ namespace PotionPopQuest.Core
             IngredientType ingredient = IngredientType.None,
             PotionType potion = PotionType.None,
             ObstacleType obstacle = ObstacleType.None,
-            int cascadeIndex = 0)
+            int cascadeIndex = 0,
+            IEnumerable<TileMovementEvent> movements = null)
         {
             Kind = kind;
             Positions = positions?.Distinct().ToArray() ?? Array.Empty<GridPosition>();
@@ -41,6 +42,7 @@ namespace PotionPopQuest.Core
             Potion = potion;
             Obstacle = obstacle;
             CascadeIndex = cascadeIndex;
+            Movements = movements?.ToArray() ?? Array.Empty<TileMovementEvent>();
         }
 
         public BoardAnimationEventKind Kind { get; }
@@ -51,6 +53,7 @@ namespace PotionPopQuest.Core
         public PotionType Potion { get; }
         public ObstacleType Obstacle { get; }
         public int CascadeIndex { get; }
+        public IReadOnlyList<TileMovementEvent> Movements { get; }
     }
 
     public sealed class TileMovementEvent

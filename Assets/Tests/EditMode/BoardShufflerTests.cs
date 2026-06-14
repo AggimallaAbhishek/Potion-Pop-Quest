@@ -15,10 +15,12 @@ namespace PotionPopQuest.Tests
 
             Assert.That(moveFinder.TryFindValidMove(board, out _), Is.False);
 
-            var shuffled = shuffler.TryShuffle(board, new SystemRandomSource(7), out var shuffledPositions);
+            var shuffled = shuffler.TryShuffle(board, new SystemRandomSource(7), out var shuffledPositions, out var movements);
 
             Assert.That(shuffled, Is.True);
             Assert.That(shuffledPositions, Is.Not.Empty);
+            Assert.That(movements, Is.Not.Empty);
+            Assert.That(movements.All(movement => shuffledPositions.Contains(movement.From) && shuffledPositions.Contains(movement.To)), Is.True);
             Assert.That(new MatchFinder().FindMatches(board), Is.Empty);
             Assert.That(moveFinder.TryFindValidMove(board, out _), Is.True);
         }
@@ -61,8 +63,11 @@ namespace PotionPopQuest.Tests
             var result = session.TryShuffleIfNeeded();
 
             Assert.That(result.ValidMove, Is.True);
+            Assert.That(result.BoardBeforeMove, Is.Not.Null);
             Assert.That(session.MovesRemaining, Is.EqualTo(beforeMoves));
-            Assert.That(result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.BoardShuffled), Is.True);
+            var shuffleEvent = result.AnimationEvents.FirstOrDefault(item => item.Kind == BoardAnimationEventKind.BoardShuffled);
+            Assert.That(shuffleEvent, Is.Not.Null);
+            Assert.That(shuffleEvent.Movements, Is.Not.Empty);
             Assert.That(new BoardMoveFinder().TryFindValidMove(session.Board, out _), Is.True);
         }
 

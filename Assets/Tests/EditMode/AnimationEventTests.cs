@@ -11,10 +11,15 @@ namespace PotionPopQuest.Tests
         {
             var session = CreateSessionWithPatternBoard();
             var move = new CandidateMove(new GridPosition(2, 2), new GridPosition(3, 2));
+            var firstBefore = session.Board.GetCell(move.First).Ingredient;
+            var secondBefore = session.Board.GetCell(move.Second).Ingredient;
 
             var result = session.TrySwap(move.First, move.Second);
 
             Assert.That(result.ValidMove, Is.True);
+            Assert.That(result.BoardBeforeMove, Is.Not.Null);
+            Assert.That(result.BoardBeforeMove.GetCell(move.First).Ingredient, Is.EqualTo(firstBefore));
+            Assert.That(result.BoardBeforeMove.GetCell(move.Second).Ingredient, Is.EqualTo(secondBefore));
             Assert.That(result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.Swap), Is.True);
             Assert.That(result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.Clear), Is.True);
             Assert.That(result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.TileDropped || item.Kind == BoardAnimationEventKind.TileSpawned), Is.True);
@@ -25,10 +30,14 @@ namespace PotionPopQuest.Tests
         {
             var session = CreateSessionWithPatternBoard();
             var before = session.MovesRemaining;
+            var first = new GridPosition(0, 0);
+            var firstIngredient = session.Board.GetCell(first).Ingredient;
 
-            var result = session.TrySwap(new GridPosition(0, 0), new GridPosition(0, 1));
+            var result = session.TrySwap(first, new GridPosition(0, 1));
 
             Assert.That(result.ValidMove, Is.False);
+            Assert.That(result.BoardBeforeMove, Is.Not.Null);
+            Assert.That(result.BoardBeforeMove.GetCell(first).Ingredient, Is.EqualTo(firstIngredient));
             Assert.That(session.MovesRemaining, Is.EqualTo(before));
             Assert.That(result.AnimationEvents.Any(item => item.Kind == BoardAnimationEventKind.InvalidSwap), Is.True);
         }
@@ -45,6 +54,20 @@ namespace PotionPopQuest.Tests
             Assert.That(result.AnimationEvents.Any(item =>
                 item.Kind == BoardAnimationEventKind.PotionCreated
                 && (item.Potion == PotionType.LineHorizontal || item.Potion == PotionType.LineVertical)), Is.True);
+        }
+
+        [Test]
+        public void TrySwap_MatchFourClearEventExcludesPotionAnchor()
+        {
+            var session = CreateSessionWithPatternBoard();
+            session.Board.SetIngredient(new GridPosition(2, 3), IngredientType.RedHerb);
+
+            var result = session.TrySwap(new GridPosition(2, 2), new GridPosition(3, 2));
+            var potionEvent = result.AnimationEvents.First(item => item.Kind == BoardAnimationEventKind.PotionCreated);
+            var clearEvent = result.AnimationEvents.First(item => item.Kind == BoardAnimationEventKind.Clear && item.CascadeIndex == 0);
+
+            Assert.That(result.ValidMove, Is.True);
+            Assert.That(clearEvent.Positions.Contains(potionEvent.Positions.Single()), Is.False);
         }
 
         [Test]

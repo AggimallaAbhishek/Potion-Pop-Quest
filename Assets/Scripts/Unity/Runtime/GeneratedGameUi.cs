@@ -17,6 +17,7 @@ namespace PotionPopQuest.Unity
         private Transform _root;
         private UiFeedbackAnimator _feedbackAnimator;
         private BoardAnimationController _boardAnimationController;
+        private BoardVisualPresenter _boardPresenter;
         private GameObject _mainMenu;
         private GameObject _levelSelect;
         private GameObject _game;
@@ -112,6 +113,7 @@ namespace PotionPopQuest.Unity
             var canvasObject = CreateCanvas(parent);
             _feedbackAnimator = canvasObject.AddComponent<UiFeedbackAnimator>();
             _boardAnimationController = canvasObject.AddComponent<BoardAnimationController>();
+            _boardPresenter = new BoardVisualPresenter(_logger, _iconFactory, () => Font);
             _root = canvasObject.transform;
             _mainMenu = CreateScreen("Main Menu");
             _levelSelect = CreateScreen("Level Select");
@@ -183,7 +185,7 @@ namespace PotionPopQuest.Unity
             HideAll();
             _game.SetActive(true);
             UpdateHud(session, message);
-            RenderBoard(session.Board, selectedTile, feedbackCue);
+            _boardPresenter.Render(BoardSnapshot.From(session.Board), selectedTile, feedbackCue);
             _feedbackAnimator.PlayBoardFeedback(feedbackCue, _boardRoot);
         }
 
@@ -195,7 +197,7 @@ namespace PotionPopQuest.Unity
         {
             HideAll();
             _game.SetActive(true);
-            RenderBoard(session.Board, selectedTile, feedbackCue);
+            _boardPresenter.Render(result.BoardBeforeMove ?? BoardSnapshot.From(session.Board), selectedTile, UiFeedbackCue.None);
             var finalScore = session.Score;
             var startingScore = Math.Max(0, finalScore - result.ScoreGained);
             _movesText.text = $"Moves\n{session.MovesRemaining}";
@@ -204,7 +206,7 @@ namespace PotionPopQuest.Unity
             _scoreText.text = $"Score\n{startingScore}";
 
             _feedbackAnimator.PlayBoardFeedback(feedbackCue, _boardRoot);
-            yield return _boardAnimationController.Play(result.AnimationEvents, _tileViews, _boardRoot);
+            yield return _boardPresenter.Play(result.AnimationEvents, BoardSnapshot.From(session.Board));
             ShowFloatingScore(result.ScoreGained, result.Cascades);
             yield return AnimateScore(startingScore, finalScore);
             UpdateHud(session, result.Message);
@@ -286,7 +288,7 @@ namespace PotionPopQuest.Unity
 
         private void AddHintOutline(GridPosition position)
         {
-            if (!_tileViews.TryGetValue(position, out var rect) || rect == null)
+            if (_boardPresenter == null || !_boardPresenter.TryGetTile(position, out var rect) || rect == null)
             {
                 return;
             }
@@ -465,13 +467,6 @@ namespace PotionPopQuest.Unity
             boardElement.preferredHeight = 720;
             boardElement.flexibleWidth = 0;
             boardElement.flexibleHeight = 0;
-            var boardLayout = boardPanel.AddComponent<GridLayoutGroup>();
-            boardLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            boardLayout.constraintCount = 8;
-            boardLayout.cellSize = new Vector2(78, 78);
-            boardLayout.spacing = new Vector2(8, 8);
-            boardLayout.padding = new RectOffset(24, 24, 24, 24);
-            boardLayout.childAlignment = TextAnchor.MiddleCenter;
             var floatingLayerObject = new GameObject("Floating Feedback Layer", typeof(RectTransform), typeof(LayoutElement));
             floatingLayerObject.transform.SetParent(boardPanel.transform, false);
             _floatingLayer = floatingLayerObject.GetComponent<RectTransform>();
@@ -480,6 +475,7 @@ namespace PotionPopQuest.Unity
             _floatingLayer.offsetMin = Vector2.zero;
             _floatingLayer.offsetMax = Vector2.zero;
             floatingLayerObject.GetComponent<LayoutElement>().ignoreLayout = true;
+            _boardPresenter.Configure(_boardRoot, _floatingLayer, _tilePressed, _playSfx);
 
             _messageText = CreateLabel(_game.transform, "", 24, TextAnchor.MiddleCenter);
             _messageText.rectTransform.sizeDelta = new Vector2(840, 64);

@@ -18,6 +18,15 @@ namespace PotionPopQuest.Core
 
         public bool TryShuffle(BoardState board, IRandomSource random, out IReadOnlyList<GridPosition> shuffledPositions)
         {
+            return TryShuffle(board, random, out shuffledPositions, out _);
+        }
+
+        public bool TryShuffle(
+            BoardState board,
+            IRandomSource random,
+            out IReadOnlyList<GridPosition> shuffledPositions,
+            out IReadOnlyList<TileMovementEvent> movements)
+        {
             if (board == null)
             {
                 throw new ArgumentNullException(nameof(board));
@@ -32,10 +41,11 @@ namespace PotionPopQuest.Core
                 .Where(position => board.GetCell(position).CanMoveIngredient)
                 .ToArray();
             var originalPayloads = positions
-                .Select(position => TilePayload.From(board.GetCell(position)))
+                .Select(position => TilePayload.From(board.GetCell(position), position))
                 .ToArray();
 
             shuffledPositions = Array.Empty<GridPosition>();
+            movements = Array.Empty<TileMovementEvent>();
             if (positions.Length < 3)
             {
                 return false;
@@ -47,6 +57,7 @@ namespace PotionPopQuest.Core
                 if (TryApplyCandidate(board, positions, rotated))
                 {
                     shuffledPositions = positions;
+                    movements = BuildMovements(positions, rotated);
                     return true;
                 }
             }
@@ -63,6 +74,7 @@ namespace PotionPopQuest.Core
                 if (TryApplyCandidate(board, positions, candidate))
                 {
                     shuffledPositions = positions;
+                    movements = BuildMovements(positions, candidate);
                     return true;
                 }
             }
@@ -128,20 +140,40 @@ namespace PotionPopQuest.Core
             }
         }
 
+        private static IReadOnlyList<TileMovementEvent> BuildMovements(IReadOnlyList<GridPosition> positions, IReadOnlyList<TilePayload> payloads)
+        {
+            var movements = new List<TileMovementEvent>();
+            for (var index = 0; index < positions.Count; index++)
+            {
+                var target = positions[index];
+                var payload = payloads[index];
+                if (payload.SourcePosition == target)
+                {
+                    continue;
+                }
+
+                movements.Add(new TileMovementEvent(payload.SourcePosition, target, payload.Ingredient, payload.Potion));
+            }
+
+            return movements;
+        }
+
         private readonly struct TilePayload : IEquatable<TilePayload>
         {
-            private TilePayload(IngredientType ingredient, PotionType potion)
+            private TilePayload(IngredientType ingredient, PotionType potion, GridPosition sourcePosition)
             {
                 Ingredient = ingredient;
                 Potion = potion;
+                SourcePosition = sourcePosition;
             }
 
             public IngredientType Ingredient { get; }
             public PotionType Potion { get; }
+            public GridPosition SourcePosition { get; }
 
-            public static TilePayload From(BoardCell cell)
+            public static TilePayload From(BoardCell cell, GridPosition sourcePosition)
             {
-                return new TilePayload(cell.Ingredient, cell.Potion);
+                return new TilePayload(cell.Ingredient, cell.Potion, sourcePosition);
             }
 
             public bool Equals(TilePayload other)
