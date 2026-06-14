@@ -23,6 +23,7 @@ namespace PotionPopQuest.Unity
         private readonly Dictionary<GridPosition, RectTransform> _tileViews = new Dictionary<GridPosition, RectTransform>();
         private readonly Dictionary<GridPosition, BoardCellSnapshot> _viewCells = new Dictionary<GridPosition, BoardCellSnapshot>();
         private readonly Stack<Button> _tileButtonPool = new Stack<Button>();
+        private readonly Stack<Image> _vfxImagePool = new Stack<Image>();
         private readonly List<Outline> _selectionOutlines = new List<Outline>();
 
         private RectTransform _boardRoot;
@@ -214,7 +215,16 @@ namespace PotionPopQuest.Unity
 
             var firstStart = CellPosition(first);
             var secondStart = CellPosition(second);
-            yield return MovePair(firstRect, firstStart, secondStart, secondRect, secondStart, firstStart, GameplayPresentationConfig.SwapDuration, pulse: true);
+            yield return TileTweenRunner.MovePair(
+                firstRect,
+                firstStart,
+                secondStart,
+                secondRect,
+                secondStart,
+                firstStart,
+                GameplayPresentationConfig.SwapDuration,
+                TileTweenEase.EaseInOutCubic,
+                1.05f);
 
             _tileViews[first] = secondRect;
             _tileViews[second] = firstRect;
@@ -256,92 +266,30 @@ namespace PotionPopQuest.Unity
 
             yield return new WaitForSecondsRealtime(0.03f);
 
-            // Pop with larger scale and EaseOutBack
             yield return ScaleFadeWithEasing(targets, Vector3.one, Vector3.one * 1.24f, 1f, 0f, GameplayPresentationConfig.ClearPopDuration);
 
-            // Spawn sparks from each cleared position
+            var origins = new List<Vector2>();
             foreach (var position in targets)
             {
                 if (_tileViews.TryGetValue(position, out var rect) && rect != null)
                 {
-                    SpawnSparks(rect.anchoredPosition, _boardRoot);
+                    origins.Add(rect.anchoredPosition);
                 }
 
                 ReleaseTile(position);
             }
+
+            yield return PlaySparkBursts(origins, targets.Length);
         }
 
-        /// <summary>Spawns small spark rectangles that fly outward diagonally and fade.</summary>
-        private void SpawnSparks(Vector2 origin, RectTransform parent)
-        {
-            if (parent == null) return;
-            var mono = parent.GetComponent<MonoBehaviour>();
-            if (mono == null) return;
-
-            var directions = new[] {
-                new Vector2(1f, 1f).normalized,
-                new Vector2(-1f, 1f).normalized,
-                new Vector2(1f, -1f).normalized,
-                new Vector2(-1f, -1f).normalized
-            };
-
-            for (var i = 0; i < Mathf.Min(GameplayPresentationConfig.SparkCount, directions.Length); i++)
-            {
-                var sparkObject = new GameObject("Spark", typeof(RectTransform), typeof(Image));
-                sparkObject.transform.SetParent(parent, false);
-                var sparkRect = sparkObject.GetComponent<RectTransform>();
-                sparkRect.anchorMin = new Vector2(0.5f, 0.5f);
-                sparkRect.anchorMax = new Vector2(0.5f, 0.5f);
-                sparkRect.sizeDelta = new Vector2(8f, 8f);
-                sparkRect.anchoredPosition = origin;
-                var sparkImage = sparkObject.GetComponent<Image>();
-                sparkImage.color = UiColorPalette.ClearGlow;
-                sparkImage.raycastTarget = false;
-                mono.StartCoroutine(SparkRoutine(sparkRect, sparkImage, directions[i]));
-            }
-
-            KeepFloatingLayerOnTop();
-        }
-
-        private static IEnumerator SparkRoutine(RectTransform rect, Image image, Vector2 direction)
-        {
-            var start = rect.anchoredPosition;
-            var duration = GameplayPresentationConfig.SparkLifetime;
-            var speed = GameplayPresentationConfig.SparkSpeed;
-            var elapsed = 0f;
-
-            while (elapsed < duration && rect != null)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                var t = Mathf.Clamp01(elapsed / duration);
-                var eased = EasingFunctions.EaseOutQuart(t);
-                rect.anchoredPosition = start + direction * speed * eased;
-                rect.sizeDelta = Vector2.Lerp(new Vector2(8f, 8f), new Vector2(3f, 3f), eased);
-                if (image != null)
-                {
-                    image.color = UiColorPalette.WithAlpha(UiColorPalette.ClearGlow, 1f - eased);
-                }
-
-                yield return null;
-            }
-
-            if (rect != null)
-            {
-                UnityEngine.Object.Destroy(rect.gameObject);
-            }
-        }
-
-        /// <summary>ScaleFade with EaseOutBack for a dramatic pop effect.</summary>
-        private static IEnumerator ScaleFadeWithEasing(IReadOnlyList<GridPosition> positions,
+        private IEnumerator ScaleFadeWithEasing(IReadOnlyList<GridPosition> positions,
             Vector3 startScale, Vector3 endScale, float startAlpha, float endAlpha, float duration)
         {
-            // Resolve targets within calling scope
-            var elapsed = 0f;
-            while (elapsed < duration)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                yield return null;
-            }
+            var targets = positions
+                .Where(position => _tileViews.TryGetValue(position, out var rect) && rect != null)
+                .Select(position => _tileViews[position])
+                .ToArray();
+            yield return TileTweenRunner.ScaleFade(targets, startScale, endScale, startAlpha, endAlpha, duration, TileTweenEase.EaseOutBack);
         }
 
         private IEnumerator ReleaseAffectedIngredientViews(IReadOnlyList<GridPosition> positions)
@@ -437,7 +385,7 @@ namespace PotionPopQuest.Unity
             var allMotions = movements.Concat(spawned).ToArray();
             if (allMotions.Length > 0)
             {
-                yield return MoveTiles(allMotions, GameplayPresentationConfig.DropDuration);
+                yield return MoveTiles(allMotions, MovementDuration(allMotions), TileTweenEase.EaseOutBack);
             }
 
             ApplyMovementMappings(movements, spawned);
@@ -478,7 +426,7 @@ namespace PotionPopQuest.Unity
             }
 
             yield return Pulse(_boardRoot, 1.025f, GameplayPresentationConfig.BoardPulseDuration * 0.5f);
-            yield return MoveTiles(motions, GameplayPresentationConfig.SpawnDropDuration);
+            yield return MoveTiles(motions, GameplayPresentationConfig.SpawnDropDuration, TileTweenEase.EaseInOutCubic);
             ApplyMovementMappings(motions);
         }
 
@@ -578,6 +526,9 @@ namespace PotionPopQuest.Unity
 
             if (cell.Potion != PotionType.None)
             {
+                CreateDepthLayer(rect, "PotionGlow",
+                    new Vector2(0.48f, 0.48f), new Vector2(1.05f, 1.05f),
+                    UiColorPalette.WithAlpha(PotionColor(cell.Potion), 0.34f));
                 CreateIconImage(rect, _iconFactory.GetPotionSprite(cell.Potion), new Vector2(0.58f, 0.58f), new Vector2(0.98f, 0.98f), Color.white);
             }
 
@@ -963,75 +914,132 @@ namespace PotionPopQuest.Unity
             }
         }
 
-        private static IEnumerator MovePair(
-            RectTransform first,
-            Vector2 firstStart,
-            Vector2 firstEnd,
-            RectTransform second,
-            Vector2 secondStart,
-            Vector2 secondEnd,
-            float duration,
-            bool pulse)
+        private IEnumerator PlaySparkBursts(IReadOnlyList<Vector2> origins, int clearedTileCount)
         {
-            var firstScale = first.localScale;
-            var secondScale = second.localScale;
+            if (_boardRoot == null || origins == null || origins.Count == 0)
+            {
+                yield break;
+            }
+
+            var positions = origins.Take(GameplayPresentationConfig.MaxSparkBurstTiles).ToArray();
+            var sparksPerTile = clearedTileCount > GameplayPresentationConfig.MaxSparkBurstTiles
+                ? GameplayPresentationConfig.LargeCascadeSparkCount
+                : GameplayPresentationConfig.SparkCount;
+            var directions = new[]
+            {
+                new Vector2(1f, 1f).normalized,
+                new Vector2(-1f, 1f).normalized,
+                new Vector2(1f, -1f).normalized,
+                new Vector2(-1f, -1f).normalized,
+                new Vector2(0f, 1f),
+                new Vector2(0f, -1f)
+            };
+
+            var active = new List<Image>();
+            var starts = new List<Vector2>();
+            var activeDirections = new List<Vector2>();
+            foreach (var origin in positions)
+            {
+                for (var index = 0; index < Mathf.Min(sparksPerTile, directions.Length); index++)
+                {
+                    var spark = RentVfxImage("Spark", UiColorPalette.ClearGlow, new Vector2(8f, 8f), origin);
+                    active.Add(spark);
+                    starts.Add(origin);
+                    activeDirections.Add(directions[index]);
+                }
+            }
+
+            KeepFloatingLayerOnTop();
             var elapsed = 0f;
-            while (elapsed < duration && first != null && second != null)
+            while (elapsed < GameplayPresentationConfig.SparkLifetime)
             {
                 elapsed += Time.unscaledDeltaTime;
-                var t = Smooth(Mathf.Clamp01(elapsed / duration));
-                var scale = pulse ? Mathf.Lerp(1f, 1.08f, Mathf.Sin(t * Mathf.PI)) : 1f;
-                first.anchoredPosition = Vector2.LerpUnclamped(firstStart, firstEnd, t);
-                second.anchoredPosition = Vector2.LerpUnclamped(secondStart, secondEnd, t);
-                first.localScale = firstScale * scale;
-                second.localScale = secondScale * scale;
+                var t = Mathf.Clamp01(elapsed / GameplayPresentationConfig.SparkLifetime);
+                var eased = EasingFunctions.EaseOutQuart(t);
+                for (var index = 0; index < active.Count; index++)
+                {
+                    var spark = active[index];
+                    if (spark == null)
+                    {
+                        continue;
+                    }
+
+                    var rect = spark.rectTransform;
+                    rect.anchoredPosition = starts[index] + activeDirections[index] * GameplayPresentationConfig.SparkSpeed * eased;
+                    rect.sizeDelta = Vector2.Lerp(new Vector2(8f, 8f), new Vector2(3f, 3f), eased);
+                    spark.color = UiColorPalette.WithAlpha(UiColorPalette.ClearGlow, 1f - eased);
+                }
+
                 yield return null;
             }
 
-            if (first != null)
+            foreach (var image in active)
             {
-                first.anchoredPosition = firstEnd;
-                first.localScale = firstScale;
-            }
-
-            if (second != null)
-            {
-                second.anchoredPosition = secondEnd;
-                second.localScale = secondScale;
+                ReleaseVfxImage(image);
             }
         }
 
-        private static IEnumerator MoveTiles(IReadOnlyList<TileMotion> motions, float duration)
+        private Image RentVfxImage(string name, Color color, Vector2 size, Vector2 anchoredPosition)
         {
-            var elapsed = 0f;
-            while (elapsed < duration)
+            Image image;
+            if (_vfxImagePool.Count > 0)
             {
-                elapsed += Time.unscaledDeltaTime;
-                var t = EasingFunctions.EaseOutBounce(Mathf.Clamp01(elapsed / duration));
-                foreach (var motion in motions)
-                {
-                    if (motion.Rect != null)
-                    {
-                        motion.Rect.anchoredPosition = Vector2.LerpUnclamped(motion.Start, motion.End, t);
-                        // Squash effect at landing: compress Y slightly
-                        var squash = Mathf.Sin(Mathf.Clamp01(elapsed / duration) * Mathf.PI);
-                        var scaleY = Mathf.Lerp(1f, 0.92f, squash * 0.3f);
-                        var scaleX = Mathf.Lerp(1f, 1.04f, squash * 0.3f);
-                        motion.Rect.localScale = new Vector3(scaleX, scaleY, 1f);
-                    }
-                }
-
-                yield return null;
+                image = _vfxImagePool.Pop();
+                image.gameObject.name = name;
+                image.gameObject.SetActive(true);
+            }
+            else
+            {
+                var effectObject = new GameObject(name, typeof(RectTransform), typeof(Image));
+                image = effectObject.GetComponent<Image>();
             }
 
-            foreach (var motion in motions)
+            image.transform.SetParent(_boardRoot, false);
+            image.color = color;
+            image.raycastTarget = false;
+            var rect = image.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = size;
+            rect.anchoredPosition = anchoredPosition;
+            rect.localScale = Vector3.one;
+            rect.localRotation = Quaternion.identity;
+            return image;
+        }
+
+        private void ReleaseVfxImage(Image image)
+        {
+            if (image == null)
             {
-                if (motion.Rect != null)
-                {
-                    motion.Rect.anchoredPosition = motion.End;
-                    motion.Rect.localScale = Vector3.one;
-                }
+                return;
             }
+
+            image.gameObject.SetActive(false);
+            image.transform.SetParent(_boardRoot, false);
+            if (_vfxImagePool.Count >= GameplayPresentationConfig.MaxActiveVfxImages)
+            {
+                UnityEngine.Object.Destroy(image.gameObject);
+                return;
+            }
+
+            _vfxImagePool.Push(image);
+        }
+
+        private IEnumerator MoveTiles(IReadOnlyList<TileMotion> motions, float duration, TileTweenEase ease)
+        {
+            var tweenMotions = motions
+                .Select(motion => new TileTweenMotion(motion.Rect, motion.Start, motion.End, squashOnLand: true))
+                .ToArray();
+            yield return TileTweenRunner.MoveMany(tweenMotions, duration, ease);
+        }
+
+        private static float MovementDuration(IReadOnlyList<TileMotion> motions)
+        {
+            var maxRows = motions.Count == 0 ? 1 : motions.Max(motion => Mathf.Abs(motion.To.Row - motion.From.Row));
+            return Mathf.Min(
+                GameplayPresentationConfig.DropMaxDuration,
+                GameplayPresentationConfig.DropDuration + maxRows * GameplayPresentationConfig.DropDurationPerRow);
         }
 
         private static IEnumerator ScaleTiles(IReadOnlyList<RectTransform> targets, Vector3 start, Vector3 end, float duration)
@@ -1060,6 +1068,7 @@ namespace PotionPopQuest.Unity
                 yield break;
             }
 
+            yield return Pulse(_boardRoot, 1.018f, GameplayPresentationConfig.PotionAnticipationDuration);
             if (animationEvent.Potion == PotionType.LineHorizontal || animationEvent.Potion == PotionType.LineVertical)
             {
                 yield return Beam(animationEvent.Potion == PotionType.LineHorizontal);
@@ -1067,42 +1076,29 @@ namespace PotionPopQuest.Unity
             }
 
             var color = PotionColor(animationEvent.Potion);
-            var burst = new GameObject("Potion Burst", typeof(RectTransform), typeof(Image));
-            burst.transform.SetParent(_boardRoot, false);
-            var rect = burst.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            var burst = RentVfxImage("Potion Burst", new Color(color.r, color.g, color.b, 0.45f), Vector2.one * (animationEvent.Potion == PotionType.Bomb ? 140f : 220f), Vector2.zero);
+            var rect = burst.rectTransform;
             rect.sizeDelta = Vector2.one * (animationEvent.Potion == PotionType.Bomb ? 140f : 220f);
-            var image = burst.GetComponent<Image>();
-            image.color = new Color(color.r, color.g, color.b, 0.45f);
-            image.raycastTarget = false;
             KeepFloatingLayerOnTop();
 
-            yield return Scale(rect, Vector3.one * 0.35f, Vector3.one * 1.35f, GameplayPresentationConfig.PotionBurstDuration);
-            UnityEngine.Object.Destroy(burst);
+            yield return TileTweenRunner.Scale(rect, Vector3.one * 0.35f, Vector3.one * 1.35f, GameplayPresentationConfig.PotionBurstDuration, TileTweenEase.EaseOutBack);
+            ReleaseVfxImage(burst);
         }
 
         private IEnumerator Beam(bool horizontal)
         {
-            var beam = new GameObject("Line Potion Beam", typeof(RectTransform), typeof(Image));
-            beam.transform.SetParent(_boardRoot, false);
-            var rect = beam.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = horizontal ? new Vector2(_boardRoot.rect.width, 18f) : new Vector2(18f, _boardRoot.rect.height);
-            var image = beam.GetComponent<Image>();
-            image.color = new Color(0.74f, 0.94f, 1f, 0.72f);
-            image.raycastTarget = false;
+            var beam = RentVfxImage("Line Potion Beam", new Color(0.74f, 0.94f, 1f, 0.72f), horizontal ? new Vector2(_boardRoot.rect.width, 18f) : new Vector2(18f, _boardRoot.rect.height), Vector2.zero);
+            var rect = beam.rectTransform;
             KeepFloatingLayerOnTop();
 
-            yield return Scale(rect, horizontal ? new Vector3(0.08f, 1f, 1f) : new Vector3(1f, 0.08f, 1f), Vector3.one, GameplayPresentationConfig.BeamDuration);
-            UnityEngine.Object.Destroy(beam);
+            yield return TileTweenRunner.Scale(rect, horizontal ? new Vector3(0.08f, 1f, 1f) : new Vector3(1f, 0.08f, 1f), Vector3.one, GameplayPresentationConfig.BeamDuration, TileTweenEase.EaseOutCubic);
+            ReleaseVfxImage(beam);
         }
 
         private static IEnumerator Pulse(RectTransform target, float scale, float duration)
         {
-            yield return Scale(target, Vector3.one, Vector3.one * scale, duration * 0.5f);
-            yield return Scale(target, Vector3.one * scale, Vector3.one, duration * 0.5f);
+            yield return TileTweenRunner.Scale(target, Vector3.one, Vector3.one * scale, duration * 0.5f, TileTweenEase.EaseOutQuart);
+            yield return TileTweenRunner.Scale(target, Vector3.one * scale, Vector3.one, duration * 0.5f, TileTweenEase.EaseOutCubic);
         }
 
         private static IEnumerator Scale(RectTransform target, Vector3 start, Vector3 end, float duration)

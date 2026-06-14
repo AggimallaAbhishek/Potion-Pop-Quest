@@ -34,11 +34,13 @@ namespace PotionPopQuest.Unity
         private GridPosition? _selectedTile;
         private int _currentLevelNumber = 1;
         private readonly BoardMoveFinder _moveFinder = new BoardMoveFinder();
+        private readonly Dictionary<GameSfxCue, float> _lastCueTimes = new Dictionary<GameSfxCue, float>();
         private AudioSource _sfxSource;
         private AudioSource _musicSource;
         private bool _inputLocked;
         private bool _hintVisible;
         private float _idleHintTimer;
+        private bool _musicGestureUnlocked;
 
         private void Start()
         {
@@ -71,6 +73,10 @@ namespace PotionPopQuest.Unity
                 ResetProgress,
                 ToggleMusic,
                 ToggleSfx,
+                SetMusicVolume,
+                SetSfxVolume,
+                ToggleVibration,
+                DismissLevelIntro,
                 PlaySfx);
 
             ShowMainMenu();
@@ -78,6 +84,12 @@ namespace PotionPopQuest.Unity
 
         private void Update()
         {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                HandleBackRequested();
+                return;
+            }
+
             if (_inputLocked || _hintVisible || _session == null || _session.State != GameSessionState.Playing)
             {
                 return;
@@ -107,7 +119,12 @@ namespace PotionPopQuest.Unity
         private void ShowSettings()
         {
             ClearHintState();
-            _ui.ShowSettings(_saveData.musicEnabled, _saveData.sfxEnabled);
+            _ui.ShowSettings(
+                _saveData.musicEnabled,
+                _saveData.sfxEnabled,
+                _saveData.musicVolume,
+                _saveData.sfxVolume,
+                _saveData.vibrationEnabled);
         }
 
         private void StartFirstUnlockedLevel()
@@ -134,6 +151,7 @@ namespace PotionPopQuest.Unity
             ClearHintState();
             _selectedTile = null;
             _session = new GameSession(level, random: new SystemRandomSource(), logger: _logger);
+            _inputLocked = true;
             _ui.ShowGame(_session, _selectedTile);
             _ui.ShowLevelIntro(_session);
             _ui.ShowTutorial(level);
@@ -276,6 +294,37 @@ namespace PotionPopQuest.Unity
             _saveRepository.Save(_saveData);
         }
 
+        private void SetMusicVolume(float volume)
+        {
+            _saveData.musicVolume = Mathf.Clamp01(volume);
+            _saveRepository.Save(_saveData);
+            ApplyMusicState();
+        }
+
+        private void SetSfxVolume(float volume)
+        {
+            _saveData.sfxVolume = Mathf.Clamp01(volume);
+            _saveRepository.Save(_saveData);
+            if (_sfxSource != null)
+            {
+                _sfxSource.volume = _saveData.sfxVolume;
+            }
+        }
+
+        private void ToggleVibration(bool enabled)
+        {
+            _saveData.vibrationEnabled = enabled;
+            _saveRepository.Save(_saveData);
+            _logger.Log(LogCategory.UI, $"Vibration placeholder set to {enabled}.");
+        }
+
+        private void DismissLevelIntro()
+        {
+            _inputLocked = false;
+            _idleHintTimer = 0f;
+            _logger.Log(LogCategory.UI, $"Level {_currentLevelNumber} intro dismissed.");
+        }
+
         private void ResetProgress()
         {
             _saveRepository.Reset();
@@ -298,6 +347,18 @@ namespace PotionPopQuest.Unity
                 Screen.sleepTimeout = SleepTimeout.NeverSleep;
                 Screen.orientation = ScreenOrientation.Portrait;
             }
+        }
+
+        private void HandleBackRequested()
+        {
+            ClearHintState();
+            if (_session != null && _session.State == GameSessionState.Playing)
+            {
+                ShowSettings();
+                return;
+            }
+
+            ShowMainMenu();
         }
 
         private static UiFeedbackCue FeedbackFor(MoveResult result)
@@ -356,7 +417,14 @@ namespace PotionPopQuest.Unity
 
         private void PlaySfx(GameSfxCue cue)
         {
+            UnlockWebGlMusicAfterGesture();
             if (_saveData != null && !_saveData.sfxEnabled)
+            {
+                return;
+            }
+
+            if (_lastCueTimes.TryGetValue(cue, out var lastTime)
+                && Time.unscaledTime - lastTime < GameplayPresentationConfig.RepeatedCueCooldown)
             {
                 return;
             }
@@ -367,7 +435,35 @@ namespace PotionPopQuest.Unity
                 return;
             }
 
+            _lastCueTimes[cue] = Time.unscaledTime;
+            _sfxSource.volume = _saveData != null ? Mathf.Clamp01(_saveData.sfxVolume) : GameplayPresentationConfig.DefaultSfxVolume;
+            _sfxSource.pitch = PitchFor(cue);
             _sfxSource.PlayOneShot(clip);
+            _sfxSource.pitch = 1f;
+        }
+
+        private void UnlockWebGlMusicAfterGesture()
+        {
+            if (_musicGestureUnlocked)
+            {
+                return;
+            }
+
+            _musicGestureUnlocked = true;
+            ApplyMusicState();
+        }
+
+        private static float PitchFor(GameSfxCue cue)
+        {
+            switch (cue)
+            {
+                case GameSfxCue.Match:
+                case GameSfxCue.Cascade:
+                case GameSfxCue.Tap:
+                    return UnityEngine.Random.Range(0.94f, 1.06f);
+                default:
+                    return 1f;
+            }
         }
 
         private AudioClip ClipFor(GameSfxCue cue)
@@ -426,11 +522,18 @@ namespace PotionPopQuest.Unity
 
             if (_saveData != null && _saveData.musicEnabled && musicLoop != null)
             {
+                if (Application.platform == RuntimePlatform.WebGLPlayer && !_musicGestureUnlocked)
+                {
+                    _musicSource.Stop();
+                    return;
+                }
+
                 if (_musicSource.clip != musicLoop)
                 {
                     _musicSource.clip = musicLoop;
                 }
 
+                _musicSource.volume = Mathf.Clamp01(_saveData.musicVolume);
                 if (!_musicSource.isPlaying)
                 {
                     _musicSource.Play();

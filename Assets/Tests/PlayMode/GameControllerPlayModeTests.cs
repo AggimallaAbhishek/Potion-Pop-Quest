@@ -48,9 +48,24 @@ namespace PotionPopQuest.PlayMode.Tests
 
             Assert.That(GameObject.Find("Board Panel"), Is.Not.Null);
             Assert.That(GameObject.Find("Star Progress"), Is.Not.Null);
+            Assert.That(GameObject.Find("Level Intro Overlay"), Is.Not.Null);
             Assert.That(GameObject.Find("Tutorial Banner"), Is.Not.Null);
             Assert.That(FindButton("Hint"), Is.Not.Null);
             Assert.That(GameObject.FindObjectsByType<Button>(FindObjectsSortMode.None).Count(button => button.name == "Tile"), Is.GreaterThanOrEqualTo(64));
+        }
+
+        [UnityTest]
+        public IEnumerator SettingsScreen_ShowsAudioSlidersAndVibrationToggle()
+        {
+            CreateRuntime();
+            yield return null;
+
+            FindButton("Settings").onClick.Invoke();
+            yield return null;
+
+            Assert.That(GameObject.Find("Slider - Music Volume"), Is.Not.Null);
+            Assert.That(GameObject.Find("Slider - SFX Volume"), Is.Not.Null);
+            Assert.That(GameObject.Find("Toggle - Vibration"), Is.Not.Null);
         }
 
         [UnityTest]
@@ -60,6 +75,8 @@ namespace PotionPopQuest.PlayMode.Tests
             yield return null;
 
             FindButton("Play").onClick.Invoke();
+            yield return null;
+            DismissLevelIntro();
             yield return null;
 
             FindButton("Hint").onClick.Invoke();
@@ -154,7 +171,7 @@ namespace PotionPopQuest.PlayMode.Tests
         }
 
         [UnityTest]
-        public IEnumerator BoardVisualPresenter_SpawnOnlyCreatesNewView()
+        public IEnumerator BoardVisualPresenter_SpawnOnlyRestoresSpawnPosition()
         {
             var presenter = CreatePresenter(out var canvas);
             var board = CreatePresenterBoard();
@@ -162,7 +179,7 @@ namespace PotionPopQuest.PlayMode.Tests
             var spawnedIngredient = IngredientType.OrangeFireDrop;
 
             presenter.Render(BoardSnapshot.From(board), null, UiFeedbackCue.None);
-            Assert.That(presenter.TryGetTile(spawnPosition, out var originalRect), Is.True);
+            Assert.That(presenter.TryGetTile(spawnPosition, out _), Is.True);
 
             board.SetIngredient(spawnPosition, spawnedIngredient);
             var finalSnapshot = BoardSnapshot.From(board);
@@ -176,7 +193,7 @@ namespace PotionPopQuest.PlayMode.Tests
                 finalSnapshot);
 
             Assert.That(presenter.TryGetTile(spawnPosition, out var spawnedRect), Is.True);
-            Assert.That(spawnedRect, Is.Not.SameAs(originalRect));
+            Assert.That(spawnedRect.gameObject.activeSelf, Is.True);
             AssertPresenterMatchesSnapshot(presenter, finalSnapshot);
             Object.DestroyImmediate(canvas);
         }
@@ -214,6 +231,11 @@ namespace PotionPopQuest.PlayMode.Tests
         private static void CreateRuntime()
         {
             var root = new GameObject("Potion Pop Quest PlayMode Test Runtime");
+            if (GameObject.FindObjectsByType<AudioListener>(FindObjectsSortMode.None).Length == 0)
+            {
+                root.AddComponent<AudioListener>();
+            }
+
             root.AddComponent<GameController>();
         }
 
@@ -221,6 +243,15 @@ namespace PotionPopQuest.PlayMode.Tests
         {
             return GameObject.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .FirstOrDefault(button => button.name == $"Button - {label}");
+        }
+
+        private static void DismissLevelIntro()
+        {
+            var overlay = GameObject.Find("Level Intro Overlay");
+            Assert.That(overlay, Is.Not.Null);
+            var button = overlay.GetComponent<Button>();
+            Assert.That(button, Is.Not.Null);
+            button.onClick.Invoke();
         }
 
         private static void DestroyExistingRuntime()

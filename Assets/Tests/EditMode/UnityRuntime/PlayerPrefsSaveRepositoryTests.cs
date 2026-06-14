@@ -16,7 +16,10 @@ namespace PotionPopQuest.Unity.Tests
             {
                 highestUnlockedLevel = 4,
                 musicEnabled = false,
-                sfxEnabled = true
+                sfxEnabled = true,
+                musicVolume = 0.35f,
+                sfxVolume = 0.72f,
+                vibrationEnabled = false
             };
             SaveProgressService.ApplyLevelCompleted(save, 3, 2500, 2, hasNextLevel: true);
 
@@ -26,6 +29,9 @@ namespace PotionPopQuest.Unity.Tests
             Assert.That(loaded.highestUnlockedLevel, Is.EqualTo(4));
             Assert.That(loaded.musicEnabled, Is.False);
             Assert.That(loaded.sfxEnabled, Is.True);
+            Assert.That(loaded.musicVolume, Is.EqualTo(0.35f).Within(0.001f));
+            Assert.That(loaded.sfxVolume, Is.EqualTo(0.72f).Within(0.001f));
+            Assert.That(loaded.vibrationEnabled, Is.False);
             Assert.That(loaded.GetOrCreateLevelProgress(3).stars, Is.EqualTo(2));
             Assert.That(loaded.GetOrCreateLevelProgress(3).bestScore, Is.EqualTo(2500));
 
@@ -33,4 +39,3 @@ namespace PotionPopQuest.Unity.Tests
         }
     }
 }
-

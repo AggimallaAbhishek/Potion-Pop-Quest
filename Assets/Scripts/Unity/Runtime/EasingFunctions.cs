@@ -35,6 +35,14 @@ namespace PotionPopQuest.Unity
         }
 
         /// <summary>
+        /// Fast, readable deceleration for tile spawns and light UI motion.
+        /// </summary>
+        public static float EaseOutCubic(float t)
+        {
+            return 1f - Mathf.Pow(1f - t, 3f);
+        }
+
+        /// <summary>
         /// Gentle start, fast end — ideal for exits.
         /// </summary>
         public static float EaseInQuart(float t)

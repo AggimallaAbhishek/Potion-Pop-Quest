@@ -24,6 +24,7 @@ namespace PotionPopQuest.Unity
         private GameObject _game;
         private GameObject _settings;
         private GameObject _modal;
+        private GameObject _levelIntroOverlay;
         private GameObject _currentScreen;
         private RectTransform _boardRoot;
         private Text _movesText;
@@ -50,6 +51,10 @@ namespace PotionPopQuest.Unity
         private Action _resetProgress;
         private Action<bool> _toggleMusic;
         private Action<bool> _toggleSfx;
+        private Action<float> _setMusicVolume;
+        private Action<float> _setSfxVolume;
+        private Action<bool> _toggleVibration;
+        private Action _levelIntroDismissed;
         private Action<GameSfxCue> _playSfx;
 
         public GeneratedGameUi(IGameLogger logger)
@@ -92,6 +97,10 @@ namespace PotionPopQuest.Unity
             Action resetProgress,
             Action<bool> toggleMusic,
             Action<bool> toggleSfx,
+            Action<float> setMusicVolume,
+            Action<float> setSfxVolume,
+            Action<bool> toggleVibration,
+            Action levelIntroDismissed,
             Action<GameSfxCue> playSfx)
         {
             _play = play;
@@ -107,15 +116,20 @@ namespace PotionPopQuest.Unity
             _resetProgress = resetProgress;
             _toggleMusic = toggleMusic;
             _toggleSfx = toggleSfx;
+            _setMusicVolume = setMusicVolume;
+            _setSfxVolume = setSfxVolume;
+            _toggleVibration = toggleVibration;
+            _levelIntroDismissed = levelIntroDismissed;
             _playSfx = playSfx;
 
             EnsureEventSystem();
             var canvasObject = CreateCanvas(parent);
+            var safeAreaRoot = CreateSafeAreaRoot(canvasObject.transform);
             _feedbackAnimator = canvasObject.AddComponent<UiFeedbackAnimator>();
             _boardAnimationController = canvasObject.AddComponent<BoardAnimationController>();
             _screenTransition = canvasObject.AddComponent<ScreenTransitionController>();
             _boardPresenter = new BoardVisualPresenter(_logger, _iconFactory, () => Font);
-            _root = canvasObject.transform;
+            _root = safeAreaRoot.transform;
             _mainMenu = CreateScreen("Main Menu");
             _levelSelect = CreateScreen("Level Select");
             _game = CreateScreen("Game");
@@ -128,12 +142,14 @@ namespace PotionPopQuest.Unity
         public void ShowMainMenu()
         {
             ClearHint();
+            HideLevelIntro();
             TransitionTo(_mainMenu);
         }
 
         public void ShowLevelSelect(IReadOnlyList<LevelData> levels, int highestUnlocked, Func<int, int> starsForLevel)
         {
             ClearHint();
+            HideLevelIntro();
             ClearChildren(_levelSelect.transform);
             CreatePotionLabBackdrop(_levelSelect.transform);
 
@@ -206,14 +222,18 @@ namespace PotionPopQuest.Unity
             }
         }
 
-        public void ShowSettings(bool musicEnabled, bool sfxEnabled)
+        public void ShowSettings(bool musicEnabled, bool sfxEnabled, float musicVolume, float sfxVolume, bool vibrationEnabled)
         {
             ClearHint();
+            HideLevelIntro();
             ClearChildren(_settings.transform);
             CreatePotionLabBackdrop(_settings.transform);
             CreateTitle(_settings.transform, "Settings", 50);
             CreateToggle(_settings.transform, "Music", musicEnabled, _toggleMusic);
+            CreateSlider(_settings.transform, "Music Volume", musicVolume, _setMusicVolume);
             CreateToggle(_settings.transform, "SFX", sfxEnabled, _toggleSfx);
+            CreateSlider(_settings.transform, "SFX Volume", sfxVolume, _setSfxVolume);
+            CreateToggle(_settings.transform, "Vibration", vibrationEnabled, _toggleVibration);
             CreateButton(_settings.transform, "Reset Progress", _resetProgress, UiColorPalette.Ruby, new Vector2(360, 76));
             CreateButton(_settings.transform, "Back", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(260, 72));
             TransitionTo(_settings);
@@ -256,7 +276,69 @@ namespace PotionPopQuest.Unity
 
         public void ShowLevelIntro(GameSession session)
         {
-            _messageText.text = $"{session.Level.DisplayName}\n{GoalLabel(session.GoalTracker.Goals)} - {session.MovesRemaining} moves";
+            HideLevelIntro();
+            _messageText.text = string.Empty;
+
+            _levelIntroOverlay = CreatePanel(_game.transform, "Level Intro Overlay", UiColorPalette.ModalBackdrop);
+            var overlayRect = _levelIntroOverlay.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.offsetMin = Vector2.zero;
+            overlayRect.offsetMax = Vector2.zero;
+            _levelIntroOverlay.AddComponent<LayoutElement>().ignoreLayout = true;
+
+            var blocker = _levelIntroOverlay.AddComponent<Button>();
+            blocker.transition = Selectable.Transition.None;
+
+            var panel = CreatePanel(_levelIntroOverlay.transform, "Level Intro Panel", new Color(0.08f, 0.10f, 0.16f, 0.98f));
+            panel.GetComponent<Image>().raycastTarget = false;
+            var panelRect = panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(760, 740);
+            panel.AddComponent<CanvasGroup>();
+            var layout = panel.AddComponent<VerticalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 16;
+            layout.padding = new RectOffset(34, 34, 36, 30);
+
+            var title = CreateTitle(panel.transform, $"Level {session.Level.LevelNumber}", 52);
+            title.color = UiColorPalette.Gold;
+            var subtitle = CreateLabel(panel.transform, session.Level.DisplayName, 30, TextAnchor.MiddleCenter);
+            subtitle.color = UiColorPalette.TextSecondary;
+
+            var goalsPanel = CreatePanel(panel.transform, "Intro Goals", new Color(0.12f, 0.14f, 0.20f, 0.85f));
+            goalsPanel.GetComponent<Image>().raycastTarget = false;
+            AddLayoutElement(goalsPanel, 660, Mathf.Max(110, session.Level.Goals.Count * 82));
+            var goalsLayout = goalsPanel.AddComponent<VerticalLayoutGroup>();
+            goalsLayout.childAlignment = TextAnchor.MiddleCenter;
+            goalsLayout.spacing = 8;
+            goalsLayout.padding = new RectOffset(14, 14, 14, 14);
+            foreach (var goal in session.Level.Goals)
+            {
+                CreateIntroGoalRow(goalsPanel.transform, goal);
+            }
+
+            var obstacleText = session.Level.Obstacles.Count > 0
+                ? $"Obstacles: {string.Join(", ", session.Level.Obstacles.Select(item => ObstacleName(item.ObstacleType)).Distinct())}"
+                : "Obstacles: None";
+            var obstacleLabel = CreateLabel(panel.transform, obstacleText, 24, TextAnchor.MiddleCenter);
+            obstacleLabel.color = UiColorPalette.TextSecondary;
+
+            var movesLabel = CreateLabel(panel.transform, $"{session.MovesRemaining} Moves", 34, TextAnchor.MiddleCenter);
+            movesLabel.color = UiColorPalette.TextSuccess;
+            var tapLabel = CreateLabel(panel.transform, "Tap to Start", 28, TextAnchor.MiddleCenter);
+            tapLabel.color = UiColorPalette.GoldLight;
+
+            blocker.onClick.AddListener(() =>
+            {
+                _playSfx?.Invoke(GameSfxCue.Tap);
+                HideLevelIntro();
+                _levelIntroDismissed?.Invoke();
+            });
+
+            _boardAnimationController.StartCoroutine(LevelIntroReveal(panelRect));
             _feedbackAnimator.PlayBoardFeedback(UiFeedbackCue.Cascade, _boardRoot);
         }
 
@@ -463,6 +545,18 @@ namespace PotionPopQuest.Unity
             scaler.matchWidthOrHeight = 0.5f;
 
             return canvasObject;
+        }
+
+        private GameObject CreateSafeAreaRoot(Transform parent)
+        {
+            var safeAreaObject = new GameObject("Safe Area", typeof(RectTransform), typeof(SafeAreaView));
+            safeAreaObject.transform.SetParent(parent, false);
+            var rect = safeAreaObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            return safeAreaObject;
         }
 
         private void BuildMainMenu()
@@ -678,6 +772,91 @@ namespace PotionPopQuest.Unity
             }
         }
 
+        private void HideLevelIntro()
+        {
+            if (_levelIntroOverlay == null)
+            {
+                return;
+            }
+
+            _levelIntroOverlay.SetActive(false);
+            UnityEngine.Object.Destroy(_levelIntroOverlay);
+            _levelIntroOverlay = null;
+        }
+
+        private IEnumerator LevelIntroReveal(RectTransform panel)
+        {
+            if (panel == null)
+            {
+                yield break;
+            }
+
+            var group = panel.GetComponent<CanvasGroup>();
+            if (group == null)
+            {
+                group = panel.gameObject.AddComponent<CanvasGroup>();
+            }
+
+            group.alpha = 0f;
+            panel.localScale = Vector3.one * 0.88f;
+            var elapsed = 0f;
+            while (elapsed < GameplayPresentationConfig.LevelIntroRevealDuration && panel != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / GameplayPresentationConfig.LevelIntroRevealDuration);
+                var eased = EasingFunctions.EaseOutBack(t, 1.05f);
+                group.alpha = Mathf.Clamp01(t / 0.65f);
+                panel.localScale = Vector3.one * Mathf.LerpUnclamped(0.88f, 1f, eased);
+                yield return null;
+            }
+
+            if (panel != null)
+            {
+                group.alpha = 1f;
+                panel.localScale = Vector3.one;
+            }
+        }
+
+        private void CreateIntroGoalRow(Transform parent, GoalData goal)
+        {
+            var row = CreatePanel(parent, "Intro Goal Row", new Color(0, 0, 0, 0));
+            AddLayoutElement(row, 620, 66);
+            row.GetComponent<Image>().raycastTarget = false;
+            var layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 14;
+            layout.padding = new RectOffset(10, 10, 6, 6);
+
+            var iconObject = new GameObject("Goal Icon", typeof(RectTransform), typeof(Image));
+            iconObject.transform.SetParent(row.transform, false);
+            AddLayoutElement(iconObject, 54, 54);
+            var icon = iconObject.GetComponent<Image>();
+            icon.sprite = GoalSprite(goal);
+            icon.color = Color.white;
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+
+            var label = CreateLabel(row.transform, $"{GoalName(goal)}  0/{goal.Amount}", 24, TextAnchor.MiddleLeft);
+            AddLayoutElement(label.gameObject, 500, 58);
+            label.color = UiColorPalette.TextPrimary;
+        }
+
+        private Sprite GoalSprite(GoalData goal)
+        {
+            switch (goal.GoalType)
+            {
+                case GoalType.CollectIngredient:
+                    return _iconFactory.GetIngredientSprite(goal.Ingredient);
+                case GoalType.BreakObstacle:
+                case GoalType.ClearTile:
+                    return _iconFactory.GetObstacleSprite(goal.Obstacle);
+                case GoalType.CreatePotion:
+                    return _iconFactory.GetPotionSprite(goal.Potion);
+                default:
+                    return _iconFactory.GetPotionSprite(PotionType.Mega);
+            }
+        }
+
         private GameObject CreateScreen(string name)
         {
             var screen = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
@@ -798,6 +977,7 @@ namespace PotionPopQuest.Unity
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.verticalOverflow = VerticalWrapMode.Truncate;
             label.rectTransform.sizeDelta = new Vector2(840, Mathf.Max(64, size * 2));
+            label.raycastTarget = false;
             return label;
         }
 
@@ -889,6 +1069,54 @@ namespace PotionPopQuest.Unity
             {
                 _playSfx?.Invoke(GameSfxCue.Tap);
                 changed?.Invoke(enabled);
+            });
+        }
+
+        private void CreateSlider(Transform parent, string label, float value, Action<float> changed)
+        {
+            var sliderObject = new GameObject($"Slider - {label}", typeof(RectTransform));
+            sliderObject.transform.SetParent(parent, false);
+            AddLayoutElement(sliderObject, 520, 88);
+            var layout = sliderObject.AddComponent<VerticalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 6;
+
+            var caption = CreateLabel(sliderObject.transform, $"{label} {Mathf.RoundToInt(Mathf.Clamp01(value) * 100f)}%", 22, TextAnchor.MiddleCenter);
+            AddLayoutElement(caption.gameObject, 500, 32);
+            caption.color = UiColorPalette.TextSecondary;
+
+            var trackObject = new GameObject("Track", typeof(RectTransform), typeof(Image), typeof(Slider));
+            trackObject.transform.SetParent(sliderObject.transform, false);
+            AddLayoutElement(trackObject, 500, 38);
+            var trackImage = trackObject.GetComponent<Image>();
+            trackImage.color = new Color(0.12f, 0.14f, 0.20f, 0.95f);
+
+            var fillObject = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fillObject.transform.SetParent(trackObject.transform, false);
+            var fillRect = fillObject.GetComponent<RectTransform>();
+            fillRect.anchorMin = new Vector2(0f, 0.2f);
+            fillRect.anchorMax = new Vector2(1f, 0.8f);
+            fillRect.offsetMin = new Vector2(8, 0);
+            fillRect.offsetMax = new Vector2(-8, 0);
+            fillObject.GetComponent<Image>().color = UiColorPalette.EmeraldLight;
+
+            var handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handleObject.transform.SetParent(trackObject.transform, false);
+            var handleRect = handleObject.GetComponent<RectTransform>();
+            handleRect.sizeDelta = new Vector2(34, 34);
+            handleObject.GetComponent<Image>().color = UiColorPalette.GoldLight;
+
+            var slider = trackObject.GetComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.value = Mathf.Clamp01(value);
+            slider.fillRect = fillRect;
+            slider.handleRect = handleRect;
+            slider.targetGraphic = handleObject.GetComponent<Image>();
+            slider.onValueChanged.AddListener(nextValue =>
+            {
+                caption.text = $"{label} {Mathf.RoundToInt(nextValue * 100f)}%";
+                changed?.Invoke(nextValue);
             });
         }
 

@@ -1,3 +1,4 @@
+using System;
 using PotionPopQuest.Core;
 using UnityEngine;
 
@@ -28,14 +29,25 @@ namespace PotionPopQuest.Unity
                 return new SaveData();
             }
 
-            var json = PlayerPrefs.GetString(SaveKey);
-            var save = JsonUtility.FromJson<SaveData>(json);
-            _logger.Log(LogCategory.Save, "Loaded local save data.");
-            return save ?? new SaveData();
+            try
+            {
+                var json = PlayerPrefs.GetString(SaveKey);
+                var save = JsonUtility.FromJson<SaveData>(json) ?? new SaveData();
+                save.Normalize();
+                _logger.Log(LogCategory.Save, "Loaded local save data.");
+                return save;
+            }
+            catch (Exception exception)
+            {
+                _logger.Warn(LogCategory.Save, $"Save data was unreadable and has been repaired. {exception.GetType().Name}: {exception.Message}");
+                return new SaveData();
+            }
         }
 
         public void Save(SaveData saveData)
         {
+            saveData = saveData ?? new SaveData();
+            saveData.Normalize();
             var json = JsonUtility.ToJson(saveData);
             PlayerPrefs.SetString(SaveKey, json);
             PlayerPrefs.Save();
@@ -50,4 +62,3 @@ namespace PotionPopQuest.Unity
         }
     }
 }
-
