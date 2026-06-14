@@ -48,7 +48,11 @@ namespace PotionPopQuest.PlayMode.Tests
 
             Assert.That(GameObject.Find("Board Panel"), Is.Not.Null);
             Assert.That(GameObject.Find("Star Progress"), Is.Not.Null);
+            Assert.That(GameObject.Find("HUD Moves Badge"), Is.Not.Null);
+            Assert.That(GameObject.Find("HUD Goal Strip"), Is.Not.Null);
+            Assert.That(GameObject.Find("HUD Score Badge"), Is.Not.Null);
             Assert.That(GameObject.Find("Level Intro Overlay"), Is.Not.Null);
+            Assert.That(GameObject.Find("Intro Obstacle Preview"), Is.Not.Null);
             Assert.That(GameObject.Find("Tutorial Banner"), Is.Not.Null);
             Assert.That(FindButton("Hint"), Is.Not.Null);
             Assert.That(GameObject.FindObjectsByType<Button>(FindObjectsSortMode.None).Count(button => button.name == "Tile"), Is.GreaterThanOrEqualTo(64));
@@ -65,6 +69,9 @@ namespace PotionPopQuest.PlayMode.Tests
 
             Assert.That(GameObject.Find("Slider - Music Volume"), Is.Not.Null);
             Assert.That(GameObject.Find("Slider - SFX Volume"), Is.Not.Null);
+            Assert.That(GameObject.Find("Settings Audio Section"), Is.Not.Null);
+            Assert.That(GameObject.Find("Settings Gameplay Section"), Is.Not.Null);
+            Assert.That(GameObject.Find("Settings Progress Section"), Is.Not.Null);
             Assert.That(GameObject.Find("Toggle - Vibration"), Is.Not.Null);
         }
 

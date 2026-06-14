@@ -1202,63 +1202,79 @@ namespace PotionPopQuest.Unity
             table.GetComponent<Image>().raycastTarget = false;
             table.AddComponent<LayoutElement>().ignoreLayout = true;
 
-            CreateBokehDust(parent);
+            CreateLabBottle(parent, "Bottle - Ruby Tonic", new Vector2(0.17f, 0.825f), new Vector2(44, 82), UiColorPalette.WithAlpha(UiColorPalette.Ruby, 0.42f));
+            CreateLabBottle(parent, "Bottle - Sapphire Elixir", new Vector2(0.29f, 0.748f), new Vector2(40, 72), UiColorPalette.WithAlpha(UiColorPalette.SapphireLight, 0.38f));
+            CreateLabBottle(parent, "Bottle - Emerald Brew", new Vector2(0.70f, 0.824f), new Vector2(48, 86), UiColorPalette.WithAlpha(UiColorPalette.Emerald, 0.36f));
+            CreateLabBottle(parent, "Bottle - Golden Dust", new Vector2(0.82f, 0.672f), new Vector2(42, 70), UiColorPalette.WithAlpha(UiColorPalette.Gold, 0.38f));
+            CreateLabLine(parent, "Lab Wall Highlight Left", new Vector2(0.10f, 0.58f), new Vector2(0.30f, 0.585f), UiColorPalette.WithAlpha(UiColorPalette.GoldLight, 0.14f));
+            CreateLabLine(parent, "Lab Wall Highlight Right", new Vector2(0.70f, 0.55f), new Vector2(0.92f, 0.555f), UiColorPalette.WithAlpha(UiColorPalette.SapphireLight, 0.14f));
+            CreateCauldronSilhouette(parent);
         }
 
-        private void CreateBokehDust(Transform parent)
+        private void CreateLabBottle(Transform parent, string name, Vector2 anchor, Vector2 size, Color color)
         {
-            var container = new GameObject("Bokeh Dust", typeof(RectTransform));
-            container.transform.SetParent(parent, false);
-            var rect = container.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
+            var body = CreatePanel(parent, name, color);
+            var bodyRect = body.GetComponent<RectTransform>();
+            bodyRect.anchorMin = anchor;
+            bodyRect.anchorMax = anchor;
+            bodyRect.pivot = new Vector2(0.5f, 0f);
+            bodyRect.anchoredPosition = Vector2.zero;
+            bodyRect.sizeDelta = size;
+            body.GetComponent<Image>().raycastTarget = false;
+            body.AddComponent<LayoutElement>().ignoreLayout = true;
+
+            var neck = CreatePanel(parent, $"{name} Neck", UiColorPalette.WithAlpha(color, Mathf.Min(0.55f, color.a + 0.12f)));
+            var neckRect = neck.GetComponent<RectTransform>();
+            neckRect.anchorMin = anchor;
+            neckRect.anchorMax = anchor;
+            neckRect.pivot = new Vector2(0.5f, 0f);
+            neckRect.anchoredPosition = new Vector2(0, size.y - 3f);
+            neckRect.sizeDelta = new Vector2(size.x * 0.38f, size.y * 0.42f);
+            neck.GetComponent<Image>().raycastTarget = false;
+            neck.AddComponent<LayoutElement>().ignoreLayout = true;
+
+            var shine = CreatePanel(parent, $"{name} Highlight", UiColorPalette.WithAlpha(Color.white, 0.12f));
+            var shineRect = shine.GetComponent<RectTransform>();
+            shineRect.anchorMin = anchor;
+            shineRect.anchorMax = anchor;
+            shineRect.pivot = new Vector2(0.5f, 0f);
+            shineRect.anchoredPosition = new Vector2(-size.x * 0.18f, size.y * 0.18f);
+            shineRect.sizeDelta = new Vector2(5f, size.y * 0.48f);
+            shine.GetComponent<Image>().raycastTarget = false;
+            shine.AddComponent<LayoutElement>().ignoreLayout = true;
+        }
+
+        private void CreateLabLine(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Color color)
+        {
+            var line = CreatePanel(parent, name, color);
+            var rect = line.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
-            container.AddComponent<LayoutElement>().ignoreLayout = true;
-
-            _boardAnimationController.StartCoroutine(SpawnBokeh(container.transform, _iconFactory.GetPillSprite()));
+            line.GetComponent<Image>().raycastTarget = false;
+            line.AddComponent<LayoutElement>().ignoreLayout = true;
         }
 
-        private static IEnumerator SpawnBokeh(Transform parent, Sprite sprite)
+        private void CreateCauldronSilhouette(Transform parent)
         {
-            var particles = new List<RectTransform>();
-            var speeds = new List<float>();
-            for (var i = 0; i < 15; i++)
-            {
-                var p = new GameObject("Bokeh", typeof(RectTransform), typeof(Image));
-                p.transform.SetParent(parent, false);
-                var r = p.GetComponent<RectTransform>();
-                var size = UnityEngine.Random.Range(20f, 80f);
-                r.sizeDelta = new Vector2(size, size);
-                r.anchoredPosition = new Vector2(
-                    UnityEngine.Random.Range(-540f, 540f),
-                    UnityEngine.Random.Range(-960f, 960f));
-                
-                var img = p.GetComponent<Image>();
-                img.sprite = sprite;
-                img.color = new Color(1f, 0.9f, 0.6f, UnityEngine.Random.Range(0.02f, 0.08f));
-                img.raycastTarget = false;
-                
-                particles.Add(r);
-                speeds.Add(UnityEngine.Random.Range(10f, 30f));
-            }
+            var cauldron = CreatePanel(parent, "Potion Lab Cauldron", UiColorPalette.WithAlpha(UiColorPalette.DarkTile, 0.56f));
+            var rect = cauldron.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.11f);
+            rect.anchorMax = new Vector2(0.5f, 0.11f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(250, 76);
+            cauldron.GetComponent<Image>().raycastTarget = false;
+            cauldron.AddComponent<LayoutElement>().ignoreLayout = true;
 
-            while (parent != null)
-            {
-                for (var i = 0; i < particles.Count; i++)
-                {
-                    if (particles[i] == null) continue;
-                    var pos = particles[i].anchoredPosition;
-                    pos.y += speeds[i] * Time.unscaledDeltaTime;
-                    if (pos.y > 1000f)
-                    {
-                        pos.y = -1000f;
-                        pos.x = UnityEngine.Random.Range(-540f, 540f);
-                    }
-                    particles[i].anchoredPosition = pos;
-                }
-                yield return null;
-            }
+            var rim = CreatePanel(parent, "Potion Lab Cauldron Rim", UiColorPalette.WithAlpha(UiColorPalette.SapphireLight, 0.20f));
+            var rimRect = rim.GetComponent<RectTransform>();
+            rimRect.anchorMin = new Vector2(0.5f, 0.145f);
+            rimRect.anchorMax = new Vector2(0.5f, 0.145f);
+            rimRect.pivot = new Vector2(0.5f, 0.5f);
+            rimRect.sizeDelta = new Vector2(274, 18);
+            rim.GetComponent<Image>().raycastTarget = false;
+            rim.AddComponent<LayoutElement>().ignoreLayout = true;
         }
 
         /// <summary>Smoothly transitions between screens using ScreenTransitionController.</summary>
@@ -1300,6 +1316,29 @@ namespace PotionPopQuest.Unity
             image.pixelsPerUnitMultiplier = 3f;
             image.color = color;
             return panel;
+        }
+
+        private GameObject CreateSettingsSection(Transform parent, string title, float height, Color? color = null)
+        {
+            var section = CreatePanel(parent, $"Settings {title} Section", color ?? UiColorPalette.WithAlpha(UiColorPalette.HudBackground, 0.86f));
+            AddLayoutElement(section, 680, height);
+            var layout = section.AddComponent<VerticalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 10;
+            layout.padding = new RectOffset(24, 24, 18, 18);
+
+            var heading = CreateLabel(section.transform, title, 24, TextAnchor.MiddleCenter);
+            heading.color = UiColorPalette.GoldLight;
+            AddLayoutElement(heading.gameObject, 600, 34);
+            return section;
+        }
+
+        private static void StretchInside(RectTransform rect, float horizontalPadding, float verticalPadding)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(horizontalPadding, verticalPadding);
+            rect.offsetMax = new Vector2(-horizontalPadding, -verticalPadding);
         }
 
         private Text CreateTitle(Transform parent, string text, int size)
@@ -1384,7 +1423,7 @@ namespace PotionPopQuest.Unity
         {
             var toggleObject = new GameObject($"Toggle - {label}", typeof(RectTransform), typeof(Toggle));
             toggleObject.transform.SetParent(parent, false);
-            toggleObject.GetComponent<RectTransform>().sizeDelta = new Vector2(420, 78);
+            AddLayoutElement(toggleObject, 560, 62);
 
             var background = new GameObject("Background", typeof(RectTransform), typeof(Image));
             background.transform.SetParent(toggleObject.transform, false);
@@ -1425,18 +1464,18 @@ namespace PotionPopQuest.Unity
         {
             var sliderObject = new GameObject($"Slider - {label}", typeof(RectTransform));
             sliderObject.transform.SetParent(parent, false);
-            AddLayoutElement(sliderObject, 520, 88);
+            AddLayoutElement(sliderObject, 560, 78);
             var layout = sliderObject.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 6;
+            layout.spacing = 5;
 
             var caption = CreateLabel(sliderObject.transform, $"{label} {Mathf.RoundToInt(Mathf.Clamp01(value) * 100f)}%", 22, TextAnchor.MiddleCenter);
-            AddLayoutElement(caption.gameObject, 500, 32);
+            AddLayoutElement(caption.gameObject, 540, 28);
             caption.color = UiColorPalette.TextSecondary;
 
             var trackObject = new GameObject("Track", typeof(RectTransform), typeof(Image), typeof(Slider));
             trackObject.transform.SetParent(sliderObject.transform, false);
-            AddLayoutElement(trackObject, 500, 38);
+            AddLayoutElement(trackObject, 540, 34);
             var trackImage = trackObject.GetComponent<Image>();
             trackImage.color = new Color(0.12f, 0.14f, 0.20f, 0.95f);
 
