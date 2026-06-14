@@ -637,15 +637,15 @@ namespace PotionPopQuest.Unity
                 var pieceRect = piece.GetComponent<RectTransform>();
                 pieceRect.anchorMin = new Vector2(0.5f, 0.5f);
                 pieceRect.anchorMax = new Vector2(0.5f, 0.5f);
-                pieceRect.sizeDelta = new Vector2(Random.Range(6f, 14f), Random.Range(6f, 14f));
-                pieceRect.anchoredPosition = new Vector2(Random.Range(-320f, 320f), Random.Range(200f, 400f));
+                pieceRect.sizeDelta = new Vector2(UnityEngine.Random.Range(6f, 14f), UnityEngine.Random.Range(6f, 14f));
+                pieceRect.anchoredPosition = new Vector2(UnityEngine.Random.Range(-320f, 320f), UnityEngine.Random.Range(200f, 400f));
                 var pieceImage = piece.GetComponent<Image>();
                 pieceImage.color = UiColorPalette.Confetti[i % UiColorPalette.Confetti.Length];
                 pieceImage.raycastTarget = false;
                 confettiPieces.Add(pieceRect);
                 confettiImages.Add(pieceImage);
-                velocities.Add(new Vector2(Random.Range(-40f, 40f), Random.Range(-120f, -60f)));
-                rotations.Add(Random.Range(-180f, 180f));
+                velocities.Add(new Vector2(UnityEngine.Random.Range(-40f, 40f), UnityEngine.Random.Range(-120f, -60f)));
+                rotations.Add(UnityEngine.Random.Range(-180f, 180f));
             }
 
             var elapsed = 0f;
