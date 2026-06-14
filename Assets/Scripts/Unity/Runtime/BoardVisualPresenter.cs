@@ -241,10 +241,106 @@ namespace PotionPopQuest.Unity
                 yield break;
             }
 
-            yield return ScaleFade(targets, Vector3.one, Vector3.one * 1.16f, 1f, 0f, GameplayPresentationConfig.ClearPopDuration);
+            // White flash frame on each tile before the pop
             foreach (var position in targets)
             {
+                if (_tileViews.TryGetValue(position, out var rect) && rect != null)
+                {
+                    var img = rect.GetComponent<Image>();
+                    if (img != null)
+                    {
+                        img.color = UiColorPalette.ClearFlash;
+                    }
+                }
+            }
+
+            yield return new WaitForSecondsRealtime(0.03f);
+
+            // Pop with larger scale and EaseOutBack
+            yield return ScaleFadeWithEasing(targets, Vector3.one, Vector3.one * 1.24f, 1f, 0f, GameplayPresentationConfig.ClearPopDuration);
+
+            // Spawn sparks from each cleared position
+            foreach (var position in targets)
+            {
+                if (_tileViews.TryGetValue(position, out var rect) && rect != null)
+                {
+                    SpawnSparks(rect.anchoredPosition, _boardRoot);
+                }
+
                 ReleaseTile(position);
+            }
+        }
+
+        /// <summary>Spawns small spark rectangles that fly outward diagonally and fade.</summary>
+        private void SpawnSparks(Vector2 origin, RectTransform parent)
+        {
+            if (parent == null) return;
+            var mono = parent.GetComponent<MonoBehaviour>();
+            if (mono == null) return;
+
+            var directions = new[] {
+                new Vector2(1f, 1f).normalized,
+                new Vector2(-1f, 1f).normalized,
+                new Vector2(1f, -1f).normalized,
+                new Vector2(-1f, -1f).normalized
+            };
+
+            for (var i = 0; i < Mathf.Min(GameplayPresentationConfig.SparkCount, directions.Length); i++)
+            {
+                var sparkObject = new GameObject("Spark", typeof(RectTransform), typeof(Image));
+                sparkObject.transform.SetParent(parent, false);
+                var sparkRect = sparkObject.GetComponent<RectTransform>();
+                sparkRect.anchorMin = new Vector2(0.5f, 0.5f);
+                sparkRect.anchorMax = new Vector2(0.5f, 0.5f);
+                sparkRect.sizeDelta = new Vector2(8f, 8f);
+                sparkRect.anchoredPosition = origin;
+                var sparkImage = sparkObject.GetComponent<Image>();
+                sparkImage.color = UiColorPalette.ClearGlow;
+                sparkImage.raycastTarget = false;
+                mono.StartCoroutine(SparkRoutine(sparkRect, sparkImage, directions[i]));
+            }
+
+            KeepFloatingLayerOnTop();
+        }
+
+        private static IEnumerator SparkRoutine(RectTransform rect, Image image, Vector2 direction)
+        {
+            var start = rect.anchoredPosition;
+            var duration = GameplayPresentationConfig.SparkLifetime;
+            var speed = GameplayPresentationConfig.SparkSpeed;
+            var elapsed = 0f;
+
+            while (elapsed < duration && rect != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var eased = EasingFunctions.EaseOutQuart(t);
+                rect.anchoredPosition = start + direction * speed * eased;
+                rect.sizeDelta = Vector2.Lerp(new Vector2(8f, 8f), new Vector2(3f, 3f), eased);
+                if (image != null)
+                {
+                    image.color = UiColorPalette.WithAlpha(UiColorPalette.ClearGlow, 1f - eased);
+                }
+
+                yield return null;
+            }
+
+            if (rect != null)
+            {
+                UnityEngine.Object.Destroy(rect.gameObject);
+            }
+        }
+
+        /// <summary>ScaleFade with EaseOutBack for a dramatic pop effect.</summary>
+        private static IEnumerator ScaleFadeWithEasing(IReadOnlyList<GridPosition> positions,
+            Vector3 startScale, Vector3 endScale, float startAlpha, float endAlpha, float duration)
+        {
+            // Resolve targets within calling scope
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
             }
         }
 
@@ -429,8 +525,18 @@ namespace PotionPopQuest.Unity
             }
 
             var image = rect.GetComponent<Image>();
-            image.color = CellColor(cell);
+            image.color = UiColorPalette.CellColor(cell);
             image.raycastTarget = true;
+
+            // ── Depth layer: inner shadow (bottom-right darkening) ──
+            CreateDepthLayer(rect, "InnerShadow",
+                new Vector2(0.04f, 0f), new Vector2(1f, 0.96f),
+                new Color(0f, 0f, 0f, 0.22f));
+
+            // ── Depth layer: top highlight (lit-from-above effect) ──
+            CreateDepthLayer(rect, "TopHighlight",
+                new Vector2(0.06f, 0.92f), new Vector2(0.94f, 1f),
+                new Color(1f, 1f, 1f, 0.18f));
 
             ConfigureTileInteraction(position, rect, cell);
 
@@ -443,6 +549,15 @@ namespace PotionPopQuest.Unity
             {
                 CreateIconImage(rect, _iconFactory.GetObstacleSprite(cell.Obstacle), new Vector2(0.13f, 0.13f), new Vector2(0.87f, 0.87f), Color.white);
                 CreateAnchoredText(rect, cell.ObstacleHealth.ToString(), 22, TextAnchor.LowerRight);
+
+                // Damage crack indicator for low-HP obstacles
+                if (cell.ObstacleHealth <= 1 && cell.Obstacle == ObstacleType.StoneBlock)
+                {
+                    CreateDepthLayer(rect, "CrackOverlay",
+                        new Vector2(0.3f, 0.2f), new Vector2(0.7f, 0.8f),
+                        new Color(0f, 0f, 0f, 0.15f));
+                }
+
                 if (registerCell)
                 {
                     _viewCells[position] = cell;
@@ -451,8 +566,13 @@ namespace PotionPopQuest.Unity
                 return;
             }
 
+            // ── Inner glow behind the ingredient icon ──
             if (cell.Ingredient != IngredientType.None)
             {
+                var glowColor = UiColorPalette.IngredientColorLight(cell.Ingredient);
+                CreateDepthLayer(rect, "InnerGlow",
+                    new Vector2(0.20f, 0.20f), new Vector2(0.80f, 0.80f),
+                    UiColorPalette.WithAlpha(glowColor, 0.15f));
                 CreateIconImage(rect, _iconFactory.GetIngredientSprite(cell.Ingredient), new Vector2(0.14f, 0.14f), new Vector2(0.86f, 0.86f), Color.white);
             }
 
@@ -465,6 +585,21 @@ namespace PotionPopQuest.Unity
             {
                 _viewCells[position] = cell;
             }
+        }
+
+        /// <summary>Creates a visual depth layer overlay on a tile.</summary>
+        private static void CreateDepthLayer(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Color color)
+        {
+            var layerObject = new GameObject(name, typeof(RectTransform), typeof(Image));
+            layerObject.transform.SetParent(parent, false);
+            var layerRect = layerObject.GetComponent<RectTransform>();
+            layerRect.anchorMin = anchorMin;
+            layerRect.anchorMax = anchorMax;
+            layerRect.offsetMin = Vector2.zero;
+            layerRect.offsetMax = Vector2.zero;
+            var layerImage = layerObject.GetComponent<Image>();
+            layerImage.color = color;
+            layerImage.raycastTarget = false;
         }
 
         private void ConfigureTileInteraction(GridPosition position, RectTransform rect, BoardCellSnapshot cell)
@@ -637,9 +772,31 @@ namespace PotionPopQuest.Unity
             }
 
             var outline = rect.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(1f, 0.95f, 0.45f);
+            outline.effectColor = UiColorPalette.SelectionGlow;
             outline.effectDistance = new Vector2(4, -4);
             _selectionOutlines.Add(outline);
+
+            // Add a glow layer behind the selected tile
+            var glowObject = new GameObject("SelectionGlow", typeof(RectTransform), typeof(Image));
+            glowObject.transform.SetParent(rect, false);
+            var glowRect = glowObject.GetComponent<RectTransform>();
+            glowRect.anchorMin = new Vector2(-0.08f, -0.08f);
+            glowRect.anchorMax = new Vector2(1.08f, 1.08f);
+            glowRect.offsetMin = Vector2.zero;
+            glowRect.offsetMax = Vector2.zero;
+            glowRect.SetAsFirstSibling();
+            var glowImage = glowObject.GetComponent<Image>();
+            glowImage.color = UiColorPalette.WithAlpha(UiColorPalette.SelectionGlow, 0.25f);
+            glowImage.raycastTarget = false;
+
+            // Start continuous pulse
+            var animator = rect.gameObject.GetComponent<UiTileAnimator>();
+            if (animator == null)
+            {
+                animator = rect.gameObject.AddComponent<UiTileAnimator>();
+            }
+
+            animator.PlayIntro(0f, UiFeedbackCue.Match);
         }
 
         private void ClearSelectionOutlines()
@@ -850,13 +1007,17 @@ namespace PotionPopQuest.Unity
             while (elapsed < duration)
             {
                 elapsed += Time.unscaledDeltaTime;
-                var t = Smooth(Mathf.Clamp01(elapsed / duration));
+                var t = EasingFunctions.EaseOutBounce(Mathf.Clamp01(elapsed / duration));
                 foreach (var motion in motions)
                 {
                     if (motion.Rect != null)
                     {
                         motion.Rect.anchoredPosition = Vector2.LerpUnclamped(motion.Start, motion.End, t);
-                        motion.Rect.localScale = Vector3.LerpUnclamped(motion.Rect.localScale, Vector3.one, t);
+                        // Squash effect at landing: compress Y slightly
+                        var squash = Mathf.Sin(Mathf.Clamp01(elapsed / duration) * Mathf.PI);
+                        var scaleY = Mathf.Lerp(1f, 0.92f, squash * 0.3f);
+                        var scaleX = Mathf.Lerp(1f, 1.04f, squash * 0.3f);
+                        motion.Rect.localScale = new Vector3(scaleX, scaleY, 1f);
                     }
                 }
 
@@ -1020,53 +1181,12 @@ namespace PotionPopQuest.Unity
 
         private static Color CellColor(BoardCellSnapshot cell)
         {
-            if (cell.Obstacle == ObstacleType.WoodenBox)
-            {
-                return new Color(0.50f, 0.32f, 0.18f);
-            }
-
-            if (cell.Obstacle == ObstacleType.StoneBlock)
-            {
-                return new Color(0.36f, 0.38f, 0.42f);
-            }
-
-            if (cell.Obstacle == ObstacleType.DarkTile)
-            {
-                return new Color(0.20f, 0.12f, 0.30f);
-            }
-
-            switch (cell.Ingredient)
-            {
-                case IngredientType.RedHerb:
-                    return new Color(0.75f, 0.22f, 0.24f);
-                case IngredientType.BlueCrystal:
-                    return new Color(0.18f, 0.42f, 0.76f);
-                case IngredientType.GreenLeaf:
-                    return new Color(0.22f, 0.58f, 0.34f);
-                case IngredientType.YellowStarDust:
-                    return new Color(0.86f, 0.68f, 0.22f);
-                case IngredientType.PurpleMushroom:
-                    return new Color(0.48f, 0.28f, 0.68f);
-                case IngredientType.OrangeFireDrop:
-                    return new Color(0.85f, 0.42f, 0.18f);
-                default:
-                    return new Color(0.18f, 0.20f, 0.23f);
-            }
+            return UiColorPalette.CellColor(cell);
         }
 
         private static Color PotionColor(PotionType potion)
         {
-            switch (potion)
-            {
-                case PotionType.Bomb:
-                    return new Color(1f, 0.50f, 0.20f, 1f);
-                case PotionType.Lightning:
-                    return new Color(0.94f, 0.96f, 1f, 1f);
-                case PotionType.Mega:
-                    return new Color(1f, 0.82f, 0.34f, 1f);
-                default:
-                    return new Color(0.62f, 0.86f, 1f, 1f);
-            }
+            return UiColorPalette.PotionColor(potion);
         }
 
         private static float Smooth(float t)
