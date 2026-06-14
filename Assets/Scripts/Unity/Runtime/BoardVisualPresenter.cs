@@ -545,6 +545,10 @@ namespace PotionPopQuest.Unity
         {
             var moving = motions ?? Array.Empty<TileMotion>();
             var spawned = spawnedMotions ?? Array.Empty<TileMotion>();
+            var incomingRects = new HashSet<RectTransform>(
+                moving.Concat(spawned)
+                    .Where(motion => motion.Rect != null)
+                    .Select(motion => motion.Rect));
             var nextViews = new Dictionary<GridPosition, RectTransform>(_tileViews);
             var nextCells = new Dictionary<GridPosition, BoardCellSnapshot>(_viewCells);
             foreach (var motion in moving)
@@ -555,12 +559,12 @@ namespace PotionPopQuest.Unity
 
             foreach (var motion in moving)
             {
-                ApplyMotionMapping(nextViews, nextCells, motion);
+                ApplyMotionMapping(nextViews, nextCells, incomingRects, motion);
             }
 
             foreach (var motion in spawned)
             {
-                ApplyMotionMapping(nextViews, nextCells, motion);
+                ApplyMotionMapping(nextViews, nextCells, incomingRects, motion);
             }
 
             _tileViews.Clear();
@@ -592,6 +596,7 @@ namespace PotionPopQuest.Unity
         private void ApplyMotionMapping(
             IDictionary<GridPosition, RectTransform> nextViews,
             IDictionary<GridPosition, BoardCellSnapshot> nextCells,
+            ISet<RectTransform> incomingRects,
             TileMotion motion)
         {
             if (motion.Rect == null)
@@ -602,6 +607,10 @@ namespace PotionPopQuest.Unity
             if (nextViews.TryGetValue(motion.To, out var existing) && existing != null && existing != motion.Rect)
             {
                 _logger.Warn(LogCategory.Drop, $"Replacing an existing tile view at {motion.To} during movement mapping; final board sync will recover if this was unexpected.");
+                if (!incomingRects.Contains(existing))
+                {
+                    PoolTile(existing);
+                }
             }
 
             nextViews[motion.To] = motion.Rect;

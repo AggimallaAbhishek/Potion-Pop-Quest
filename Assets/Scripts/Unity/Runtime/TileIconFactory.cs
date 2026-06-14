@@ -7,7 +7,7 @@ namespace PotionPopQuest.Unity
 {
     public sealed class TileIconFactory
     {
-        private const int Size = 96;
+        private const int Size = 128;
         private readonly Dictionary<string, Sprite> _cache = new Dictionary<string, Sprite>();
 
         public Sprite GetIngredientSprite(IngredientType ingredient)
@@ -48,36 +48,49 @@ namespace PotionPopQuest.Unity
 
         private static void DrawIngredient(Texture2D texture, IngredientType ingredient)
         {
+            var shadow = new Color(0f, 0f, 0f, 0.30f);
+            const int shadowOffset = 3;
             switch (ingredient)
             {
                 case IngredientType.RedHerb:
-                    DrawLine(texture, 48, 72, 48, 28, new Color(0.35f, 0.12f, 0.10f, 1f), 5);
-                    DrawEllipse(texture, 36, 45, 20, 12, new Color(0.96f, 0.28f, 0.30f, 1f));
-                    DrawEllipse(texture, 60, 45, 20, 12, new Color(0.86f, 0.16f, 0.18f, 1f));
-                    DrawEllipse(texture, 48, 28, 15, 22, new Color(1f, 0.36f, 0.32f, 1f));
+                    // Shadow pass
+                    DrawEllipse(texture, 64 + shadowOffset, 37 + shadowOffset, 20, 29, shadow);
+                    // Main shapes (scaled from 96 to 128)
+                    DrawLine(texture, 64, 96, 64, 37, new Color(0.35f, 0.12f, 0.10f, 1f), 7);
+                    DrawEllipseAA(texture, 48, 60, 27, 16, new Color(0.96f, 0.28f, 0.30f, 1f));
+                    DrawEllipseAA(texture, 80, 60, 27, 16, new Color(0.86f, 0.16f, 0.18f, 1f));
+                    DrawEllipseAA(texture, 64, 37, 20, 29, new Color(1f, 0.36f, 0.32f, 1f));
                     break;
                 case IngredientType.BlueCrystal:
-                    DrawDiamond(texture, 48, 48, 28, 40, new Color(0.28f, 0.70f, 1f, 1f));
-                    DrawDiamond(texture, 48, 43, 13, 24, new Color(0.74f, 0.93f, 1f, 0.85f));
-                    DrawLine(texture, 48, 9, 48, 87, new Color(0.10f, 0.36f, 0.72f, 1f), 2);
+                    DrawDiamond(texture, 64 + shadowOffset, 64 + shadowOffset, 37, 53, shadow);
+                    DrawDiamond(texture, 64, 64, 37, 53, new Color(0.28f, 0.70f, 1f, 1f));
+                    DrawDiamond(texture, 64, 57, 17, 32, new Color(0.74f, 0.93f, 1f, 0.85f));
+                    DrawLine(texture, 64, 12, 64, 116, new Color(0.10f, 0.36f, 0.72f, 1f), 3);
                     break;
                 case IngredientType.GreenLeaf:
-                    DrawEllipse(texture, 48, 45, 30, 20, new Color(0.26f, 0.78f, 0.36f, 1f));
-                    DrawLine(texture, 24, 65, 72, 28, new Color(0.11f, 0.36f, 0.16f, 1f), 4);
-                    DrawLine(texture, 42, 50, 34, 39, new Color(0.16f, 0.48f, 0.20f, 1f), 2);
-                    DrawLine(texture, 52, 43, 63, 36, new Color(0.16f, 0.48f, 0.20f, 1f), 2);
+                    DrawEllipseAA(texture, 64 + shadowOffset, 60 + shadowOffset, 40, 27, shadow);
+                    DrawEllipseAA(texture, 64, 60, 40, 27, new Color(0.26f, 0.78f, 0.36f, 1f));
+                    DrawLine(texture, 32, 87, 96, 37, new Color(0.11f, 0.36f, 0.16f, 1f), 5);
+                    DrawLine(texture, 56, 67, 45, 52, new Color(0.16f, 0.48f, 0.20f, 1f), 3);
+                    DrawLine(texture, 69, 57, 84, 48, new Color(0.16f, 0.48f, 0.20f, 1f), 3);
                     break;
                 case IngredientType.YellowStarDust:
-                    DrawStar(texture, 48, 42, 34, 15, new Color(1f, 0.82f, 0.24f, 1f));
-                    DrawCircle(texture, 24, 72, 5, new Color(1f, 0.95f, 0.50f, 0.9f));
-                    DrawCircle(texture, 70, 70, 4, new Color(1f, 0.95f, 0.50f, 0.9f));
-                    DrawCircle(texture, 75, 20, 4, new Color(1f, 0.95f, 0.50f, 0.9f));
+                    DrawStar(texture, 64 + shadowOffset, 56 + shadowOffset, 45, 20, shadow);
+                    DrawStar(texture, 64, 56, 45, 20, new Color(1f, 0.82f, 0.24f, 1f));
+                    // Sparkle dots with glow
+                    DrawCircleAA(texture, 32, 96, 8, new Color(1f, 0.95f, 0.50f, 0.5f));
+                    DrawCircleAA(texture, 32, 96, 5, new Color(1f, 0.95f, 0.50f, 0.9f));
+                    DrawCircleAA(texture, 93, 93, 7, new Color(1f, 0.95f, 0.50f, 0.5f));
+                    DrawCircleAA(texture, 93, 93, 4, new Color(1f, 0.95f, 0.50f, 0.9f));
+                    DrawCircleAA(texture, 100, 27, 7, new Color(1f, 0.95f, 0.50f, 0.5f));
+                    DrawCircleAA(texture, 100, 27, 4, new Color(1f, 0.95f, 0.50f, 0.9f));
                     break;
                 case IngredientType.PurpleMushroom:
-                    DrawEllipse(texture, 48, 36, 30, 18, new Color(0.68f, 0.36f, 0.92f, 1f));
-                    DrawRect(texture, 37, 40, 22, 34, new Color(0.94f, 0.80f, 0.66f, 1f));
-                    DrawCircle(texture, 36, 30, 5, new Color(0.96f, 0.86f, 1f, 1f));
-                    DrawCircle(texture, 55, 27, 4, new Color(0.96f, 0.86f, 1f, 1f));
+                    DrawEllipseAA(texture, 64 + shadowOffset, 48 + shadowOffset, 40, 24, shadow);
+                    DrawEllipseAA(texture, 64, 48, 40, 24, new Color(0.68f, 0.36f, 0.92f, 1f));
+                    DrawRect(texture, 49, 53, 30, 45, new Color(0.94f, 0.80f, 0.66f, 1f));
+                    DrawCircleAA(texture, 48, 40, 7, new Color(0.96f, 0.86f, 1f, 1f));
+                    DrawCircleAA(texture, 73, 36, 5, new Color(0.96f, 0.86f, 1f, 1f));
                     break;
                 case IngredientType.OrangeFireDrop:
                     DrawFlame(texture, new Color(1f, 0.42f, 0.14f, 1f), new Color(1f, 0.86f, 0.26f, 1f));
@@ -139,26 +152,35 @@ namespace PotionPopQuest.Unity
 
         private static void Clear(Texture2D texture)
         {
-            for (var y = 0; y < Size; y++)
-            {
-                for (var x = 0; x < Size; x++)
-                {
-                    texture.SetPixel(x, y, Color.clear);
-                }
-            }
+            var pixels = new Color[Size * Size];
+            texture.SetPixels(pixels);
         }
 
         private static void SetPixel(Texture2D texture, int x, int y, Color color)
         {
             if (x >= 0 && x < Size && y >= 0 && y < Size)
             {
-                texture.SetPixel(x, y, color);
+                if (color.a < 1f)
+                {
+                    var existing = texture.GetPixel(x, y);
+                    texture.SetPixel(x, y, Color.Lerp(existing, color, color.a));
+                }
+                else
+                {
+                    texture.SetPixel(x, y, color);
+                }
             }
         }
 
         private static void DrawCircle(Texture2D texture, int cx, int cy, int radius, Color color)
         {
             DrawEllipse(texture, cx, cy, radius, radius, color);
+        }
+
+        /// <summary>Anti-aliased circle with 1px edge blend.</summary>
+        private static void DrawCircleAA(Texture2D texture, int cx, int cy, int radius, Color color)
+        {
+            DrawEllipseAA(texture, cx, cy, radius, radius, color);
         }
 
         private static void DrawEllipse(Texture2D texture, int cx, int cy, int rx, int ry, Color color)
@@ -172,6 +194,31 @@ namespace PotionPopQuest.Unity
                     if (dx * dx + dy * dy <= 1f)
                     {
                         SetPixel(texture, x, y, color);
+                    }
+                }
+            }
+        }
+
+        /// <summary>Anti-aliased ellipse with smooth edge blending.</summary>
+        private static void DrawEllipseAA(Texture2D texture, int cx, int cy, int rx, int ry, Color color)
+        {
+            var margin = 2;
+            for (var y = cy - ry - margin; y <= cy + ry + margin; y++)
+            {
+                for (var x = cx - rx - margin; x <= cx + rx + margin; x++)
+                {
+                    var dx = (x - cx) / (float)rx;
+                    var dy = (y - cy) / (float)ry;
+                    var dist = dx * dx + dy * dy;
+                    if (dist <= 1f)
+                    {
+                        SetPixel(texture, x, y, color);
+                    }
+                    else if (dist < 1.12f)
+                    {
+                        var edgeAlpha = 1f - (dist - 1f) / 0.12f;
+                        var edgeColor = new Color(color.r, color.g, color.b, color.a * Mathf.Clamp01(edgeAlpha));
+                        SetPixel(texture, x, y, edgeColor);
                     }
                 }
             }
@@ -255,13 +302,29 @@ namespace PotionPopQuest.Unity
 
         private static void DrawFlame(Texture2D texture, Color outer, Color inner)
         {
-            for (var y = 14; y <= 82; y++)
+            // Shadow pass
+            for (var y = 21; y <= 112; y++)
             {
-                for (var x = 18; x <= 78; x++)
+                for (var x = 26; x <= 106; x++)
                 {
-                    var nx = (x - 48) / 30f;
-                    var ny = (y - 36) / 48f;
-                    var width = Mathf.Lerp(0.24f, 0.95f, Mathf.Clamp01((y - 14) / 68f));
+                    var nx = (x - 2 - 64) / 40f;
+                    var ny = (y - 2 - 48) / 64f;
+                    var width = Mathf.Lerp(0.24f, 0.95f, Mathf.Clamp01((y - 2 - 19) / 91f));
+                    if (Mathf.Abs(nx) < width * (1f - Mathf.Clamp01(ny) * 0.32f) && ny > -0.12f)
+                    {
+                        SetPixel(texture, x, y, new Color(0f, 0f, 0f, 0.25f));
+                    }
+                }
+            }
+
+            // Main flame (scaled to 128)
+            for (var y = 19; y <= 110; y++)
+            {
+                for (var x = 24; x <= 104; x++)
+                {
+                    var nx = (x - 64) / 40f;
+                    var ny = (y - 48) / 64f;
+                    var width = Mathf.Lerp(0.24f, 0.95f, Mathf.Clamp01((y - 19) / 91f));
                     if (Mathf.Abs(nx) < width * (1f - Mathf.Clamp01(ny) * 0.32f) && ny > -0.12f)
                     {
                         SetPixel(texture, x, y, outer);
@@ -269,7 +332,7 @@ namespace PotionPopQuest.Unity
                 }
             }
 
-            DrawEllipse(texture, 48, 55, 13, 22, inner);
+            DrawEllipseAA(texture, 64, 73, 17, 29, inner);
         }
     }
 }
