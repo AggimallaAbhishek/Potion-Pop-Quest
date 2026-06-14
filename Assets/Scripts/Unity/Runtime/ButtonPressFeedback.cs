@@ -80,7 +80,7 @@ namespace PotionPopQuest.Unity
             {
                 elapsed += Time.unscaledDeltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
-                var eased = useEaseIn ? t * t : EasingFunctions.EaseOutElastic(t, 0.4f, 0.5f);
+                var eased = useEaseIn ? t * t : EasingFunctions.EaseOutElasticGentle(t);
                 _rect.localScale = Vector3.LerpUnclamped(start, end, eased);
                 yield return null;
             }
@@ -160,4 +160,3 @@ namespace PotionPopQuest.Unity
         }
     }
 }
-

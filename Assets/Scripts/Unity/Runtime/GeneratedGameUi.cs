@@ -31,11 +31,15 @@ namespace PotionPopQuest.Unity
         private Text _goalText;
         private Text _scoreText;
         private Text _messageText;
+        private Image _movesBadgeImage;
+        private RectTransform _goalStrip;
         private Image _starProgressFill;
         private Text _starProgressText;
         private GameObject _tutorialPanel;
         private Text _tutorialText;
         private RectTransform _floatingLayer;
+        private string _lastGoalSummary;
+        private Coroutine _goalPulseRoutine;
         private readonly List<Outline> _hintOutlines = new List<Outline>();
 
         private Action _play;
@@ -156,13 +160,19 @@ namespace PotionPopQuest.Unity
             CreateTitle(_levelSelect.transform, "Level Select", 50);
             var grid = CreatePanel(_levelSelect.transform, "Levels Grid", UiColorPalette.LevelGridBackground);
             var gridRect = grid.GetComponent<RectTransform>();
-            gridRect.sizeDelta = new Vector2(760, 760);
+            var columns = UiLayoutMetrics.LevelSelectColumnCount();
+            var rows = Mathf.CeilToInt(levels.Count / (float)columns);
+            var cellSize = columns <= 3 ? 156f : columns == 4 ? 142f : 130f;
+            var gridWidth = columns * cellSize + (columns - 1) * 14f + 48f;
+            var gridHeight = rows * cellSize + Mathf.Max(0, rows - 1) * 14f + 48f;
+            gridRect.sizeDelta = new Vector2(Mathf.Min(UiLayoutMetrics.ScreenMaxWidth, gridWidth), Mathf.Min(760f, gridHeight));
+            AddLayoutElement(grid, Mathf.Min(UiLayoutMetrics.ScreenMaxWidth, gridWidth), Mathf.Min(760f, gridHeight));
             var layout = grid.AddComponent<GridLayoutGroup>();
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = 5;
-            layout.cellSize = new Vector2(130, 130);
-            layout.spacing = new Vector2(12, 12);
-            layout.padding = new RectOffset(20, 20, 20, 20);
+            layout.constraintCount = columns;
+            layout.cellSize = new Vector2(cellSize, cellSize);
+            layout.spacing = new Vector2(14, 14);
+            layout.padding = new RectOffset(24, 24, 24, 24);
 
             foreach (var level in levels)
             {
@@ -229,13 +239,18 @@ namespace PotionPopQuest.Unity
             ClearChildren(_settings.transform);
             CreatePotionLabBackdrop(_settings.transform);
             CreateTitle(_settings.transform, "Settings", 50);
-            CreateToggle(_settings.transform, "Music", musicEnabled, _toggleMusic);
-            CreateSlider(_settings.transform, "Music Volume", musicVolume, _setMusicVolume);
-            CreateToggle(_settings.transform, "SFX", sfxEnabled, _toggleSfx);
-            CreateSlider(_settings.transform, "SFX Volume", sfxVolume, _setSfxVolume);
-            CreateToggle(_settings.transform, "Vibration", vibrationEnabled, _toggleVibration);
-            CreateButton(_settings.transform, "Reset Progress", _resetProgress, UiColorPalette.Ruby, new Vector2(360, 76));
-            CreateButton(_settings.transform, "Back", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(260, 72));
+            var audioSection = CreateSettingsSection(_settings.transform, "Audio", 332);
+            CreateToggle(audioSection.transform, "Music", musicEnabled, _toggleMusic);
+            CreateSlider(audioSection.transform, "Music Volume", musicVolume, _setMusicVolume);
+            CreateToggle(audioSection.transform, "SFX", sfxEnabled, _toggleSfx);
+            CreateSlider(audioSection.transform, "SFX Volume", sfxVolume, _setSfxVolume);
+
+            var gameplaySection = CreateSettingsSection(_settings.transform, "Gameplay", 126);
+            CreateToggle(gameplaySection.transform, "Vibration", vibrationEnabled, _toggleVibration);
+
+            var resetSection = CreateSettingsSection(_settings.transform, "Progress", 144, UiColorPalette.WithAlpha(UiColorPalette.Ruby, 0.16f));
+            CreateButton(resetSection.transform, "Reset Progress", _resetProgress, UiColorPalette.Ruby, new Vector2(360, 70));
+            CreateButton(_settings.transform, "Back", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(260, 70));
             TransitionTo(_settings);
         }
 
@@ -262,8 +277,8 @@ namespace PotionPopQuest.Unity
             _boardPresenter.Render(result.BoardBeforeMove ?? BoardSnapshot.From(session.Board), selectedTile, UiFeedbackCue.None);
             var finalScore = session.Score;
             var startingScore = Math.Max(0, finalScore - result.ScoreGained);
-            _movesText.text = $"Moves\n{session.MovesRemaining}";
-            _goalText.text = GoalLabel(session.GoalTracker.Goals);
+            UpdateMovesBadge(session.MovesRemaining);
+            RenderGoalProgress(session.GoalTracker.Goals, false);
             _messageText.text = result.Message ?? string.Empty;
             _scoreText.text = $"Score\n{startingScore}";
 
@@ -296,7 +311,7 @@ namespace PotionPopQuest.Unity
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.sizeDelta = new Vector2(760, 740);
+            panelRect.sizeDelta = new Vector2(760, 700);
             panel.AddComponent<CanvasGroup>();
             var layout = panel.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
@@ -320,11 +335,7 @@ namespace PotionPopQuest.Unity
                 CreateIntroGoalRow(goalsPanel.transform, goal);
             }
 
-            var obstacleText = session.Level.Obstacles.Count > 0
-                ? $"Obstacles: {string.Join(", ", session.Level.Obstacles.Select(item => ObstacleName(item.ObstacleType)).Distinct())}"
-                : "Obstacles: None";
-            var obstacleLabel = CreateLabel(panel.transform, obstacleText, 24, TextAnchor.MiddleCenter);
-            obstacleLabel.color = UiColorPalette.TextSecondary;
+            CreateIntroObstaclePreview(panel.transform, session.Level);
 
             var movesLabel = CreateLabel(panel.transform, $"{session.MovesRemaining} Moves", 34, TextAnchor.MiddleCenter);
             movesLabel.color = UiColorPalette.TextSuccess;
@@ -394,22 +405,12 @@ namespace PotionPopQuest.Unity
 
         public void ShowWin(GameSession session, bool hasNextLevel)
         {
-            ShowModal(
-                "Level Complete",
-                $"Score {session.Score}\nStars {StarLabel(session.Stars)}",
-                hasNextLevel ? "Next" : "Levels",
-                hasNextLevel ? _nextLevel : _showLevels,
-                session.Stars);
+            ShowWinModal(session, hasNextLevel);
         }
 
         public void ShowLose(GameSession session)
         {
-            ShowModal(
-                "Out of Moves",
-                $"Score {session.Score}\nAlmost there! Try again?",
-                "Retry",
-                _restart,
-                0);
+            ShowLoseModal(session);
         }
 
         private void AddHintOutline(GridPosition position)
@@ -576,24 +577,41 @@ namespace PotionPopQuest.Unity
             CreatePotionLabBackdrop(_game.transform);
             var hud = CreatePanel(_game.transform, "HUD", UiColorPalette.HudBackground);
             var hudRect = hud.GetComponent<RectTransform>();
-            hudRect.sizeDelta = new Vector2(920, 150);
-            var hudElement = hud.AddComponent<LayoutElement>();
-            hudElement.preferredWidth = 920;
-            hudElement.preferredHeight = 150;
-            hudElement.flexibleWidth = 0;
+            hudRect.sizeDelta = new Vector2(UiLayoutMetrics.HudWidth, UiLayoutMetrics.HudHeight);
+            AddLayoutElement(hud, UiLayoutMetrics.HudWidth, UiLayoutMetrics.HudHeight);
             var hudLayout = hud.AddComponent<HorizontalLayoutGroup>();
             hudLayout.childAlignment = TextAnchor.MiddleCenter;
-            hudLayout.spacing = 20;
-            hudLayout.padding = new RectOffset(20, 20, 15, 15);
-            _movesText = CreateLabel(hud.transform, "Moves 0", 26, TextAnchor.MiddleCenter);
-            _goalText = CreateLabel(hud.transform, "Goal", 24, TextAnchor.MiddleCenter);
-            _scoreText = CreateLabel(hud.transform, "Score 0", 26, TextAnchor.MiddleCenter);
-            AddLayoutElement(_movesText.gameObject, 190, 110);
-            AddLayoutElement(_goalText.gameObject, 480, 110);
-            AddLayoutElement(_scoreText.gameObject, 190, 110);
+            hudLayout.spacing = 16;
+            hudLayout.padding = new RectOffset(18, 18, 14, 14);
+
+            var movesBadge = CreateHudBadge(hud.transform, "HUD Moves Badge", 166, UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.55f));
+            _movesBadgeImage = movesBadge.GetComponent<Image>();
+            _movesText = CreateLabel(movesBadge.transform, "Moves\n0", 28, TextAnchor.MiddleCenter);
+            StretchInside(_movesText.rectTransform, 8, 6);
+
+            var goalPanel = CreateHudBadge(hud.transform, "HUD Goal Panel", 520, UiColorPalette.WithAlpha(UiColorPalette.Amethyst, 0.46f));
+            var goalLayout = goalPanel.AddComponent<VerticalLayoutGroup>();
+            goalLayout.childAlignment = TextAnchor.MiddleCenter;
+            goalLayout.spacing = 8;
+            goalLayout.padding = new RectOffset(12, 12, 10, 10);
+            _goalText = CreateLabel(goalPanel.transform, "Goals", 20, TextAnchor.MiddleCenter);
+            _goalText.color = UiColorPalette.GoldLight;
+            AddLayoutElement(_goalText.gameObject, 490, 26);
+            var goalStripObject = new GameObject("HUD Goal Strip", typeof(RectTransform));
+            goalStripObject.transform.SetParent(goalPanel.transform, false);
+            _goalStrip = goalStripObject.GetComponent<RectTransform>();
+            AddLayoutElement(goalStripObject, 490, 92);
+            var goalStripLayout = goalStripObject.AddComponent<VerticalLayoutGroup>();
+            goalStripLayout.childAlignment = TextAnchor.MiddleCenter;
+            goalStripLayout.spacing = 6;
+            goalStripLayout.padding = new RectOffset(0, 0, 0, 0);
+
+            var scoreBadge = CreateHudBadge(hud.transform, "HUD Score Badge", 166, UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.50f));
+            _scoreText = CreateLabel(scoreBadge.transform, "Score\n0", 28, TextAnchor.MiddleCenter);
+            StretchInside(_scoreText.rectTransform, 8, 6);
 
             var starProgress = CreatePanel(_game.transform, "Star Progress", new Color(0.11f, 0.14f, 0.18f, 0.86f));
-            AddLayoutElement(starProgress, 860, 54);
+            AddLayoutElement(starProgress, UiLayoutMetrics.StarProgressWidth, UiLayoutMetrics.StarProgressHeight);
             var starBarBackground = CreatePanel(starProgress.transform, "Star Bar Background", new Color(0.07f, 0.08f, 0.10f, 0.92f));
             var starBarRect = starBarBackground.GetComponent<RectTransform>();
             starBarRect.anchorMin = new Vector2(0.04f, 0.22f);
@@ -616,12 +634,8 @@ namespace PotionPopQuest.Unity
 
             var boardPanel = CreatePanel(_game.transform, "Board Panel", new Color(0.16f, 0.18f, 0.21f, 0.94f));
             _boardRoot = boardPanel.GetComponent<RectTransform>();
-            _boardRoot.sizeDelta = new Vector2(720, 720);
-            var boardElement = boardPanel.AddComponent<LayoutElement>();
-            boardElement.preferredWidth = 720;
-            boardElement.preferredHeight = 720;
-            boardElement.flexibleWidth = 0;
-            boardElement.flexibleHeight = 0;
+            _boardRoot.sizeDelta = new Vector2(UiLayoutMetrics.BoardSize, UiLayoutMetrics.BoardSize);
+            AddLayoutElement(boardPanel, UiLayoutMetrics.BoardSize, UiLayoutMetrics.BoardSize);
             var floatingLayerObject = new GameObject("Floating Feedback Layer", typeof(RectTransform), typeof(LayoutElement));
             floatingLayerObject.transform.SetParent(boardPanel.transform, false);
             _floatingLayer = floatingLayerObject.GetComponent<RectTransform>();
@@ -633,10 +647,10 @@ namespace PotionPopQuest.Unity
             _boardPresenter.Configure(_boardRoot, _floatingLayer, _tilePressed, _playSfx);
 
             _messageText = CreateLabel(_game.transform, "", 24, TextAnchor.MiddleCenter);
-            _messageText.rectTransform.sizeDelta = new Vector2(840, 64);
+            _messageText.rectTransform.sizeDelta = new Vector2(UiLayoutMetrics.MessageWidth, UiLayoutMetrics.MessageHeight);
 
             _tutorialPanel = CreatePanel(_game.transform, "Tutorial Banner", new Color(0.20f, 0.15f, 0.28f, 0.92f));
-            AddLayoutElement(_tutorialPanel, 860, 86);
+            AddLayoutElement(_tutorialPanel, UiLayoutMetrics.TutorialWidth, UiLayoutMetrics.TutorialHeight);
             _tutorialText = CreateLabel(_tutorialPanel.transform, "", 22, TextAnchor.MiddleCenter);
             _tutorialText.rectTransform.anchorMin = Vector2.zero;
             _tutorialText.rectTransform.anchorMax = Vector2.one;
@@ -645,73 +659,293 @@ namespace PotionPopQuest.Unity
             _tutorialPanel.SetActive(false);
 
             var actions = CreatePanel(_game.transform, "Game Actions", new Color(0, 0, 0, 0));
-            AddLayoutElement(actions, 900, 76);
+            AddLayoutElement(actions, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.ActionsHeight);
             var actionsLayout = actions.AddComponent<HorizontalLayoutGroup>();
             actionsLayout.childAlignment = TextAnchor.MiddleCenter;
-            actionsLayout.spacing = 16;
-            CreateButton(actions.transform, "Hint", _hintRequested, UiColorPalette.Emerald, new Vector2(200, 68));
-            CreateButton(actions.transform, "Restart", _restart, UiColorPalette.Ruby, new Vector2(200, 68));
-            CreateButton(actions.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(200, 68));
-            CreateButton(actions.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(200, 68));
+            actionsLayout.spacing = 14;
+            CreateButton(actions.transform, "Hint", _hintRequested, UiColorPalette.Emerald, new Vector2(204, UiLayoutMetrics.TouchHeight));
+            CreateButton(actions.transform, "Restart", _restart, UiColorPalette.Ruby, new Vector2(204, UiLayoutMetrics.TouchHeight));
+            CreateButton(actions.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(204, UiLayoutMetrics.TouchHeight));
+            CreateButton(actions.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(204, UiLayoutMetrics.TouchHeight));
         }
 
         private void UpdateHud(GameSession session, string message)
         {
-            _movesText.text = $"Moves\n{session.MovesRemaining}";
-            _goalText.text = GoalLabel(session.GoalTracker.Goals);
+            UpdateMovesBadge(session.MovesRemaining);
+            RenderGoalProgress(session.GoalTracker.Goals, true);
             _scoreText.text = $"Score\n{session.Score}";
             _messageText.text = message ?? string.Empty;
             UpdateStarProgress(session);
         }
 
-        private void ShowModal(string title, string body, string primaryLabel, Action primaryAction, int starCount = 0)
+        private void UpdateMovesBadge(int movesRemaining)
+        {
+            _movesText.text = $"Moves\n{movesRemaining}";
+            if (_movesBadgeImage == null)
+            {
+                return;
+            }
+
+            if (movesRemaining <= 1)
+            {
+                _movesBadgeImage.color = UiColorPalette.WithAlpha(UiColorPalette.Ruby, 0.72f);
+                _movesText.color = UiColorPalette.RubyLight;
+            }
+            else if (movesRemaining <= 3)
+            {
+                _movesBadgeImage.color = UiColorPalette.WithAlpha(UiColorPalette.GoldDark, 0.70f);
+                _movesText.color = UiColorPalette.GoldLight;
+            }
+            else
+            {
+                _movesBadgeImage.color = UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.55f);
+                _movesText.color = UiColorPalette.TextPrimary;
+            }
+        }
+
+        private void RenderGoalProgress(IReadOnlyList<GoalProgress> goals, bool animateChanged)
+        {
+            if (_goalStrip == null)
+            {
+                return;
+            }
+
+            var summary = GoalLabel(goals);
+            _goalText.text = goals.Count == 1 ? "Goal" : "Goals";
+            ClearChildren(_goalStrip);
+
+            foreach (var goal in goals)
+            {
+                CreateHudGoalRow(_goalStrip, goal);
+            }
+
+            if (animateChanged && _lastGoalSummary != null && _lastGoalSummary != summary)
+            {
+                PulseGoalStrip();
+            }
+
+            _lastGoalSummary = summary;
+        }
+
+        private void PulseGoalStrip()
+        {
+            if (_goalStrip == null || _boardAnimationController == null)
+            {
+                return;
+            }
+
+            if (_goalPulseRoutine != null)
+            {
+                _boardAnimationController.StopCoroutine(_goalPulseRoutine);
+            }
+
+            _goalPulseRoutine = _boardAnimationController.StartCoroutine(PulseRect(_goalStrip, 1.035f, 0.18f));
+        }
+
+        private static IEnumerator PulseRect(RectTransform rect, float scale, float duration)
+        {
+            var elapsed = 0f;
+            while (elapsed < duration && rect != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var pulse = Mathf.Sin(t * Mathf.PI);
+                rect.localScale = Vector3.one * Mathf.Lerp(1f, scale, pulse);
+                yield return null;
+            }
+
+            if (rect != null)
+            {
+                rect.localScale = Vector3.one;
+            }
+        }
+
+        private void ShowWinModal(GameSession session, bool hasNextLevel)
+        {
+            var panel = CreateModalPanel(780, 18);
+            var titleText = CreateTitle(panel.transform, "Level Complete", 48);
+            titleText.color = UiColorPalette.Gold;
+
+            var scoreLabel = CreateLabel(panel.transform, "Score 0", 34, TextAnchor.MiddleCenter);
+            scoreLabel.color = UiColorPalette.TextPrimary;
+            AddLayoutElement(scoreLabel.gameObject, 560, 58);
+
+            var starLabels = CreateStarRow(panel.transform, session.Stars);
+            CreateGoalSummary(panel.transform, session.GoalTracker.Goals, false);
+            CreateModalActions(panel.transform, hasNextLevel ? "Next" : "Levels", hasNextLevel ? _nextLevel : _showLevels, showLevelsButton: hasNextLevel);
+
+            var rect = panel.GetComponent<RectTransform>();
+            _feedbackAnimator.PlayModalIntro(rect);
+            _boardAnimationController.StartCoroutine(AnimateModalScore(scoreLabel, session.Score));
+            _boardAnimationController.StartCoroutine(RevealStars(starLabels, session.Stars));
+            _boardAnimationController.StartCoroutine(SpawnConfetti(_modal.transform));
+        }
+
+        private void ShowLoseModal(GameSession session)
+        {
+            var panel = CreateModalPanel(720, 16);
+            var titleText = CreateTitle(panel.transform, "Out of Moves", 46);
+            titleText.color = UiColorPalette.RubyLight;
+            var body = CreateLabel(panel.transform, "Try again to finish the remaining goals.", 26, TextAnchor.MiddleCenter);
+            body.color = UiColorPalette.TextSecondary;
+            AddLayoutElement(body.gameObject, 590, 60);
+            CreateGoalSummary(panel.transform, session.GoalTracker.Goals, true);
+            CreateModalActions(panel.transform, "Retry", _restart, showLevelsButton: true);
+            _feedbackAnimator.PlayModalIntro(panel.GetComponent<RectTransform>());
+        }
+
+        private GameObject CreateHudBadge(Transform parent, string name, float width, Color color)
+        {
+            var badge = CreatePanel(parent, name, color);
+            AddLayoutElement(badge, width, 138);
+            return badge;
+        }
+
+        private void CreateHudGoalRow(Transform parent, GoalProgress progress)
+        {
+            var row = CreatePanel(parent, "HUD Goal Row", progress.IsComplete
+                ? UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.35f)
+                : UiColorPalette.WithAlpha(UiColorPalette.BackgroundSolid, 0.20f));
+            AddLayoutElement(row, 490, 42);
+            var layout = row.AddComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 10;
+            layout.padding = new RectOffset(8, 10, 4, 4);
+
+            var iconObject = new GameObject("HUD Goal Icon", typeof(RectTransform), typeof(Image));
+            iconObject.transform.SetParent(row.transform, false);
+            AddLayoutElement(iconObject, 34, 34);
+            var icon = iconObject.GetComponent<Image>();
+            icon.sprite = GoalSprite(progress.Goal);
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+
+            var label = CreateLabel(row.transform, $"{GoalName(progress.Goal)}  {progress.CurrentAmount}/{progress.Goal.Amount}", 19, TextAnchor.MiddleLeft);
+            label.color = progress.IsComplete ? UiColorPalette.TextSuccess : UiColorPalette.TextPrimary;
+            AddLayoutElement(label.gameObject, 420, 36);
+        }
+
+        private GameObject CreateModalPanel(float height, int spacing)
         {
             _modal.SetActive(true);
             ClearChildren(_modal.transform);
 
             var panel = CreatePanel(_modal.transform, "Modal Panel", new Color(0.06f, 0.08f, 0.12f, 0.97f));
             var rect = panel.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(700, starCount > 0 ? 720 : 620);
+            rect.sizeDelta = new Vector2(UiLayoutMetrics.ModalWidth, height);
             panel.AddComponent<CanvasGroup>();
             var layout = panel.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 18;
-            layout.padding = new RectOffset(28, 28, 38, 38);
+            layout.spacing = spacing;
+            layout.padding = new RectOffset(30, 30, 36, 36);
+            return panel;
+        }
 
-            // Title with golden color for win
-            var titleText = CreateTitle(panel.transform, title, 48);
-            if (starCount > 0)
+        private List<Text> CreateStarRow(Transform parent, int starCount)
+        {
+            var labels = new List<Text>();
+            var starRow = CreatePanel(parent, "Stars", new Color(0, 0, 0, 0));
+            AddLayoutElement(starRow, 380, 72);
+            var starLayout = starRow.AddComponent<HorizontalLayoutGroup>();
+            starLayout.childAlignment = TextAnchor.MiddleCenter;
+            starLayout.spacing = 18;
+
+            for (var i = 1; i <= 3; i++)
             {
-                titleText.color = UiColorPalette.Gold;
+                var starLabel = CreateLabel(starRow.transform, "\u2606", 52, TextAnchor.MiddleCenter);
+                starLabel.color = UiColorPalette.StarEmpty;
+                AddLayoutElement(starLabel.gameObject, 70, 66);
+                labels.Add(starLabel);
             }
 
-            // Star display for win screen
-            if (starCount > 0)
-            {
-                var starRow = CreatePanel(panel.transform, "Stars", new Color(0, 0, 0, 0));
-                AddLayoutElement(starRow, 360, 70);
-                var starLayout = starRow.AddComponent<HorizontalLayoutGroup>();
-                starLayout.childAlignment = TextAnchor.MiddleCenter;
-                starLayout.spacing = 16;
+            return labels;
+        }
 
-                for (var i = 1; i <= 3; i++)
+        private void CreateGoalSummary(Transform parent, IReadOnlyList<GoalProgress> goals, bool remainingOnly)
+        {
+            var summary = CreatePanel(parent, remainingOnly ? "Remaining Goals" : "Completed Goals", UiColorPalette.WithAlpha(UiColorPalette.Amethyst, 0.32f));
+            AddLayoutElement(summary, 620, Mathf.Clamp(goals.Count * 58 + 28, 112, 232));
+            var layout = summary.AddComponent<VerticalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 8;
+            layout.padding = new RectOffset(14, 14, 14, 14);
+
+            foreach (var progress in goals)
+            {
+                var amount = remainingOnly
+                    ? $"{progress.RemainingAmount} left"
+                    : $"{progress.CurrentAmount}/{progress.Goal.Amount}";
+                var row = CreatePanel(summary.transform, "Modal Goal Row", new Color(0, 0, 0, 0));
+                AddLayoutElement(row, 560, 48);
+                row.GetComponent<Image>().raycastTarget = false;
+                var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
+                rowLayout.childAlignment = TextAnchor.MiddleCenter;
+                rowLayout.spacing = 12;
+
+                var iconObject = new GameObject("Goal Icon", typeof(RectTransform), typeof(Image));
+                iconObject.transform.SetParent(row.transform, false);
+                AddLayoutElement(iconObject, 42, 42);
+                var icon = iconObject.GetComponent<Image>();
+                icon.sprite = GoalSprite(progress.Goal);
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+
+                var label = CreateLabel(row.transform, $"{GoalName(progress.Goal)}  {amount}", 22, TextAnchor.MiddleLeft);
+                label.color = remainingOnly && progress.RemainingAmount > 0 ? UiColorPalette.GoldLight : UiColorPalette.TextSuccess;
+                AddLayoutElement(label.gameObject, 490, 44);
+            }
+        }
+
+        private void CreateModalActions(Transform parent, string primaryLabel, Action primaryAction, bool showLevelsButton)
+        {
+            CreateButton(parent, primaryLabel, primaryAction, UiColorPalette.Emerald, new Vector2(320, 74));
+            CreateButton(parent, "Replay", _restart, UiColorPalette.Sapphire, new Vector2(320, 68));
+            if (showLevelsButton)
+            {
+                CreateButton(parent, "Levels", _showLevels, UiColorPalette.Amethyst, new Vector2(320, 68));
+            }
+            else
+            {
+                CreateButton(parent, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(320, 68));
+            }
+        }
+
+        private static IEnumerator AnimateModalScore(Text label, int finalScore)
+        {
+            if (label == null)
+            {
+                yield break;
+            }
+
+            var elapsed = 0f;
+            while (elapsed < GameplayPresentationConfig.ScoreCountDuration && label != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / GameplayPresentationConfig.ScoreCountDuration);
+                label.text = $"Score {Mathf.RoundToInt(Mathf.Lerp(0, finalScore, EasingFunctions.EaseOutQuart(t)))}";
+                yield return null;
+            }
+
+            if (label != null)
+            {
+                label.text = $"Score {finalScore}";
+            }
+        }
+
+        private static IEnumerator RevealStars(IReadOnlyList<Text> starLabels, int starCount)
+        {
+            for (var i = 0; i < starLabels.Count; i++)
+            {
+                var label = starLabels[i];
+                if (label == null)
                 {
-                    var starLabel = CreateLabel(starRow.transform, i <= starCount ? "\u2605" : "\u2606", 48, TextAnchor.MiddleCenter);
-                    starLabel.color = i <= starCount ? UiColorPalette.StarEarned : UiColorPalette.StarEmpty;
-                    AddLayoutElement(starLabel.gameObject, 60, 60);
+                    continue;
                 }
-            }
 
-            CreateLabel(panel.transform, body, 30, TextAnchor.MiddleCenter);
-            CreateButton(panel.transform, primaryLabel, primaryAction, UiColorPalette.Emerald, new Vector2(300, 78));
-            CreateButton(panel.transform, "Replay", _restart, UiColorPalette.Sapphire, new Vector2(300, 72));
-            CreateButton(panel.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(300, 72));
-            _feedbackAnimator.PlayModalIntro(rect);
-
-            // Spawn confetti on win
-            if (starCount > 0)
-            {
-                _boardAnimationController.StartCoroutine(SpawnConfetti(_modal.transform));
+                yield return new WaitForSecondsRealtime(0.18f);
+                label.text = i < starCount ? "\u2605" : "\u2606";
+                label.color = i < starCount ? UiColorPalette.StarEarned : UiColorPalette.StarEmpty;
+                yield return PulseRect(label.rectTransform, i < starCount ? 1.28f : 1.08f, 0.20f);
             }
         }
 
@@ -839,6 +1073,56 @@ namespace PotionPopQuest.Unity
             var label = CreateLabel(row.transform, $"{GoalName(goal)}  0/{goal.Amount}", 24, TextAnchor.MiddleLeft);
             AddLayoutElement(label.gameObject, 500, 58);
             label.color = UiColorPalette.TextPrimary;
+        }
+
+        private void CreateIntroObstaclePreview(Transform parent, LevelData level)
+        {
+            var preview = CreatePanel(parent, "Intro Obstacle Preview", UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.18f));
+            AddLayoutElement(preview, 660, 72);
+            var layout = preview.AddComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 12;
+            layout.padding = new RectOffset(16, 16, 8, 8);
+
+            var label = CreateLabel(preview.transform, "Obstacles", 22, TextAnchor.MiddleRight);
+            label.color = UiColorPalette.TextSecondary;
+            AddLayoutElement(label.gameObject, 140, 54);
+
+            var obstacleTypes = level.Obstacles
+                .Select(item => item.ObstacleType)
+                .Where(item => item != ObstacleType.None)
+                .Distinct()
+                .ToArray();
+
+            if (obstacleTypes.Length == 0)
+            {
+                var none = CreateLabel(preview.transform, "None", 24, TextAnchor.MiddleLeft);
+                none.color = UiColorPalette.TextSuccess;
+                AddLayoutElement(none.gameObject, 450, 54);
+                return;
+            }
+
+            foreach (var obstacle in obstacleTypes)
+            {
+                var item = CreatePanel(preview.transform, $"Obstacle Preview - {ObstacleName(obstacle)}", UiColorPalette.WithAlpha(UiColorPalette.BackgroundSolid, 0.22f));
+                AddLayoutElement(item, 150, 54);
+                var itemLayout = item.AddComponent<HorizontalLayoutGroup>();
+                itemLayout.childAlignment = TextAnchor.MiddleCenter;
+                itemLayout.spacing = 8;
+                itemLayout.padding = new RectOffset(8, 8, 6, 6);
+
+                var iconObject = new GameObject("Obstacle Icon", typeof(RectTransform), typeof(Image));
+                iconObject.transform.SetParent(item.transform, false);
+                AddLayoutElement(iconObject, 38, 38);
+                var icon = iconObject.GetComponent<Image>();
+                icon.sprite = _iconFactory.GetObstacleSprite(obstacle);
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+
+                var text = CreateLabel(item.transform, ObstacleName(obstacle), 18, TextAnchor.MiddleLeft);
+                text.color = UiColorPalette.TextPrimary;
+                AddLayoutElement(text.gameObject, 88, 40);
+            }
         }
 
         private Sprite GoalSprite(GoalData goal)
