@@ -917,6 +917,64 @@ namespace PotionPopQuest.Unity
             tableRect.offsetMax = Vector2.zero;
             table.GetComponent<Image>().raycastTarget = false;
             table.AddComponent<LayoutElement>().ignoreLayout = true;
+
+            CreateBokehDust(parent);
+        }
+
+        private void CreateBokehDust(Transform parent)
+        {
+            var container = new GameObject("Bokeh Dust", typeof(RectTransform));
+            container.transform.SetParent(parent, false);
+            var rect = container.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            container.AddComponent<LayoutElement>().ignoreLayout = true;
+
+            _boardAnimationController.StartCoroutine(SpawnBokeh(container.transform, _iconFactory.GetPillSprite()));
+        }
+
+        private static IEnumerator SpawnBokeh(Transform parent, Sprite sprite)
+        {
+            var particles = new List<RectTransform>();
+            var speeds = new List<float>();
+            for (var i = 0; i < 15; i++)
+            {
+                var p = new GameObject("Bokeh", typeof(RectTransform), typeof(Image));
+                p.transform.SetParent(parent, false);
+                var r = p.GetComponent<RectTransform>();
+                var size = UnityEngine.Random.Range(20f, 80f);
+                r.sizeDelta = new Vector2(size, size);
+                r.anchoredPosition = new Vector2(
+                    UnityEngine.Random.Range(-540f, 540f),
+                    UnityEngine.Random.Range(-960f, 960f));
+                
+                var img = p.GetComponent<Image>();
+                img.sprite = sprite;
+                img.color = new Color(1f, 0.9f, 0.6f, UnityEngine.Random.Range(0.02f, 0.08f));
+                img.raycastTarget = false;
+                
+                particles.Add(r);
+                speeds.Add(UnityEngine.Random.Range(10f, 30f));
+            }
+
+            while (parent != null)
+            {
+                for (var i = 0; i < particles.Count; i++)
+                {
+                    if (particles[i] == null) continue;
+                    var pos = particles[i].anchoredPosition;
+                    pos.y += speeds[i] * Time.unscaledDeltaTime;
+                    if (pos.y > 1000f)
+                    {
+                        pos.y = -1000f;
+                        pos.x = UnityEngine.Random.Range(-540f, 540f);
+                    }
+                    particles[i].anchoredPosition = pos;
+                }
+                yield return null;
+            }
         }
 
         /// <summary>Smoothly transitions between screens using ScreenTransitionController.</summary>
@@ -952,7 +1010,11 @@ namespace PotionPopQuest.Unity
         {
             var panel = new GameObject(name, typeof(RectTransform), typeof(Image));
             panel.transform.SetParent(parent, false);
-            panel.GetComponent<Image>().color = color;
+            var image = panel.GetComponent<Image>();
+            image.sprite = _iconFactory.GetRoundedRectSprite(32);
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 3f;
+            image.color = color;
             return panel;
         }
 
@@ -990,6 +1052,9 @@ namespace PotionPopQuest.Unity
             rect.sizeDelta = size ?? new Vector2(180, 80);
 
             var image = buttonObject.GetComponent<Image>();
+            image.sprite = _iconFactory.GetPillSprite();
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 2f;
             image.color = color;
 
             var button = buttonObject.GetComponent<Button>();

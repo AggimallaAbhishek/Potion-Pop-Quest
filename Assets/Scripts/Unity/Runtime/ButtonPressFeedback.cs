@@ -26,7 +26,7 @@ namespace PotionPopQuest.Unity
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            ScaleTo(0.94f, useEaseIn: true);
+            ScaleTo(new Vector3(0.98f, 0.92f, 1f), useEaseIn: true);
             if (_image != null && _colorCaptured)
             {
                 _image.color = Brighten(_originalColor, 0.12f);
@@ -37,13 +37,13 @@ namespace PotionPopQuest.Unity
 
         public void OnPointerUp(PointerEventData eventData)
         {
-            ScaleTo(1f, useEaseIn: false);
+            ScaleTo(Vector3.one, useEaseIn: false);
             RestoreColor();
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
-            ScaleTo(1f, useEaseIn: false);
+            ScaleTo(Vector3.one, useEaseIn: false);
             RestoreColor();
         }
 
@@ -55,7 +55,7 @@ namespace PotionPopQuest.Unity
             }
         }
 
-        private void ScaleTo(float targetScale, bool useEaseIn)
+        private void ScaleTo(Vector3 targetScale, bool useEaseIn)
         {
             if (_rect == null)
             {
@@ -70,10 +70,9 @@ namespace PotionPopQuest.Unity
             _scaleRoutine = StartCoroutine(ScaleRoutine(targetScale, useEaseIn));
         }
 
-        private IEnumerator ScaleRoutine(float targetScale, bool useEaseIn)
+        private IEnumerator ScaleRoutine(Vector3 end, bool useEaseIn)
         {
             var start = _rect.localScale;
-            var end = Vector3.one * targetScale;
             var duration = useEaseIn ? 0.06f : GameplayPresentationConfig.ButtonBounceBackDuration;
             var elapsed = 0f;
 
@@ -81,7 +80,7 @@ namespace PotionPopQuest.Unity
             {
                 elapsed += Time.unscaledDeltaTime;
                 var t = Mathf.Clamp01(elapsed / duration);
-                var eased = useEaseIn ? t * t : EasingFunctions.EaseOutBack(t, 2.5f);
+                var eased = useEaseIn ? t * t : EasingFunctions.EaseOutElastic(t, 0.4f, 0.5f);
                 _rect.localScale = Vector3.LerpUnclamped(start, end, eased);
                 yield return null;
             }

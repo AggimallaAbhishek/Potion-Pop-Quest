@@ -385,7 +385,7 @@ namespace PotionPopQuest.Unity
             var allMotions = movements.Concat(spawned).ToArray();
             if (allMotions.Length > 0)
             {
-                yield return MoveTiles(allMotions, MovementDuration(allMotions), TileTweenEase.EaseOutBack);
+                yield return MoveTiles(allMotions, MovementDuration(allMotions), TileTweenEase.EaseOutBounce);
             }
 
             ApplyMovementMappings(movements, spawned);
@@ -995,6 +995,7 @@ namespace PotionPopQuest.Unity
             }
 
             image.transform.SetParent(_boardRoot, false);
+            image.sprite = _iconFactory.GetPillSprite();
             image.color = color;
             image.raycastTarget = false;
             var rect = image.rectTransform;
@@ -1076,12 +1077,12 @@ namespace PotionPopQuest.Unity
             }
 
             var color = PotionColor(animationEvent.Potion);
-            var burst = RentVfxImage("Potion Burst", new Color(color.r, color.g, color.b, 0.45f), Vector2.one * (animationEvent.Potion == PotionType.Bomb ? 140f : 220f), Vector2.zero);
+            var burst = RentVfxImage("Potion Burst", new Color(color.r, color.g, color.b, 0.6f), Vector2.one * (animationEvent.Potion == PotionType.Bomb ? 140f : 220f), Vector2.zero);
             var rect = burst.rectTransform;
-            rect.sizeDelta = Vector2.one * (animationEvent.Potion == PotionType.Bomb ? 140f : 220f);
+            rect.sizeDelta = Vector2.one * (animationEvent.Potion == PotionType.Bomb ? 160f : 240f);
             KeepFloatingLayerOnTop();
 
-            yield return TileTweenRunner.Scale(rect, Vector3.one * 0.35f, Vector3.one * 1.35f, GameplayPresentationConfig.PotionBurstDuration, TileTweenEase.EaseOutBack);
+            yield return TileTweenRunner.Scale(rect, Vector3.one * 0.35f, Vector3.one * 1.5f, GameplayPresentationConfig.PotionBurstDuration, TileTweenEase.EaseOutBack);
             ReleaseVfxImage(burst);
         }
 

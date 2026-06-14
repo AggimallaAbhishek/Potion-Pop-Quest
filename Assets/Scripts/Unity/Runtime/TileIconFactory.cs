@@ -25,7 +25,17 @@ namespace PotionPopQuest.Unity
             return GetOrCreate($"potion-{potion}", texture => DrawPotion(texture, potion));
         }
 
-        private Sprite GetOrCreate(string key, Action<Texture2D> draw)
+        public Sprite GetRoundedRectSprite(int radius)
+        {
+            return GetOrCreate($"roundedrect-{radius}", texture => DrawRoundedRect(texture, radius), new Vector4(radius, radius, radius, radius));
+        }
+
+        public Sprite GetPillSprite()
+        {
+            return GetOrCreate("pill", texture => DrawRoundedRect(texture, Size / 2), new Vector4(Size / 2, Size / 2, Size / 2, Size / 2));
+        }
+
+        private Sprite GetOrCreate(string key, Action<Texture2D> draw, Vector4 border = default)
         {
             if (_cache.TryGetValue(key, out var sprite))
             {
@@ -40,7 +50,10 @@ namespace PotionPopQuest.Unity
             Clear(texture);
             draw(texture);
             texture.Apply();
-            sprite = Sprite.Create(texture, new Rect(0, 0, Size, Size), new Vector2(0.5f, 0.5f), Size);
+            var pivot = new Vector2(0.5f, 0.5f);
+            sprite = border == default 
+                ? Sprite.Create(texture, new Rect(0, 0, Size, Size), pivot, Size)
+                : Sprite.Create(texture, new Rect(0, 0, Size, Size), pivot, Size, 0, SpriteMeshType.FullRect, border);
             sprite.name = key;
             _cache[key] = sprite;
             return sprite;
@@ -245,6 +258,45 @@ namespace PotionPopQuest.Unity
                 for (var px = x; px < x + width; px++)
                 {
                     SetPixel(texture, px, py, color);
+                }
+            }
+        }
+
+        private static void DrawRoundedRect(Texture2D texture, int radius)
+        {
+            for (var y = 0; y < Size; y++)
+            {
+                var pixelColor = Color.white;
+                if (y > Size - 8) pixelColor = new Color(1.2f, 1.2f, 1.2f, 1f); // Top highlight
+                else if (y < 12) pixelColor = new Color(0.7f, 0.7f, 0.7f, 1f); // Bottom shadow
+                
+                for (var x = 0; x < Size; x++)
+                {
+                    var dx = 0;
+                    var dy = 0;
+                    if (x < radius) dx = radius - x;
+                    else if (x >= Size - radius) dx = x - (Size - radius - 1);
+                    
+                    if (y < radius) dy = radius - y;
+                    else if (y >= Size - radius) dy = y - (Size - radius - 1);
+
+                    if (dx > 0 && dy > 0)
+                    {
+                        var dist = Mathf.Sqrt(dx * dx + dy * dy);
+                        if (dist <= radius)
+                        {
+                            SetPixel(texture, x, y, pixelColor);
+                        }
+                        else if (dist < radius + 1.5f)
+                        {
+                            var alpha = 1f - (dist - radius) / 1.5f;
+                            SetPixel(texture, x, y, new Color(pixelColor.r, pixelColor.g, pixelColor.b, Mathf.Clamp01(alpha)));
+                        }
+                    }
+                    else
+                    {
+                        SetPixel(texture, x, y, pixelColor);
+                    }
                 }
             }
         }

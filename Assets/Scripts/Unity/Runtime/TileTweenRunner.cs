@@ -11,7 +11,9 @@ namespace PotionPopQuest.Unity
         EaseInOutCubic,
         EaseOutQuart,
         EaseOutCubic,
-        EaseOutBack
+        EaseOutBack,
+        EaseOutBounce,
+        EaseOutElastic
     }
 
     public readonly struct TileTweenMotion
@@ -193,6 +195,10 @@ namespace PotionPopQuest.Unity
                     return EasingFunctions.EaseOutCubic(t);
                 case TileTweenEase.EaseOutBack:
                     return EasingFunctions.EaseOutBack(t, 1.15f);
+                case TileTweenEase.EaseOutBounce:
+                    return EasingFunctions.EaseOutBounce(t);
+                case TileTweenEase.EaseOutElastic:
+                    return EasingFunctions.EaseOutElastic(t);
                 default:
                     return EasingFunctions.SmoothStep(t);
             }

@@ -11,17 +11,17 @@ namespace PotionPopQuest.Unity
     {
         // ── Background & Atmosphere ──────────────────────────────────
 
-        /// <summary>Top color of the screen background gradient (deep purple-midnight).</summary>
-        public static readonly Color BackgroundTop = new Color(0.06f, 0.04f, 0.14f);
+        /// <summary>Top color of the screen background gradient (deep space purple).</summary>
+        public static readonly Color BackgroundTop = new Color(0.16f, 0.11f, 0.22f);
 
-        /// <summary>Bottom color of the screen background gradient (dark teal-navy).</summary>
-        public static readonly Color BackgroundBottom = new Color(0.04f, 0.10f, 0.16f);
+        /// <summary>Bottom color of the screen background gradient (midnight amethyst).</summary>
+        public static readonly Color BackgroundBottom = new Color(0.35f, 0.18f, 0.50f);
 
         /// <summary>Solid fallback background.</summary>
-        public static readonly Color BackgroundSolid = new Color(0.05f, 0.07f, 0.13f);
+        public static readonly Color BackgroundSolid = new Color(0.23f, 0.13f, 0.32f);
 
         /// <summary>Modal backdrop overlay.</summary>
-        public static readonly Color ModalBackdrop = new Color(0f, 0f, 0f, 0.60f);
+        public static readonly Color ModalBackdrop = new Color(0.08f, 0.05f, 0.12f, 0.85f);
 
         // ── Board & Panels ──────────────────────────────────────────
 
@@ -84,26 +84,26 @@ namespace PotionPopQuest.Unity
         // ── UI Accent Colors ────────────────────────────────────────
 
         /// <summary>Gold — used for scores, stars, and highlights.</summary>
-        public static readonly Color Gold = new Color(1f, 0.82f, 0.24f);
-        public static readonly Color GoldLight = new Color(1f, 0.92f, 0.52f);
-        public static readonly Color GoldDark = new Color(0.72f, 0.56f, 0.10f);
+        public static readonly Color Gold = new Color(1f, 0.82f, 0.40f);
+        public static readonly Color GoldLight = new Color(1f, 0.95f, 0.69f);
+        public static readonly Color GoldDark = new Color(0.80f, 0.55f, 0.10f);
 
         /// <summary>Emerald — used for positive actions (Play, Hint, Next).</summary>
-        public static readonly Color Emerald = new Color(0.20f, 0.62f, 0.52f);
-        public static readonly Color EmeraldLight = new Color(0.30f, 0.78f, 0.64f);
-        public static readonly Color EmeraldDark = new Color(0.12f, 0.42f, 0.34f);
+        public static readonly Color Emerald = new Color(0.02f, 0.84f, 0.63f);
+        public static readonly Color EmeraldLight = new Color(0.50f, 1f, 0.86f);
+        public static readonly Color EmeraldDark = new Color(0.01f, 0.50f, 0.38f);
 
         /// <summary>Ruby — used for danger states (low moves, restart, exit).</summary>
-        public static readonly Color Ruby = new Color(0.72f, 0.22f, 0.22f);
-        public static readonly Color RubyLight = new Color(0.88f, 0.36f, 0.34f);
+        public static readonly Color Ruby = new Color(0.94f, 0.28f, 0.44f);
+        public static readonly Color RubyLight = new Color(1f, 0.70f, 0.78f);
 
         /// <summary>Sapphire — used for info actions (Levels, Settings).</summary>
-        public static readonly Color Sapphire = new Color(0.22f, 0.44f, 0.68f);
-        public static readonly Color SapphireLight = new Color(0.34f, 0.58f, 0.84f);
+        public static readonly Color Sapphire = new Color(0.07f, 0.54f, 0.70f);
+        public static readonly Color SapphireLight = new Color(0.28f, 0.79f, 0.89f);
 
         /// <summary>Amethyst — used for secondary actions (Menu, Back).</summary>
-        public static readonly Color Amethyst = new Color(0.34f, 0.24f, 0.44f);
-        public static readonly Color AmethystLight = new Color(0.48f, 0.36f, 0.58f);
+        public static readonly Color Amethyst = new Color(0.35f, 0.18f, 0.50f);
+        public static readonly Color AmethystLight = new Color(0.55f, 0.35f, 0.72f);
 
         // ── Text Colors ─────────────────────────────────────────────
 
