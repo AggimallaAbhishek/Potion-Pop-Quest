@@ -574,11 +574,16 @@ namespace PotionPopQuest.Unity
         private void BuildGameScreen()
         {
             ClearChildren(_game.transform);
+            var screenLayout = _game.GetComponent<VerticalLayoutGroup>();
+            screenLayout.spacing = UiLayoutMetrics.GameScreenSpacing();
+            screenLayout.padding = UiLayoutMetrics.GameScreenPadding();
+
             CreatePotionLabBackdrop(_game.transform);
             var hud = CreatePanel(_game.transform, "HUD", UiColorPalette.HudBackground);
             var hudRect = hud.GetComponent<RectTransform>();
-            hudRect.sizeDelta = new Vector2(UiLayoutMetrics.HudWidth, UiLayoutMetrics.HudHeight);
-            AddLayoutElement(hud, UiLayoutMetrics.HudWidth, UiLayoutMetrics.HudHeight);
+            var hudHeight = UiLayoutMetrics.GameHudHeight();
+            hudRect.sizeDelta = new Vector2(UiLayoutMetrics.HudWidth, hudHeight);
+            AddLayoutElement(hud, UiLayoutMetrics.HudWidth, hudHeight);
             var hudLayout = hud.AddComponent<HorizontalLayoutGroup>();
             hudLayout.childAlignment = TextAnchor.MiddleCenter;
             hudLayout.spacing = 16;
@@ -600,7 +605,7 @@ namespace PotionPopQuest.Unity
             var goalStripObject = new GameObject("HUD Goal Strip", typeof(RectTransform));
             goalStripObject.transform.SetParent(goalPanel.transform, false);
             _goalStrip = goalStripObject.GetComponent<RectTransform>();
-            AddLayoutElement(goalStripObject, 490, 92);
+            AddLayoutElement(goalStripObject, 490, Mathf.Max(52f, hudHeight - 76f));
             var goalStripLayout = goalStripObject.AddComponent<VerticalLayoutGroup>();
             goalStripLayout.childAlignment = TextAnchor.MiddleCenter;
             goalStripLayout.spacing = 6;
@@ -611,7 +616,7 @@ namespace PotionPopQuest.Unity
             StretchInside(_scoreText.rectTransform, 8, 6);
 
             var starProgress = CreatePanel(_game.transform, "Star Progress", new Color(0.11f, 0.14f, 0.18f, 0.86f));
-            AddLayoutElement(starProgress, UiLayoutMetrics.StarProgressWidth, UiLayoutMetrics.StarProgressHeight);
+            AddLayoutElement(starProgress, UiLayoutMetrics.StarProgressWidth, UiLayoutMetrics.GameStarProgressHeight());
             var starBarBackground = CreatePanel(starProgress.transform, "Star Bar Background", new Color(0.07f, 0.08f, 0.10f, 0.92f));
             var starBarRect = starBarBackground.GetComponent<RectTransform>();
             starBarRect.anchorMin = new Vector2(0.04f, 0.22f);
@@ -634,8 +639,9 @@ namespace PotionPopQuest.Unity
 
             var boardPanel = CreatePanel(_game.transform, "Board Panel", new Color(0.16f, 0.18f, 0.21f, 0.94f));
             _boardRoot = boardPanel.GetComponent<RectTransform>();
-            _boardRoot.sizeDelta = new Vector2(UiLayoutMetrics.BoardSize, UiLayoutMetrics.BoardSize);
-            AddLayoutElement(boardPanel, UiLayoutMetrics.BoardSize, UiLayoutMetrics.BoardSize);
+            var boardSize = UiLayoutMetrics.GameBoardSize();
+            _boardRoot.sizeDelta = new Vector2(boardSize, boardSize);
+            AddLayoutElement(boardPanel, boardSize, boardSize);
             var floatingLayerObject = new GameObject("Floating Feedback Layer", typeof(RectTransform), typeof(LayoutElement));
             floatingLayerObject.transform.SetParent(boardPanel.transform, false);
             _floatingLayer = floatingLayerObject.GetComponent<RectTransform>();
@@ -647,10 +653,10 @@ namespace PotionPopQuest.Unity
             _boardPresenter.Configure(_boardRoot, _floatingLayer, _tilePressed, _playSfx);
 
             _messageText = CreateLabel(_game.transform, "", 24, TextAnchor.MiddleCenter);
-            _messageText.rectTransform.sizeDelta = new Vector2(UiLayoutMetrics.MessageWidth, UiLayoutMetrics.MessageHeight);
+            _messageText.rectTransform.sizeDelta = new Vector2(UiLayoutMetrics.MessageWidth, UiLayoutMetrics.GameMessageHeight());
 
             _tutorialPanel = CreatePanel(_game.transform, "Tutorial Banner", new Color(0.20f, 0.15f, 0.28f, 0.92f));
-            AddLayoutElement(_tutorialPanel, UiLayoutMetrics.TutorialWidth, UiLayoutMetrics.TutorialHeight);
+            AddLayoutElement(_tutorialPanel, UiLayoutMetrics.TutorialWidth, UiLayoutMetrics.GameTutorialHeight());
             _tutorialText = CreateLabel(_tutorialPanel.transform, "", 22, TextAnchor.MiddleCenter);
             _tutorialText.rectTransform.anchorMin = Vector2.zero;
             _tutorialText.rectTransform.anchorMax = Vector2.one;
@@ -659,14 +665,15 @@ namespace PotionPopQuest.Unity
             _tutorialPanel.SetActive(false);
 
             var actions = CreatePanel(_game.transform, "Game Actions", new Color(0, 0, 0, 0));
-            AddLayoutElement(actions, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.ActionsHeight);
+            AddLayoutElement(actions, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.GameActionsHeight());
             var actionsLayout = actions.AddComponent<HorizontalLayoutGroup>();
             actionsLayout.childAlignment = TextAnchor.MiddleCenter;
             actionsLayout.spacing = 14;
-            CreateButton(actions.transform, "Hint", _hintRequested, UiColorPalette.Emerald, new Vector2(204, UiLayoutMetrics.TouchHeight));
-            CreateButton(actions.transform, "Restart", _restart, UiColorPalette.Ruby, new Vector2(204, UiLayoutMetrics.TouchHeight));
-            CreateButton(actions.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(204, UiLayoutMetrics.TouchHeight));
-            CreateButton(actions.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(204, UiLayoutMetrics.TouchHeight));
+            var touchHeight = UiLayoutMetrics.GameTouchHeight();
+            CreateButton(actions.transform, "Hint", _hintRequested, UiColorPalette.Emerald, new Vector2(204, touchHeight));
+            CreateButton(actions.transform, "Restart", _restart, UiColorPalette.Ruby, new Vector2(204, touchHeight));
+            CreateButton(actions.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(204, touchHeight));
+            CreateButton(actions.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(204, touchHeight));
         }
 
         private void UpdateHud(GameSession session, string message)
@@ -797,7 +804,7 @@ namespace PotionPopQuest.Unity
         private GameObject CreateHudBadge(Transform parent, string name, float width, Color color)
         {
             var badge = CreatePanel(parent, name, color);
-            AddLayoutElement(badge, width, 138);
+            AddLayoutElement(badge, width, Mathf.Max(96f, UiLayoutMetrics.GameHudHeight() - 30f));
             return badge;
         }
 

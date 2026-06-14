@@ -19,6 +19,53 @@ namespace PotionPopQuest.Unity
         public const float TouchHeight = 68f;
         public const float ModalWidth = 720f;
 
+        public static float GameHudHeight()
+        {
+            return IsShortWideScreen() ? 128f : HudHeight;
+        }
+
+        public static float GameStarProgressHeight()
+        {
+            return IsShortWideScreen() ? 44f : StarProgressHeight;
+        }
+
+        public static float GameBoardSize()
+        {
+            return IsShortWideScreen() ? 620f : BoardSize;
+        }
+
+        public static float GameMessageHeight()
+        {
+            return IsShortWideScreen() ? 42f : MessageHeight;
+        }
+
+        public static float GameTutorialHeight()
+        {
+            return IsShortWideScreen() ? 64f : TutorialHeight;
+        }
+
+        public static float GameActionsHeight()
+        {
+            return IsShortWideScreen() ? 60f : ActionsHeight;
+        }
+
+        public static float GameTouchHeight()
+        {
+            return IsShortWideScreen() ? 56f : TouchHeight;
+        }
+
+        public static int GameScreenSpacing()
+        {
+            return IsShortWideScreen() ? 12 : 24;
+        }
+
+        public static RectOffset GameScreenPadding()
+        {
+            return IsShortWideScreen()
+                ? new RectOffset(28, 28, 24, 24)
+                : new RectOffset(40, 40, 80, 80);
+        }
+
         public static int LevelSelectColumnCount()
         {
             var width = Mathf.Min(Screen.width, Screen.height);
@@ -33,6 +80,11 @@ namespace PotionPopQuest.Unity
             }
 
             return 5;
+        }
+
+        private static bool IsShortWideScreen()
+        {
+            return Screen.width > Screen.height && Screen.height > 0;
         }
     }
 }
