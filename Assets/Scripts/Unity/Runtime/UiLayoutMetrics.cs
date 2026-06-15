@@ -6,9 +6,9 @@ namespace PotionPopQuest.Unity
     {
         public const float ScreenMaxWidth = 960f;
         public const float HudWidth = 960f;
-        public const float HudHeight = 174f;
+        public const float HudHeight = 110f; // Was 174f
         public const float StarProgressWidth = 920f;
-        public const float StarProgressHeight = 54f;
+        public const float StarProgressHeight = 0f; // Was 54f
         public const float BoardSize = 780f;
         public const float MessageWidth = 900f;
         public const float MessageHeight = 56f;

@@ -64,10 +64,11 @@ namespace PotionPopQuest.Unity
         private Action _levelIntroDismissed;
         private Action<GameSfxCue> _playSfx;
 
-        // Economy
+        // Economy & Pause
         private Action _buyLivesPressed;
         private Action _hammerBoosterPressed;
         private Action _shuffleBoosterPressed;
+        private Action _pauseRequested;
 
         private GameObject _economyPanel;
         private Text _livesText;
@@ -116,6 +117,7 @@ namespace PotionPopQuest.Unity
             _buyLivesPressed = actions.BuyLivesPressed;
             _hammerBoosterPressed = actions.HammerBoosterPressed;
             _shuffleBoosterPressed = actions.ShuffleBoosterPressed;
+            _pauseRequested = () => ShowPauseMenu();
 
             EnsureEventSystem();
             var canvasObject = CreateCanvas(parent);
@@ -137,22 +139,26 @@ namespace PotionPopQuest.Unity
 
         private void BuildEconomyHud()
         {
-            _economyPanel = CreatePanel(_root, "Economy HUD", UiColorPalette.HudBackground);
+            _economyPanel = CreatePanel(_root, "Economy HUD", new Color(0, 0, 0, 0));
             var rect = _economyPanel.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0, 1);
             rect.anchorMax = new Vector2(1, 1);
             rect.pivot = new Vector2(0.5f, 1);
-            rect.offsetMin = new Vector2(0, -60);
-            rect.offsetMax = new Vector2(0, 0);
+            rect.offsetMin = new Vector2(20, -80);
+            rect.offsetMax = new Vector2(-20, -20);
 
             var layout = _economyPanel.AddComponent<HorizontalLayoutGroup>();
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 20;
+            layout.childAlignment = TextAnchor.MiddleRight;
+            layout.spacing = 15;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
 
-            var livesBtn = CreateButton(_economyPanel.transform, "❤️ 5", _buyLivesPressed, UiColorPalette.Ruby, new Vector2(160, 40));
+            CreateButton(_economyPanel.transform, "⏸", _pauseRequested, UiColorPalette.Amethyst, new Vector2(60, 50));
+
+            var livesBtn = CreateButton(_economyPanel.transform, "Lives: 5", _buyLivesPressed, UiColorPalette.Ruby, new Vector2(160, 50));
             _livesText = livesBtn.GetComponentInChildren<Text>();
 
-            var coinsBtn = CreateButton(_economyPanel.transform, "🪙 100", null, UiColorPalette.Gold, new Vector2(160, 40));
+            var coinsBtn = CreateButton(_economyPanel.transform, "Coins: 100", null, UiColorPalette.Gold, new Vector2(160, 50));
             _coinsText = coinsBtn.GetComponentInChildren<Text>();
             
             _economyPanel.SetActive(true);
@@ -163,19 +169,19 @@ namespace PotionPopQuest.Unity
             if (_livesText != null)
             {
                 var regenText = lives < 5 && regenTimeSeconds > 0 ? $" ({regenTimeSeconds / 60}:{(regenTimeSeconds % 60):D2})" : "";
-                _livesText.text = $"❤️ {lives}" + regenText;
+                _livesText.text = $"Lives: {lives}" + regenText;
             }
             if (_coinsText != null)
             {
-                _coinsText.text = $"🪙 {coins}";
+                _coinsText.text = $"Coins: {coins}";
             }
             if (_hammerText != null)
             {
-                _hammerText.text = $"🔨 {hammers}";
+                _hammerText.text = $"[Smash]: {hammers}";
             }
             if (_shuffleText != null)
             {
-                _shuffleText.text = $"🔀 {shuffles}";
+                _shuffleText.text = $"[Shuffle]: {shuffles}";
             }
         }
 
@@ -716,6 +722,7 @@ namespace PotionPopQuest.Unity
 
             // Star progress bar with shimmer
             var starProgress = CreatePanel(_game.transform, "Star Progress", new Color(0.09f, 0.11f, 0.16f, 0.90f));
+            starProgress.SetActive(false); // Hide to save space
             AddLayoutElement(starProgress, UiLayoutMetrics.StarProgressWidth, UiLayoutMetrics.GameStarProgressHeight());
             var starBarBackground = CreatePanel(starProgress.transform, "Star Bar Background", UiColorPalette.StarBarBackground);
             var starBarRect = starBarBackground.GetComponent<RectTransform>();
@@ -787,23 +794,13 @@ namespace PotionPopQuest.Unity
             AddLayoutElement(boosters, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.GameActionsHeight());
             var boostersLayout = boosters.AddComponent<HorizontalLayoutGroup>();
             boostersLayout.childAlignment = TextAnchor.MiddleCenter;
-            boostersLayout.spacing = 14;
+            boostersLayout.spacing = 20;
             
-            var hammerBtn = CreateButton(boosters.transform, "🔨 0", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(204, touchHeight));
+            var hammerBtn = CreateButton(boosters.transform, "[Smash] 0", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(160, touchHeight));
             _hammerText = hammerBtn.GetComponentInChildren<Text>();
             
-            var shuffleBtn = CreateButton(boosters.transform, "🔀 0", _shuffleBoosterPressed, UiColorPalette.Gold, new Vector2(204, touchHeight));
+            var shuffleBtn = CreateButton(boosters.transform, "[Shuffle] 0", _shuffleBoosterPressed, UiColorPalette.Gold, new Vector2(160, touchHeight));
             _shuffleText = shuffleBtn.GetComponentInChildren<Text>();
-
-            var actions = CreatePanel(_game.transform, "Game Actions", new Color(0, 0, 0, 0));
-            AddLayoutElement(actions, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.GameActionsHeight());
-            var actionsLayout = actions.AddComponent<HorizontalLayoutGroup>();
-            actionsLayout.childAlignment = TextAnchor.MiddleCenter;
-            actionsLayout.spacing = 14;
-            CreateButton(actions.transform, "\u2728 Hint", _hintRequested, UiColorPalette.Emerald, new Vector2(204, touchHeight));
-            CreateButton(actions.transform, "\u21BB Restart", _restart, UiColorPalette.Ruby, new Vector2(204, touchHeight));
-            CreateButton(actions.transform, "\u2606 Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(204, touchHeight));
-            CreateButton(actions.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(204, touchHeight));
         }
 
         private void UpdateHud(GameSession session, string message)
@@ -1566,6 +1563,40 @@ namespace PotionPopQuest.Unity
             _game.SetActive(false);
             _settings.SetActive(false);
             _modal.SetActive(false);
+        }
+
+        private void ShowPauseMenu()
+        {
+            if (_gameSession == null || _gameSession.State != GameSessionState.Playing) return;
+            _playSfx(GameSfxCue.ButtonPress);
+            
+            ClearChildren(_modal.transform);
+            var modalPanel = CreatePanel(_modal.transform, "Pause Menu", UiColorPalette.HudBackground);
+            var rect = modalPanel.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(800, 400);
+
+            var layout = modalPanel.AddComponent<VerticalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 30;
+
+            var title = CreateTitle(modalPanel.transform, "Game Paused", 50);
+            title.color = UiColorPalette.Gold;
+
+            var buttonGroup = new GameObject("Buttons", typeof(RectTransform));
+            buttonGroup.transform.SetParent(modalPanel.transform, false);
+            var btnLayout = buttonGroup.AddComponent<HorizontalLayoutGroup>();
+            btnLayout.childAlignment = TextAnchor.MiddleCenter;
+            btnLayout.spacing = 20;
+
+            CreateButton(buttonGroup.transform, "Resume", () => _screenTransition.TransitionTo(_game, null), UiColorPalette.Emerald, new Vector2(180, 60));
+            CreateButton(buttonGroup.transform, "Restart", _restart, UiColorPalette.Ruby, new Vector2(180, 60));
+            CreateButton(buttonGroup.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(180, 60));
+            CreateButton(buttonGroup.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(180, 60));
+
+            _screenTransition.TransitionTo(_modal, null);
         }
 
         private static void ClearChildren(Transform parent)
