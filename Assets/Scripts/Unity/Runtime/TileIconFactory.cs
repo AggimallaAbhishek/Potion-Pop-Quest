@@ -35,6 +35,17 @@ namespace PotionPopQuest.Unity
             return GetOrCreate("pill", texture => DrawRoundedRect(texture, Size / 2), new Vector4(Size / 2, Size / 2, Size / 2, Size / 2));
         }
 
+        public Sprite GetStarSprite(bool earned)
+        {
+            return GetOrCreate(earned ? "star-earned" : "star-empty", texture => DrawStarIcon(texture, earned));
+        }
+
+        public Sprite GetBackgroundGradientSprite(Color top, Color bottom)
+        {
+            var key = $"gradient-{ColorUtility.ToHtmlStringRGBA(top)}-{ColorUtility.ToHtmlStringRGBA(bottom)}";
+            return GetOrCreate(key, texture => DrawVerticalGradient(texture, top, bottom));
+        }
+
         private Sprite GetOrCreate(string key, Action<Texture2D> draw, Vector4 border = default)
         {
             if (_cache.TryGetValue(key, out var sprite))
@@ -301,6 +312,35 @@ namespace PotionPopQuest.Unity
             }
         }
 
+        private static void DrawStarIcon(Texture2D texture, bool earned)
+        {
+            var shadow = new Color(0f, 0f, 0f, earned ? 0.30f : 0.18f);
+            DrawStar(texture, 66, 58, 44, 20, shadow);
+            if (earned)
+            {
+                DrawStar(texture, 64, 60, 43, 19, UiColorPalette.StarEarned);
+                DrawStar(texture, 64, 67, 24, 10, UiColorPalette.GoldLight);
+            }
+            else
+            {
+                DrawStar(texture, 64, 60, 43, 19, UiColorPalette.StarEmpty);
+                DrawStar(texture, 64, 60, 31, 14, new Color(0f, 0f, 0f, 0f));
+            }
+        }
+
+        private static void DrawVerticalGradient(Texture2D texture, Color top, Color bottom)
+        {
+            for (var y = 0; y < Size; y++)
+            {
+                var t = y / (float)(Size - 1);
+                var color = Color.Lerp(bottom, top, t);
+                for (var x = 0; x < Size; x++)
+                {
+                    texture.SetPixel(x, y, color);
+                }
+            }
+        }
+
         private static void DrawLine(Texture2D texture, int x0, int y0, int x1, int y1, Color color, int thickness)
         {
             var dx = Mathf.Abs(x1 - x0);
@@ -388,4 +428,3 @@ namespace PotionPopQuest.Unity
         }
     }
 }
-
