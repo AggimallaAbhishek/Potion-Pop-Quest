@@ -1567,8 +1567,7 @@ namespace PotionPopQuest.Unity
 
         private void ShowPauseMenu()
         {
-            if (_gameSession == null || _gameSession.State != GameSessionState.Playing) return;
-            _playSfx(GameSfxCue.ButtonPress);
+            _playSfx(GameSfxCue.Tap);
             
             ClearChildren(_modal.transform);
             var modalPanel = CreatePanel(_modal.transform, "Pause Menu", UiColorPalette.HudBackground);
@@ -1591,12 +1590,12 @@ namespace PotionPopQuest.Unity
             btnLayout.childAlignment = TextAnchor.MiddleCenter;
             btnLayout.spacing = 20;
 
-            CreateButton(buttonGroup.transform, "Resume", () => _screenTransition.TransitionTo(_game, null), UiColorPalette.Emerald, new Vector2(180, 60));
+            CreateButton(buttonGroup.transform, "Resume", () => _modal.SetActive(false), UiColorPalette.Emerald, new Vector2(180, 60));
             CreateButton(buttonGroup.transform, "Restart", _restart, UiColorPalette.Ruby, new Vector2(180, 60));
             CreateButton(buttonGroup.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(180, 60));
             CreateButton(buttonGroup.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(180, 60));
 
-            _screenTransition.TransitionTo(_modal, null);
+            _screenTransition.ScaleReveal(_modal);
         }
 
         private static void ClearChildren(Transform parent)
