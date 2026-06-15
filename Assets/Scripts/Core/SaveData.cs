@@ -15,7 +15,7 @@ namespace PotionPopQuest.Core
     [Serializable]
     public sealed class SaveData
     {
-        public const int CurrentSaveVersion = 2;
+        public const int CurrentSaveVersion = 3;
 
         public int saveVersion = CurrentSaveVersion;
         public int highestUnlockedLevel = 1;
@@ -24,6 +24,14 @@ namespace PotionPopQuest.Core
         public float musicVolume = 0.55f;
         public float sfxVolume = 0.85f;
         public bool vibrationEnabled = true;
+        
+        // Economy & Boosters
+        public int coins = 100;
+        public int currentLives = 5;
+        public long nextLifeRegenTime = 0;
+        public int hammerBoosters = 2;
+        public int shuffleBoosters = 2;
+
         public List<LevelSaveData> levelProgress = new List<LevelSaveData>();
 
         public LevelSaveData GetOrCreateLevelProgress(int levelNumber)
@@ -41,11 +49,24 @@ namespace PotionPopQuest.Core
 
         public void Normalize()
         {
-            var migratedFromOlderSettings = saveVersion < CurrentSaveVersion;
+            var migratedFromOlderSettings = saveVersion < 2;
+            var migratedFromNoEconomy = saveVersion < 3;
+            
             saveVersion = CurrentSaveVersion;
             highestUnlockedLevel = Math.Max(1, highestUnlockedLevel);
             musicVolume = Clamp01(migratedFromOlderSettings && musicVolume <= 0f ? 0.55f : musicVolume);
             sfxVolume = Clamp01(migratedFromOlderSettings && sfxVolume <= 0f ? 0.85f : sfxVolume);
+            
+            if (migratedFromNoEconomy)
+            {
+                coins = 100;
+                currentLives = 5;
+                nextLifeRegenTime = 0;
+                hammerBoosters = 2;
+                shuffleBoosters = 2;
+            }
+            
+            currentLives = Math.Max(0, Math.Min(5, currentLives));
             levelProgress = levelProgress ?? new List<LevelSaveData>();
         }
 
@@ -60,3 +81,4 @@ namespace PotionPopQuest.Core
         }
     }
 }
+

@@ -171,6 +171,81 @@ namespace PotionPopQuest.Core
                 boardBeforeMove);
         }
 
+        public MoveResult ForceShuffle()
+        {
+            var boardBeforeMove = BoardSnapshot.From(Board);
+            if (State != GameSessionState.Playing)
+            {
+                return Invalid($"Level is already {State}.", boardBeforeMove);
+            }
+
+            var animationEvents = new List<BoardAnimationEvent>();
+            if (_boardShuffler.TryShuffle(Board, _random, out var shuffledPositions, out var movements))
+            {
+                animationEvents.Add(new BoardAnimationEvent(BoardAnimationEventKind.BoardShuffled, shuffledPositions, movements: movements));
+                _logger.Log(LogCategory.Board, $"Force shuffled {shuffledPositions.Count} movable tiles via booster.");
+            }
+            else
+            {
+                return Invalid("Could not shuffle board.", animationEvents, boardBeforeMove);
+            }
+
+            return new MoveResult(
+                true,
+                "Board shuffled with booster.",
+                0,
+                0,
+                Array.Empty<GridPosition>(),
+                Array.Empty<PotionType>(),
+                State,
+                animationEvents,
+                boardBeforeMove);
+        }
+
+        public MoveResult UseHammer(GridPosition position)
+        {
+            var boardBeforeMove = BoardSnapshot.From(Board);
+            if (State != GameSessionState.Playing)
+            {
+                return Invalid($"Level is already {State}.", boardBeforeMove);
+            }
+            
+            if (!Board.IsValid(position))
+            {
+                return Invalid("Invalid tile for hammer.", boardBeforeMove);
+            }
+
+            var animationEvents = new List<BoardAnimationEvent>();
+            animationEvents.Add(new BoardAnimationEvent(
+                BoardAnimationEventKind.Clear,
+                new[] { position },
+                cascadeIndex: 0));
+
+            var drop = _dropResolver.ClearDropAndSpawn(Board, new[] { position }, Level.ActiveIngredients, _random, new[] { position });
+            
+            AppendDropAnimationEvents(drop, animationEvents, 0);
+
+            var clearedIngredient = boardBeforeMove.GetCell(position).Ingredient;
+            GoalTracker.ApplyMatchEvents(
+                new[] { new ClearedIngredient(position, clearedIngredient) },
+                drop.DestroyedObstacles,
+                drop.ClearedTiles,
+                Array.Empty<PotionType>());
+
+            var scoreGained = 50; // Base score for hammer
+            Score += scoreGained;
+            
+            var cascadeScore = ResolveCascades(new List<GridPosition> { position }, new List<PotionType>(), animationEvents, out var cascades);
+            Score += cascadeScore;
+            scoreGained += cascadeScore;
+            
+            UpdateState(animationEvents);
+            TryShuffleBoardIfNeeded(animationEvents);
+
+            _logger.Log(LogCategory.Match, $"Hammer used at {position}, {cascades} cascades, +{scoreGained} score.");
+            return new MoveResult(true, "Hammer used.", scoreGained, cascades, new[] { position }, Array.Empty<PotionType>(), State, animationEvents, boardBeforeMove);
+        }
+
         private MoveResult ResolvePotionSwap(
             GridPosition first,
             GridPosition second,

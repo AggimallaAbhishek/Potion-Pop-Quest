@@ -23,5 +23,10 @@ namespace PotionPopQuest.Unity
         public Action<bool> ToggleVibration { get; set; }
         public Action LevelIntroDismissed { get; set; }
         public Action<GameSfxCue> PlaySfx { get; set; }
+        
+        // Economy & Boosters
+        public Action BuyLivesPressed { get; set; }
+        public Action HammerBoosterPressed { get; set; }
+        public Action ShuffleBoosterPressed { get; set; }
     }
 }

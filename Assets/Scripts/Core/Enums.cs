@@ -69,5 +69,11 @@ namespace PotionPopQuest.Core
         Save,
         UI
     }
+
+    public enum BoosterType
+    {
+        Hammer = 1,
+        Shuffle = 2
+    }
 }
 
