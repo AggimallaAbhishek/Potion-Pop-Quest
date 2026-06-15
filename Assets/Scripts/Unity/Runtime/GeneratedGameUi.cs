@@ -69,8 +69,14 @@ namespace PotionPopQuest.Unity
         private Action _hammerBoosterPressed;
         private Action _shuffleBoosterPressed;
         private Action _pauseRequested;
+        private Action _showShop;
+        private Action _closeShop;
+        private Action<int> _buyCoinPackage;
+        private Action _claimDailyReward;
 
         private GameObject _economyPanel;
+        private GameObject _shopModal;
+        private GameObject _dailyRewardModal;
         private Text _livesText;
         private Text _coinsText;
         private Text _hammerText;
@@ -118,6 +124,10 @@ namespace PotionPopQuest.Unity
             _hammerBoosterPressed = actions.HammerBoosterPressed;
             _shuffleBoosterPressed = actions.ShuffleBoosterPressed;
             _pauseRequested = () => ShowPauseMenu();
+            _showShop = actions.ShowShop;
+            _closeShop = actions.CloseShop;
+            _buyCoinPackage = actions.BuyCoinPackage;
+            _claimDailyReward = actions.ClaimDailyReward;
 
             EnsureEventSystem();
             var canvasObject = CreateCanvas(parent);

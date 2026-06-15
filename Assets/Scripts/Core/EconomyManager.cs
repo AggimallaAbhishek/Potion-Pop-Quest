@@ -112,5 +112,46 @@ namespace PotionPopQuest.Core
             }
             return true;
         }
+
+        public static bool CheckDailyRewardAvailable(SaveData data)
+        {
+            if (data == null) return false;
+
+            var now = DateTimeOffset.UtcNow;
+            var lastReward = DateTimeOffset.FromUnixTimeSeconds(data.lastDailyRewardTime);
+            
+            // If the last reward was not collected today (UTC)
+            return now.Date > lastReward.Date;
+        }
+
+        public static int ClaimDailyReward(SaveData data)
+        {
+            if (data == null || !CheckDailyRewardAvailable(data)) return 0;
+
+            var now = DateTimeOffset.UtcNow;
+            var lastReward = DateTimeOffset.FromUnixTimeSeconds(data.lastDailyRewardTime);
+
+            // If more than 1 day has passed, reset streak
+            if ((now.Date - lastReward.Date).TotalDays > 1)
+            {
+                data.dailyRewardStreak = 0;
+            }
+
+            data.dailyRewardStreak++;
+            data.lastDailyRewardTime = now.ToUnixTimeSeconds();
+
+            // Reward scales with streak, up to 7 days (50 -> 200 max)
+            var streakCap = Math.Min(data.dailyRewardStreak, 7);
+            var rewardCoins = 50 + ((streakCap - 1) * 25);
+            
+            data.coins += rewardCoins;
+            return rewardCoins;
+        }
+
+        public static void PurchaseCoinPackage(SaveData data, int amount)
+        {
+            if (data == null || amount <= 0) return;
+            data.coins += amount;
+        }
     }
 }

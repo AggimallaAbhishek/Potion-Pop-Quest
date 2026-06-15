@@ -15,7 +15,7 @@ namespace PotionPopQuest.Core
     [Serializable]
     public sealed class SaveData
     {
-        public const int CurrentSaveVersion = 3;
+        public const int CurrentSaveVersion = 4;
 
         public int saveVersion = CurrentSaveVersion;
         public int highestUnlockedLevel = 1;
@@ -31,6 +31,10 @@ namespace PotionPopQuest.Core
         public long nextLifeRegenTime = 0;
         public int hammerBoosters = 2;
         public int shuffleBoosters = 2;
+
+        // Daily Rewards
+        public long lastDailyRewardTime = 0;
+        public int dailyRewardStreak = 0;
 
         public List<LevelSaveData> levelProgress = new List<LevelSaveData>();
 
@@ -51,6 +55,7 @@ namespace PotionPopQuest.Core
         {
             var migratedFromOlderSettings = saveVersion < 2;
             var migratedFromNoEconomy = saveVersion < 3;
+            var migratedFromNoDaily = saveVersion < 4;
             
             saveVersion = CurrentSaveVersion;
             highestUnlockedLevel = Math.Max(1, highestUnlockedLevel);
@@ -64,6 +69,12 @@ namespace PotionPopQuest.Core
                 nextLifeRegenTime = 0;
                 hammerBoosters = 2;
                 shuffleBoosters = 2;
+            }
+
+            if (migratedFromNoDaily)
+            {
+                lastDailyRewardTime = 0;
+                dailyRewardStreak = 0;
             }
             
             currentLives = Math.Max(0, Math.Min(5, currentLives));

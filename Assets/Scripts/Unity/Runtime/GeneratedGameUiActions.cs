@@ -28,5 +28,11 @@ namespace PotionPopQuest.Unity
         public Action BuyLivesPressed { get; set; }
         public Action HammerBoosterPressed { get; set; }
         public Action ShuffleBoosterPressed { get; set; }
+        
+        // Shop & Daily Rewards
+        public Action ShowShop { get; set; }
+        public Action CloseShop { get; set; }
+        public Action<int> BuyCoinPackage { get; set; }
+        public Action ClaimDailyReward { get; set; }
     }
 }
