@@ -8,6 +8,8 @@ namespace PotionPopQuest.Unity
 {
     public sealed class BoardAnimationController : MonoBehaviour
     {
+        private int _cascadeCount;
+
         public IEnumerator Play(
             IReadOnlyList<BoardAnimationEvent> events,
             IReadOnlyDictionary<GridPosition, RectTransform> tileViews,
@@ -17,6 +19,8 @@ namespace PotionPopQuest.Unity
             {
                 yield break;
             }
+
+            _cascadeCount = 0;
 
             foreach (var animationEvent in events)
             {
@@ -29,32 +33,33 @@ namespace PotionPopQuest.Unity
                         yield return ShakePositions(tileViews, animationEvent.Positions);
                         break;
                     case BoardAnimationEventKind.CascadeStarted:
+                        _cascadeCount++;
                         yield return new WaitForSecondsRealtime(GameplayPresentationConfig.CascadeDelay);
                         break;
                     case BoardAnimationEventKind.Clear:
-                        yield return PopPositions(tileViews, animationEvent.Positions, new Color(1f, 0.95f, 0.55f, 1f));
+                        yield return PopWithParticles(tileViews, animationEvent.Positions, UiColorPalette.ClearGlow, boardRoot);
                         break;
                     case BoardAnimationEventKind.PotionCreated:
-                        yield return PopPositions(tileViews, animationEvent.Positions, PotionColor(animationEvent.Potion));
+                        yield return PopWithParticles(tileViews, animationEvent.Positions, PotionColor(animationEvent.Potion), boardRoot);
                         break;
                     case BoardAnimationEventKind.PotionActivated:
                         yield return PotionBurst(boardRoot, animationEvent);
                         break;
                     case BoardAnimationEventKind.ObstacleDamaged:
-                        yield return PopPositions(tileViews, animationEvent.Positions, new Color(1f, 0.58f, 0.28f, 1f));
+                        yield return PopWithParticles(tileViews, animationEvent.Positions, UiColorPalette.ObstacleDamageFlash, boardRoot);
                         break;
                     case BoardAnimationEventKind.ObstacleDestroyed:
-                        yield return PopPositions(tileViews, animationEvent.Positions, new Color(0.78f, 0.54f, 1f, 1f));
+                        yield return PopWithParticles(tileViews, animationEvent.Positions, UiColorPalette.ObstacleDestroyFlash, boardRoot);
                         break;
                     case BoardAnimationEventKind.TileDropped:
-                        yield return DropTile(tileViews, animationEvent.From, animationEvent.To);
+                        yield return DropTileWithBounce(tileViews, animationEvent.From, animationEvent.To);
                         break;
                     case BoardAnimationEventKind.TileSpawned:
                         yield return SpawnTile(tileViews, animationEvent.From, animationEvent.To);
                         break;
                     case BoardAnimationEventKind.Win:
                     case BoardAnimationEventKind.Lose:
-                        yield return Pulse(boardRoot, 1.035f, GameplayPresentationConfig.BoardPulseDuration);
+                        yield return Pulse(boardRoot, 1.04f, GameplayPresentationConfig.BoardPulseDuration);
                         break;
                     case BoardAnimationEventKind.BoardShuffled:
                         yield return ShuffleBoard(tileViews, animationEvent.Positions, boardRoot);
@@ -89,8 +94,9 @@ namespace PotionPopQuest.Unity
                 var pulse = Mathf.Sin(progress * Mathf.PI);
                 firstRect.anchoredPosition = Vector2.LerpUnclamped(secondEndPosition, firstEndPosition, progress);
                 secondRect.anchoredPosition = Vector2.LerpUnclamped(firstEndPosition, secondEndPosition, progress);
-                firstRect.localScale = firstStart * Mathf.Lerp(1f, 1.08f, pulse);
-                secondRect.localScale = secondStart * Mathf.Lerp(1f, 1.08f, pulse);
+                // Slightly larger pulse for juicier swap
+                firstRect.localScale = firstStart * Mathf.Lerp(1f, 1.12f, pulse);
+                secondRect.localScale = secondStart * Mathf.Lerp(1f, 1.12f, pulse);
                 yield return null;
             }
 
@@ -123,7 +129,8 @@ namespace PotionPopQuest.Unity
             while (elapsed < duration)
             {
                 elapsed += Time.unscaledDeltaTime;
-                var offset = Mathf.Sin(elapsed * 120f) * Mathf.Lerp(10f, 0f, elapsed / duration);
+                var decay = 1f - elapsed / duration;
+                var offset = Mathf.Sin(elapsed * 120f) * Mathf.Lerp(12f, 0f, 1f - decay * decay);
                 foreach (var target in targets)
                 {
                     if (target != null)
@@ -144,12 +151,18 @@ namespace PotionPopQuest.Unity
             }
         }
 
-        private IEnumerator PopPositions(
+        /// <summary>
+        /// Enhanced pop with starburst particle effects on clear.
+        /// </summary>
+        private IEnumerator PopWithParticles(
             IReadOnlyDictionary<GridPosition, RectTransform> tileViews,
             IReadOnlyList<GridPosition> positions,
-            Color flashColor)
+            Color flashColor,
+            RectTransform boardRoot)
         {
             var targets = ResolveTargets(tileViews, positions);
+            var origins = new List<Vector2>();
+
             foreach (var target in targets)
             {
                 if (target == null)
@@ -157,13 +170,158 @@ namespace PotionPopQuest.Unity
                     continue;
                 }
 
-                StartCoroutine(Flash(target, flashColor));
+                origins.Add(target.anchoredPosition);
+                StartCoroutine(FlashAndPop(target, flashColor));
+            }
+
+            // Spawn starburst particles at each cleared tile
+            if (boardRoot != null && origins.Count > 0)
+            {
+                StartCoroutine(SpawnParticleBursts(boardRoot, origins, flashColor));
             }
 
             yield return new WaitForSecondsRealtime(GameplayPresentationConfig.ClearPopDuration);
         }
 
-        private static IEnumerator DropTile(
+        /// <summary>
+        /// Flash color and elastic pop with scale-down shrink.
+        /// </summary>
+        private static IEnumerator FlashAndPop(RectTransform target, Color color)
+        {
+            var image = target.GetComponent<Image>();
+            Color? startColor = null;
+            if (image != null)
+            {
+                startColor = image.color;
+                image.color = color;
+            }
+
+            // Scale up with elastic overshoot
+            var elapsed = 0f;
+            var phase1 = GameplayPresentationConfig.ClearPopDuration * 0.45f;
+            while (elapsed < phase1 && target != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = EasingFunctions.EaseOutBack(Mathf.Clamp01(elapsed / phase1), 2.0f);
+                target.localScale = Vector3.LerpUnclamped(Vector3.one, Vector3.one * 1.18f, t);
+                yield return null;
+            }
+
+            // Shrink down quickly
+            elapsed = 0f;
+            var phase2 = GameplayPresentationConfig.ClearPopDuration * 0.55f;
+            while (elapsed < phase2 && target != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = EasingFunctions.EaseOutQuart(Mathf.Clamp01(elapsed / phase2));
+                target.localScale = Vector3.Lerp(Vector3.one * 1.18f, Vector3.one, t);
+
+                // Fade out the flash color
+                if (image != null && startColor.HasValue)
+                {
+                    image.color = Color.Lerp(color, startColor.Value, t);
+                }
+
+                yield return null;
+            }
+
+            if (target != null)
+            {
+                target.localScale = Vector3.one;
+            }
+
+            if (image != null && startColor.HasValue)
+            {
+                image.color = startColor.Value;
+            }
+        }
+
+        /// <summary>
+        /// Spawns starburst particles that fly outward from each cleared tile position.
+        /// </summary>
+        private static IEnumerator SpawnParticleBursts(RectTransform boardRoot, IReadOnlyList<Vector2> origins, Color color)
+        {
+            var particles = new List<RectTransform>();
+            var images = new List<Image>();
+            var velocities = new List<Vector2>();
+            var count = GameplayPresentationConfig.ParticleBurstCount;
+            var speed = GameplayPresentationConfig.ParticleBurstSpeed;
+
+            foreach (var origin in origins)
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    var angle = (i / (float)count) * Mathf.PI * 2f + Random.Range(-0.2f, 0.2f);
+                    var dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+
+                    var particle = new GameObject("ClearParticle", typeof(RectTransform), typeof(Image));
+                    particle.transform.SetParent(boardRoot, false);
+                    var rect = particle.GetComponent<RectTransform>();
+                    rect.anchorMin = new Vector2(0.5f, 0.5f);
+                    rect.anchorMax = new Vector2(0.5f, 0.5f);
+                    rect.sizeDelta = Vector2.one * Random.Range(
+                        GameplayPresentationConfig.ParticleBurstSize * 0.6f,
+                        GameplayPresentationConfig.ParticleBurstSize * 1.4f);
+                    rect.anchoredPosition = origin;
+                    rect.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+
+                    var img = particle.GetComponent<Image>();
+                    // Randomize particle color slightly
+                    var hueShift = Random.Range(-0.06f, 0.06f);
+                    var particleColor = new Color(
+                        Mathf.Clamp01(color.r + hueShift),
+                        Mathf.Clamp01(color.g + hueShift),
+                        Mathf.Clamp01(color.b + hueShift), 0.90f);
+                    img.color = particleColor;
+                    img.raycastTarget = false;
+
+                    particles.Add(rect);
+                    images.Add(img);
+                    velocities.Add(dir * speed * Random.Range(0.7f, 1.3f));
+                }
+            }
+
+            var elapsed = 0f;
+            var duration = GameplayPresentationConfig.ParticleBurstDuration;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+
+                for (var i = 0; i < particles.Count; i++)
+                {
+                    if (particles[i] == null)
+                    {
+                        continue;
+                    }
+
+                    // Move outward with deceleration
+                    particles[i].anchoredPosition += velocities[i] * (1f - t) * Time.unscaledDeltaTime;
+                    // Shrink and fade
+                    particles[i].localScale = Vector3.one * (1f - t * t);
+                    if (images[i] != null)
+                    {
+                        var c = images[i].color;
+                        images[i].color = new Color(c.r, c.g, c.b, 0.90f * (1f - t));
+                    }
+                }
+
+                yield return null;
+            }
+
+            foreach (var p in particles)
+            {
+                if (p != null)
+                {
+                    Object.Destroy(p.gameObject);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tile drop with squash-and-stretch bounce on landing.
+        /// </summary>
+        private static IEnumerator DropTileWithBounce(
             IReadOnlyDictionary<GridPosition, RectTransform> tileViews,
             GridPosition from,
             GridPosition to)
@@ -177,7 +335,43 @@ namespace PotionPopQuest.Unity
             var start = tileViews.TryGetValue(from, out var source) && source != null && source != target
                 ? source.anchoredPosition
                 : end + new Vector2(0f, CellPitch(target, vertical: true) * Mathf.Max(1, to.Row - from.Row));
-            yield return MoveAnchored(target, start, end, GameplayPresentationConfig.DropDuration);
+
+            // Move phase with EaseOutBounce
+            var elapsed = 0f;
+            var moveDuration = GameplayPresentationConfig.DropDuration;
+            target.anchoredPosition = start;
+            while (elapsed < moveDuration && target != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = EasingFunctions.EaseOutBounce(Mathf.Clamp01(elapsed / moveDuration));
+                target.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
+                yield return null;
+            }
+
+            if (target != null)
+            {
+                target.anchoredPosition = end;
+            }
+
+            // Squash-and-stretch on landing
+            elapsed = 0f;
+            var ssDuration = GameplayPresentationConfig.SquashStretchDuration;
+            while (elapsed < ssDuration && target != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / ssDuration);
+                var ss = EasingFunctions.SquashStretch(t);
+                // Squash: wider and shorter; Stretch: thinner and taller
+                var scaleX = ss < 1f ? Mathf.Lerp(1f, GameplayPresentationConfig.SquashScaleX, (1f - ss)) : 1f;
+                var scaleY = ss;
+                target.localScale = new Vector3(scaleX, scaleY, 1f);
+                yield return null;
+            }
+
+            if (target != null)
+            {
+                target.localScale = Vector3.one;
+            }
         }
 
         private static IEnumerator SpawnTile(
@@ -193,9 +387,27 @@ namespace PotionPopQuest.Unity
             var end = target.anchoredPosition;
             var rowDistance = Mathf.Max(1, to.Row - from.Row);
             var start = end + new Vector2(0f, CellPitch(target, vertical: true) * rowDistance);
-            target.localScale = Vector3.one * 0.72f;
-            yield return MoveAnchored(target, start, end, GameplayPresentationConfig.SpawnDropDuration);
-            yield return Scale(target, Vector3.one * 0.72f, Vector3.one, GameplayPresentationConfig.SpawnScaleDuration);
+            target.localScale = Vector3.one * 0.65f;
+
+            // Move and scale simultaneously
+            var elapsed = 0f;
+            var duration = GameplayPresentationConfig.SpawnDropDuration;
+            while (elapsed < duration && target != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var moveT = EasingFunctions.EaseOutCubic(t);
+                var scaleT = EasingFunctions.EaseOutBack(t, 1.2f);
+                target.anchoredPosition = Vector2.LerpUnclamped(start, end, moveT);
+                target.localScale = Vector3.LerpUnclamped(Vector3.one * 0.65f, Vector3.one, scaleT);
+                yield return null;
+            }
+
+            if (target != null)
+            {
+                target.anchoredPosition = end;
+                target.localScale = Vector3.one;
+            }
         }
 
         private IEnumerator PotionBurst(RectTransform boardRoot, BoardAnimationEvent animationEvent)
@@ -212,32 +424,93 @@ namespace PotionPopQuest.Unity
             }
 
             var color = PotionColor(animationEvent.Potion);
+
+            // Shockwave ring
+            StartCoroutine(ShockwaveRing(boardRoot, color, animationEvent.Potion == PotionType.Bomb ? 400f : 600f));
+
+            // Color burst
             var burst = new GameObject("Potion Burst", typeof(RectTransform), typeof(Image));
             burst.transform.SetParent(boardRoot, false);
             var rect = burst.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = Vector2.one * (animationEvent.Potion == PotionType.Bomb ? 140f : 220f);
+            rect.sizeDelta = Vector2.one * (animationEvent.Potion == PotionType.Bomb ? 160f : 240f);
             var image = burst.GetComponent<Image>();
+            image.color = new Color(color.r, color.g, color.b, 0.50f);
+            image.raycastTarget = false;
+
+            yield return Scale(rect, Vector3.one * 0.30f, Vector3.one * 1.5f, GameplayPresentationConfig.PotionBurstDuration);
+            Object.Destroy(burst);
+        }
+
+        /// <summary>
+        /// Expanding shockwave ring effect for potion activations.
+        /// </summary>
+        private static IEnumerator ShockwaveRing(RectTransform parent, Color color, float maxSize)
+        {
+            var ring = new GameObject("Shockwave", typeof(RectTransform), typeof(Image));
+            ring.transform.SetParent(parent, false);
+            var rect = ring.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = Vector2.one * 30f;
+            var image = ring.GetComponent<Image>();
             image.color = new Color(color.r, color.g, color.b, 0.45f);
             image.raycastTarget = false;
 
-            yield return Scale(rect, Vector3.one * 0.35f, Vector3.one * 1.35f, GameplayPresentationConfig.PotionBurstDuration);
-            Object.Destroy(burst);
+            var elapsed = 0f;
+            var duration = GameplayPresentationConfig.ShockwaveExpandDuration;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var eased = EasingFunctions.EaseOutQuart(t);
+                rect.sizeDelta = Vector2.one * Mathf.Lerp(30f, maxSize, eased);
+                image.color = new Color(color.r, color.g, color.b, 0.45f * (1f - t));
+                yield return null;
+            }
+
+            Object.Destroy(ring);
         }
 
         private static IEnumerator Beam(RectTransform boardRoot, bool horizontal)
         {
+            // Create glow trail behind beam
+            var glow = new GameObject("Beam Glow", typeof(RectTransform), typeof(Image));
+            glow.transform.SetParent(boardRoot, false);
+            var glowRect = glow.GetComponent<RectTransform>();
+            glowRect.anchorMin = new Vector2(0.5f, 0.5f);
+            glowRect.anchorMax = new Vector2(0.5f, 0.5f);
+            glowRect.sizeDelta = horizontal ? new Vector2(boardRoot.rect.width, 40f) : new Vector2(40f, boardRoot.rect.height);
+            var glowImage = glow.GetComponent<Image>();
+            glowImage.color = new Color(0.48f, 0.88f, 1f, 0.22f);
+            glowImage.raycastTarget = false;
+
+            // Main beam
             var beam = new GameObject("Line Potion Beam", typeof(RectTransform), typeof(Image));
             beam.transform.SetParent(boardRoot, false);
             var rect = beam.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = horizontal ? new Vector2(boardRoot.rect.width, 18f) : new Vector2(18f, boardRoot.rect.height);
+            rect.sizeDelta = horizontal ? new Vector2(boardRoot.rect.width, 20f) : new Vector2(20f, boardRoot.rect.height);
             var image = beam.GetComponent<Image>();
-            image.color = new Color(0.74f, 0.94f, 1f, 0.72f);
+            image.color = new Color(0.74f, 0.94f, 1f, 0.80f);
             image.raycastTarget = false;
-            yield return Scale(rect, horizontal ? new Vector3(0.08f, 1f, 1f) : new Vector3(1f, 0.08f, 1f), Vector3.one, GameplayPresentationConfig.BeamDuration);
+
+            yield return Scale(rect, horizontal ? new Vector3(0.06f, 1f, 1f) : new Vector3(1f, 0.06f, 1f), Vector3.one, GameplayPresentationConfig.BeamDuration);
+
+            // Fade out glow
+            var elapsed = 0f;
+            while (elapsed < 0.10f)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var t = Mathf.Clamp01(elapsed / 0.10f);
+                glowImage.color = new Color(0.48f, 0.88f, 1f, 0.22f * (1f - t));
+                image.color = new Color(0.74f, 0.94f, 1f, 0.80f * (1f - t));
+                yield return null;
+            }
+
+            Object.Destroy(glow);
             Object.Destroy(beam);
         }
 
@@ -252,21 +525,21 @@ namespace PotionPopQuest.Unity
             {
                 if (target != null)
                 {
-                    target.localScale = Vector3.one * 0.88f;
+                    target.localScale = Vector3.one * 0.85f;
                 }
             }
 
             var elapsed = 0f;
-            const float duration = 0.18f;
+            const float duration = 0.20f;
             while (elapsed < duration)
             {
                 elapsed += Time.unscaledDeltaTime;
-                var t = Smooth(Mathf.Clamp01(elapsed / duration));
+                var t = EasingFunctions.EaseOutBack(Mathf.Clamp01(elapsed / duration), 1.2f);
                 foreach (var target in targets)
                 {
                     if (target != null)
                     {
-                        target.localScale = Vector3.Lerp(Vector3.one * 0.88f, Vector3.one, t);
+                        target.localScale = Vector3.LerpUnclamped(Vector3.one * 0.85f, Vector3.one, t);
                     }
                 }
 
@@ -288,21 +561,21 @@ namespace PotionPopQuest.Unity
             yield return Scale(target, Vector3.one * scale, Vector3.one, duration * 0.5f);
         }
 
-        private static IEnumerator Flash(RectTransform target, Color color)
+        private static IEnumerator Scale(RectTransform target, Vector3 start, Vector3 end, float duration)
         {
-            var image = target.GetComponent<Image>();
-            if (image == null)
+            var elapsed = 0f;
+            target.localScale = start;
+            while (elapsed < duration && target != null)
             {
-                yield return Pulse(target, 1.10f, 0.12f);
-                yield break;
+                elapsed += Time.unscaledDeltaTime;
+                var t = Smooth(Mathf.Clamp01(elapsed / duration));
+                target.localScale = Vector3.LerpUnclamped(start, end, t);
+                yield return null;
             }
 
-            var startColor = image.color;
-            image.color = color;
-            yield return Pulse(target, 1.12f, 0.12f);
-            if (image != null)
+            if (target != null)
             {
-                image.color = startColor;
+                target.localScale = end;
             }
         }
 
@@ -324,24 +597,6 @@ namespace PotionPopQuest.Unity
             }
         }
 
-        private static IEnumerator Scale(RectTransform target, Vector3 start, Vector3 end, float duration)
-        {
-            var elapsed = 0f;
-            target.localScale = start;
-            while (elapsed < duration && target != null)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                var t = Smooth(Mathf.Clamp01(elapsed / duration));
-                target.localScale = Vector3.LerpUnclamped(start, end, t);
-                yield return null;
-            }
-
-            if (target != null)
-            {
-                target.localScale = end;
-            }
-        }
-
         private static List<RectTransform> ResolveTargets(
             IReadOnlyDictionary<GridPosition, RectTransform> tileViews,
             IReadOnlyList<GridPosition> positions)
@@ -360,17 +615,7 @@ namespace PotionPopQuest.Unity
 
         private static Color PotionColor(PotionType potion)
         {
-            switch (potion)
-            {
-                case PotionType.Bomb:
-                    return new Color(1f, 0.50f, 0.20f, 1f);
-                case PotionType.Lightning:
-                    return new Color(0.94f, 0.96f, 1f, 1f);
-                case PotionType.Mega:
-                    return new Color(1f, 0.82f, 0.34f, 1f);
-                default:
-                    return new Color(0.62f, 0.86f, 1f, 1f);
-            }
+            return UiColorPalette.PotionColor(potion);
         }
 
         private static float Smooth(float t)

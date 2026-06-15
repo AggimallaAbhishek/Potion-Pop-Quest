@@ -60,6 +60,14 @@ namespace PotionPopQuest.Unity
         }
 
         /// <summary>
+        /// Exaggerated overshoot for dramatic reveals (star popups, potion creation).
+        /// </summary>
+        public static float EaseOutBackStrong(float t)
+        {
+            return EaseOutBack(t, 2.8f);
+        }
+
+        /// <summary>
         /// Bounces at the end like a ball — ideal for tile drops.
         /// </summary>
         public static float EaseOutBounce(float t)
@@ -158,6 +166,59 @@ namespace PotionPopQuest.Unity
         public static float LoopingPulse(float elapsed, float period)
         {
             return (Mathf.Sin(elapsed / period * Mathf.PI * 2f - Mathf.PI * 0.5f) + 1f) * 0.5f;
+        }
+
+        /// <summary>
+        /// Squash-and-stretch curve for tile landing impacts.
+        /// Goes through: normal → squash (0.88) → stretch (1.06) → settle (1.0)
+        /// </summary>
+        public static float SquashStretch(float t)
+        {
+            if (t < 0.3f)
+            {
+                // Squash phase: scale down to 0.88
+                var squashT = t / 0.3f;
+                return Mathf.Lerp(1f, 0.88f, EaseOutCubic(squashT));
+            }
+
+            if (t < 0.6f)
+            {
+                // Stretch phase: spring up to 1.06
+                var stretchT = (t - 0.3f) / 0.3f;
+                return Mathf.Lerp(0.88f, 1.06f, EaseOutCubic(stretchT));
+            }
+
+            // Settle phase: ease back to 1.0
+            var settleT = (t - 0.6f) / 0.4f;
+            return Mathf.Lerp(1.06f, 1f, EaseOutElasticGentle(settleT));
+        }
+
+        /// <summary>
+        /// Cycles through HSV hue for rainbow color effects.
+        /// Returns a fully saturated color at hue position t (0..1).
+        /// </summary>
+        public static Color RainbowHue(float t)
+        {
+            return Color.HSVToRGB(t % 1f, 0.85f, 1f);
+        }
+
+        /// <summary>
+        /// Damped oscillation for jelly/candy wobble effects.
+        /// Returns values centered around 0, decaying over time.
+        /// </summary>
+        public static float Wobble(float t, float frequency = 8f)
+        {
+            return Mathf.Sin(t * frequency * Mathf.PI) * Mathf.Pow(1f - t, 2f);
+        }
+
+        /// <summary>
+        /// Quadratic ease-in-out — smooth symmetric motion.
+        /// </summary>
+        public static float EaseInOutQuad(float t)
+        {
+            return t < 0.5f
+                ? 2f * t * t
+                : 1f - Mathf.Pow(-2f * t + 2f, 2f) * 0.5f;
         }
     }
 }

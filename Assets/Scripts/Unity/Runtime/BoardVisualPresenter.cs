@@ -473,37 +473,62 @@ namespace PotionPopQuest.Unity
             }
 
             var image = rect.GetComponent<Image>();
+            // Use rounded-corner sprite for candy-style tiles
+            image.sprite = _iconFactory.GetRoundedRectSprite(14);
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 3f;
             image.color = UiColorPalette.CellColor(cell);
             image.raycastTarget = true;
 
-            // ── Depth layer: inner shadow (bottom-right darkening) ──
-            CreateDepthLayer(rect, "InnerShadow",
-                new Vector2(0.04f, 0f), new Vector2(1f, 0.96f),
-                new Color(0f, 0f, 0f, 0.22f));
+            // ── Bottom shadow gradient (3D depth) ──
+            CreateDepthLayer(rect, "BottomShadow",
+                new Vector2(0.02f, 0f), new Vector2(0.98f, 0.22f),
+                UiColorPalette.TileBaseGradientBottom);
 
-            // ── Depth layer: top highlight (lit-from-above effect) ──
+            // ── Inner shadow (bottom-right darkening) ──
+            CreateDepthLayer(rect, "InnerShadow",
+                new Vector2(0.05f, 0f), new Vector2(1f, 0.95f),
+                UiColorPalette.TileInnerShadow);
+
+            // ── Top specular highlight band (glossy candy shine) ──
             CreateDepthLayer(rect, "TopHighlight",
-                new Vector2(0.06f, 0.92f), new Vector2(0.94f, 1f),
-                new Color(1f, 1f, 1f, 0.18f));
+                new Vector2(0.08f, 0.84f), new Vector2(0.92f, 0.98f),
+                UiColorPalette.TileTopHighlight);
+
+            // ── Top gradient (lighter top edge for 3D look) ──
+            CreateDepthLayer(rect, "TopGradient",
+                new Vector2(0.04f, 0.90f), new Vector2(0.96f, 1f),
+                UiColorPalette.TileBaseGradientTop);
 
             ConfigureTileInteraction(position, rect, cell);
 
             if (cell.Obstacle == ObstacleType.DarkTile)
             {
-                CreateIconImage(rect, _iconFactory.GetObstacleSprite(ObstacleType.DarkTile), new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.92f), new Color(1f, 1f, 1f, 0.65f));
+                // Vignette overlay for obstacle tiles
+                CreateDepthLayer(rect, "ObstacleVignette",
+                    new Vector2(0f, 0f), new Vector2(1f, 1f),
+                    new Color(0f, 0f, 0f, 0.12f));
+                CreateIconImage(rect, _iconFactory.GetObstacleSprite(ObstacleType.DarkTile), new Vector2(0.06f, 0.06f), new Vector2(0.94f, 0.94f), new Color(1f, 1f, 1f, 0.70f));
             }
 
             if (cell.BlocksIngredientSpace)
             {
-                CreateIconImage(rect, _iconFactory.GetObstacleSprite(cell.Obstacle), new Vector2(0.13f, 0.13f), new Vector2(0.87f, 0.87f), Color.white);
+                // Vignette for inset look
+                CreateDepthLayer(rect, "ObstacleVignette",
+                    new Vector2(0f, 0f), new Vector2(0.08f, 1f),
+                    new Color(0f, 0f, 0f, 0.10f));
+                CreateDepthLayer(rect, "ObstacleVignette2",
+                    new Vector2(0.92f, 0f), new Vector2(1f, 1f),
+                    new Color(0f, 0f, 0f, 0.10f));
+                CreateIconImage(rect, _iconFactory.GetObstacleSprite(cell.Obstacle), new Vector2(0.10f, 0.10f), new Vector2(0.90f, 0.90f), Color.white);
                 CreateAnchoredText(rect, cell.ObstacleHealth.ToString(), 22, TextAnchor.LowerRight);
 
                 // Damage crack indicator for low-HP obstacles
                 if (cell.ObstacleHealth <= 1 && cell.Obstacle == ObstacleType.StoneBlock)
                 {
                     CreateDepthLayer(rect, "CrackOverlay",
-                        new Vector2(0.3f, 0.2f), new Vector2(0.7f, 0.8f),
-                        new Color(0f, 0f, 0f, 0.15f));
+                        new Vector2(0.25f, 0.15f), new Vector2(0.75f, 0.85f),
+                        new Color(0f, 0f, 0f, 0.18f));
                 }
 
                 if (registerCell)
@@ -514,22 +539,32 @@ namespace PotionPopQuest.Unity
                 return;
             }
 
-            // ── Inner glow behind the ingredient icon ──
+            // ── Radial glow behind the ingredient icon (soft light emission) ──
             if (cell.Ingredient != IngredientType.None)
             {
                 var glowColor = UiColorPalette.IngredientColorLight(cell.Ingredient);
-                CreateDepthLayer(rect, "InnerGlow",
-                    new Vector2(0.20f, 0.20f), new Vector2(0.80f, 0.80f),
-                    UiColorPalette.WithAlpha(glowColor, 0.15f));
-                CreateIconImage(rect, _iconFactory.GetIngredientSprite(cell.Ingredient), new Vector2(0.14f, 0.14f), new Vector2(0.86f, 0.86f), Color.white);
+                // Larger, softer outer glow
+                CreateDepthLayer(rect, "RadialGlowOuter",
+                    new Vector2(0.12f, 0.12f), new Vector2(0.88f, 0.88f),
+                    UiColorPalette.WithAlpha(glowColor, 0.10f));
+                // Inner bright glow
+                CreateDepthLayer(rect, "RadialGlowInner",
+                    new Vector2(0.22f, 0.22f), new Vector2(0.78f, 0.78f),
+                    UiColorPalette.WithAlpha(glowColor, 0.16f));
+                CreateIconImage(rect, _iconFactory.GetIngredientSprite(cell.Ingredient), new Vector2(0.10f, 0.10f), new Vector2(0.90f, 0.90f), Color.white);
             }
 
             if (cell.Potion != PotionType.None)
             {
-                CreateDepthLayer(rect, "PotionGlow",
-                    new Vector2(0.48f, 0.48f), new Vector2(1.05f, 1.05f),
-                    UiColorPalette.WithAlpha(PotionColor(cell.Potion), 0.34f));
-                CreateIconImage(rect, _iconFactory.GetPotionSprite(cell.Potion), new Vector2(0.58f, 0.58f), new Vector2(0.98f, 0.98f), Color.white);
+                // Pulsing potion glow
+                var potionColor = PotionColor(cell.Potion);
+                CreateDepthLayer(rect, "PotionGlowOuter",
+                    new Vector2(0.42f, 0.42f), new Vector2(1.08f, 1.08f),
+                    UiColorPalette.WithAlpha(potionColor, 0.26f));
+                CreateDepthLayer(rect, "PotionGlowInner",
+                    new Vector2(0.50f, 0.50f), new Vector2(1.02f, 1.02f),
+                    UiColorPalette.WithAlpha(potionColor, 0.38f));
+                CreateIconImage(rect, _iconFactory.GetPotionSprite(cell.Potion), new Vector2(0.55f, 0.55f), new Vector2(0.98f, 0.98f), Color.white);
             }
 
             if (registerCell)
@@ -724,23 +759,38 @@ namespace PotionPopQuest.Unity
 
             var outline = rect.gameObject.AddComponent<Outline>();
             outline.effectColor = UiColorPalette.SelectionGlow;
-            outline.effectDistance = new Vector2(4, -4);
+            outline.effectDistance = new Vector2(5, -5);
             _selectionOutlines.Add(outline);
 
-            // Add a glow layer behind the selected tile
+            // Outer glow ring behind the selected tile (pulsing)
             var glowObject = new GameObject("SelectionGlow", typeof(RectTransform), typeof(Image));
             glowObject.transform.SetParent(rect, false);
             var glowRect = glowObject.GetComponent<RectTransform>();
-            glowRect.anchorMin = new Vector2(-0.08f, -0.08f);
-            glowRect.anchorMax = new Vector2(1.08f, 1.08f);
+            glowRect.anchorMin = new Vector2(-0.12f, -0.12f);
+            glowRect.anchorMax = new Vector2(1.12f, 1.12f);
             glowRect.offsetMin = Vector2.zero;
             glowRect.offsetMax = Vector2.zero;
             glowRect.SetAsFirstSibling();
             var glowImage = glowObject.GetComponent<Image>();
-            glowImage.color = UiColorPalette.WithAlpha(UiColorPalette.SelectionGlow, 0.25f);
+            glowImage.sprite = _iconFactory.GetRoundedRectSprite(14);
+            glowImage.type = Image.Type.Sliced;
+            glowImage.pixelsPerUnitMultiplier = 3f;
+            glowImage.color = UiColorPalette.WithAlpha(UiColorPalette.SelectionGlow, 0.30f);
             glowImage.raycastTarget = false;
 
-            // Start continuous pulse
+            // Inner highlight glow
+            var innerGlow = new GameObject("SelectionInnerGlow", typeof(RectTransform), typeof(Image));
+            innerGlow.transform.SetParent(rect, false);
+            var innerRect = innerGlow.GetComponent<RectTransform>();
+            innerRect.anchorMin = new Vector2(0.05f, 0.05f);
+            innerRect.anchorMax = new Vector2(0.95f, 0.95f);
+            innerRect.offsetMin = Vector2.zero;
+            innerRect.offsetMax = Vector2.zero;
+            innerRect.SetAsFirstSibling();
+            innerGlow.GetComponent<Image>().color = UiColorPalette.WithAlpha(UiColorPalette.SelectionGlow, 0.12f);
+            innerGlow.GetComponent<Image>().raycastTarget = false;
+
+            // Start continuous bounce pulse
             var animator = rect.gameObject.GetComponent<UiTileAnimator>();
             if (animator == null)
             {
