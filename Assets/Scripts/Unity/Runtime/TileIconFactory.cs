@@ -204,12 +204,12 @@ namespace PotionPopQuest.Unity
 
                 case ObstacleType.DarkTile:
                     // Swirling dark magic circle
-                    DrawRadialGradientCircle(texture, cx, cx, 52, new Color(0.24f, 0.12f, 0.38f, 0.90f), new Color(0.10f, 0.04f, 0.18f, 0.90f));
-                    DrawStar(texture, cx, cx, 32, 14, new Color(0.60f, 0.36f, 0.88f, 0.55f));
-                    DrawCircleAA(texture, cx, cx, 20, new Color(0.44f, 0.22f, 0.66f, 0.35f));
+                    DrawRadialGradientCircle(texture, cx, cy, 52, new Color(0.24f, 0.12f, 0.38f, 0.90f), new Color(0.10f, 0.04f, 0.18f, 0.90f));
+                    DrawStar(texture, cx, cy, 32, 14, new Color(0.60f, 0.36f, 0.88f, 0.55f));
+                    DrawCircleAA(texture, cx, cy, 20, new Color(0.44f, 0.22f, 0.66f, 0.35f));
                     // Magic sparkles
-                    DrawSparkle(texture, cx - 28, cx - 24, 6, new Color(0.80f, 0.60f, 1f, 0.50f));
-                    DrawSparkle(texture, cx + 30, cx + 20, 5, new Color(0.80f, 0.60f, 1f, 0.40f));
+                    DrawSparkle(texture, cx - 28, cy - 24, 6, new Color(0.80f, 0.60f, 1f, 0.50f));
+                    DrawSparkle(texture, cx + 30, cy + 20, 5, new Color(0.80f, 0.60f, 1f, 0.40f));
                     break;
             }
         }
