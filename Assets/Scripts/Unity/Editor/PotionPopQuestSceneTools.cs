@@ -71,9 +71,10 @@ namespace PotionPopQuest.Editor
                 .LoadLevels(null)
                 .OrderBy(level => level.LevelNumber)
                 .ToArray();
+            var highestLevelNumber = levels.Length == 0 ? 1 : levels.Max(level => level.LevelNumber);
             var saveData = new SaveData
             {
-                highestUnlockedLevel = levels.Count,
+                highestUnlockedLevel = highestLevelNumber,
                 musicEnabled = true,
                 sfxEnabled = true
             };
@@ -86,7 +87,7 @@ namespace PotionPopQuest.Editor
                     level.LevelNumber,
                     score,
                     3,
-                    hasNextLevel: level.LevelNumber < levels.Count);
+                    hasNextLevel: level.LevelNumber < highestLevelNumber);
             }
 
             new PlayerPrefsSaveRepository(new NullGameLogger()).Save(saveData);

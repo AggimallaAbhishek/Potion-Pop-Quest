@@ -32,6 +32,8 @@ namespace PotionPopQuest.PlayMode.Tests
             yield return null;
 
             Assert.That(GameObject.Find("Potion Pop Quest Canvas"), Is.Not.Null);
+            Assert.That(GameObject.Find("Potion Lab Back Wall"), Is.Not.Null);
+            Assert.That(GameObject.Find("Potion Lab Cauldron"), Is.Not.Null);
             Assert.That(FindButton("Play"), Is.Not.Null);
             Assert.That(FindButton("Levels"), Is.Not.Null);
             Assert.That(FindButton("Settings"), Is.Not.Null);
