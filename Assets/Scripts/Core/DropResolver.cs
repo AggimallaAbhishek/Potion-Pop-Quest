@@ -91,6 +91,8 @@ namespace PotionPopQuest.Core
                 }
             }
 
+            var damaged = new HashSet<GridPosition>();
+
             foreach (var position in impacts)
             {
                 var cell = board.GetCell(position);
@@ -100,9 +102,23 @@ namespace PotionPopQuest.Core
                     cell.Obstacle = ObstacleType.None;
                     cell.ObstacleHealth = 0;
                 }
+                else if (cell.Obstacle == ObstacleType.WoodenBox || cell.Obstacle == ObstacleType.StoneBlock)
+                {
+                    if (damaged.Add(position))
+                    {
+                        damagedObstacles.Add(new ObstacleEvent(position, cell.Obstacle));
+                        cell.ObstacleHealth--;
+                        if (cell.ObstacleHealth <= 0)
+                        {
+                            destroyedObstacles.Add(new ObstacleEvent(position, cell.Obstacle));
+                            cell.Obstacle = ObstacleType.None;
+                            cell.ObstacleHealth = 0;
+                        }
+                    }
+                }
             }
 
-            DamageAdjacentObstacles(board, impacts, damagedObstacles, destroyedObstacles);
+            DamageAdjacentObstacles(board, impacts, damagedObstacles, destroyedObstacles, damaged);
             var movement = ApplyGravity(board, activeIngredients, random);
 
             return new DropResult(
@@ -120,9 +136,9 @@ namespace PotionPopQuest.Core
             BoardState board,
             IEnumerable<GridPosition> clearPositions,
             ICollection<ObstacleEvent> damagedObstacles,
-            ICollection<ObstacleEvent> destroyedObstacles)
+            ICollection<ObstacleEvent> destroyedObstacles,
+            HashSet<GridPosition> damaged)
         {
-            var damaged = new HashSet<GridPosition>();
             foreach (var position in clearPositions)
             {
                 foreach (var neighbor in Adjacent(position))

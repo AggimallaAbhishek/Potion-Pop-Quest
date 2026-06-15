@@ -70,7 +70,7 @@ namespace PotionPopQuest.Core
                     break;
             }
 
-            return new PotionActivation(potionType, affected.Where(p => board.GetCell(p).AcceptsIngredient));
+            return new PotionActivation(potionType, affected);
         }
 
         private static IngredientType FirstGoalLikeIngredient(BoardState board)
