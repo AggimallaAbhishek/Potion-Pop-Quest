@@ -1,0 +1,27 @@
+. is not a valid directory name. Please make sure there are no unallowed characters in the name.
+. is not a valid directory name. Please make sure there are no unallowed characters in the name.
+Unity Editor version:    6000.3.17f1 (cf0352b38e81)
+Branch:                  6000.3/staging
+Build type:              Release
+Batch mode:              YES
+macOS version:           Version 26.5.1 (Build 25F80)
+Darwin version:          25.5.0
+Architecture:            arm64
+Running under Rosetta:   NO
+Available memory:        16384 MB
+Date:                    2026-06-15T06:40:33Z
+[Licensing::Module] Trying to connect to existing licensing client channel...
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-aggimallaabhishek" at "2026-06-15T06:40:33.15218Z"
+Launching external process: /Applications/Unity/Hub/Editor/6000.3.17f1/Unity.app/Contents/Resources/PackageManager/Server/UnityPackageManager
+
+COMMAND LINE ARGUMENTS:
+/Applications/Unity/Hub/Editor/6000.3.17f1/Unity.app/Contents/MacOS/Unity
+-batchmode
+-quit
+-projectPath
+/Users/aggimallaabhishek/Documents/Potion-Pop-Quest
+-logFile
+./unity_compile.log
+Successfully changed project path to: /Users/aggimallaabhishek/Documents/Potion-Pop-Quest
+/Users/aggimallaabhishek/Documents/Potion-Pop-Quest
+[Package Manager] Server process was shutdown
