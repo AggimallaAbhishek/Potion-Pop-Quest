@@ -80,7 +80,11 @@ namespace PotionPopQuest.Unity
                 PlaySfx = PlaySfx,
                 BuyLivesPressed = HandleBuyLives,
                 HammerBoosterPressed = RequestHammerBooster,
-                ShuffleBoosterPressed = RequestShuffleBooster
+                ShuffleBoosterPressed = RequestShuffleBooster,
+                ShowShop = ShowShop,
+                CloseShop = CloseShop,
+                BuyCoinPackage = BuyCoinPackage,
+                ClaimDailyReward = ClaimDailyReward
             });
 
             ShowMainMenu();
@@ -123,6 +127,7 @@ namespace PotionPopQuest.Unity
             ClearHintState();
             _selectedTile = null;
             _ui.ShowMainMenu();
+            CheckAndShowDailyReward();
         }
 
         private void ShowLevelSelect()
@@ -455,6 +460,41 @@ namespace PotionPopQuest.Unity
                 StartCoroutine(ResolveMove(_session.ForceShuffle()));
                 UpdateEconomyUi();
             }
+        }
+
+        private void CheckAndShowDailyReward()
+        {
+            if (EconomyManager.CheckDailyRewardAvailable(_saveData))
+            {
+                _ui.ShowDailyReward();
+            }
+        }
+
+        private void ShowShop()
+        {
+            _ui.ShowShop();
+        }
+
+        private void CloseShop()
+        {
+            // Update UI in case anything changed
+            UpdateEconomyUi();
+        }
+
+        private void BuyCoinPackage(int amount)
+        {
+            EconomyManager.PurchaseCoinPackage(_saveData, amount);
+            _saveRepository.Save(_saveData);
+            UpdateEconomyUi();
+            _logger.Log(LogCategory.UI, $"Purchased {amount} coins.");
+        }
+
+        private void ClaimDailyReward()
+        {
+            var reward = EconomyManager.ClaimDailyReward(_saveData);
+            _saveRepository.Save(_saveData);
+            UpdateEconomyUi();
+            _logger.Log(LogCategory.UI, $"Claimed daily reward of {reward} coins.");
         }
 
         private static UiFeedbackCue FeedbackFor(MoveResult result)

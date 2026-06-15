@@ -136,15 +136,23 @@ namespace PotionPopQuest.Unity
             _boardAnimationController = canvasObject.AddComponent<BoardAnimationController>();
             _screenTransition = canvasObject.AddComponent<ScreenTransitionController>();
             _boardPresenter = new BoardVisualPresenter(_logger, _iconFactory, () => Font);
+
             _root = safeAreaRoot.transform;
+
             _mainMenu = CreateScreen("Main Menu");
             _levelSelect = CreateScreen("Level Select");
             _game = CreateScreen("Game");
             _settings = CreateScreen("Settings");
             _modal = CreateScreen("Modal");
-            BuildEconomyHud();
+            _shopModal = CreateScreen("Shop Modal");
+            _dailyRewardModal = CreateScreen("Daily Reward Modal");
+
             BuildMainMenu();
+            BuildSettingsScreen();
             BuildGameScreen();
+            BuildEconomyHud();
+            BuildShopModal();
+            BuildDailyRewardModal();
         }
 
         private void BuildEconomyHud()
@@ -168,8 +176,18 @@ namespace PotionPopQuest.Unity
             var livesBtn = CreateButton(_economyPanel.transform, "Lives: 5", _buyLivesPressed, UiColorPalette.Ruby, new Vector2(160, 50));
             _livesText = livesBtn.GetComponentInChildren<Text>();
 
-            var coinsBtn = CreateButton(_economyPanel.transform, "Coins: 100", null, UiColorPalette.Gold, new Vector2(160, 50));
+            var coinContainer = new GameObject("CoinContainer", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            coinContainer.transform.SetParent(_economyPanel.transform, false);
+            var coinLayout = coinContainer.GetComponent<HorizontalLayoutGroup>();
+            coinLayout.spacing = 5;
+            coinLayout.childAlignment = TextAnchor.MiddleRight;
+            coinLayout.childForceExpandHeight = false;
+            coinLayout.childForceExpandWidth = false;
+
+            var coinsBtn = CreateButton(coinContainer.transform, "Coins: 100", _showShop, UiColorPalette.Gold, new Vector2(160, 50));
             _coinsText = coinsBtn.GetComponentInChildren<Text>();
+
+            CreateButton(coinContainer.transform, "+", _showShop, UiColorPalette.Emerald, new Vector2(50, 50));
             
             _economyPanel.SetActive(true);
         }
@@ -626,18 +644,6 @@ namespace PotionPopQuest.Unity
             scaler.matchWidthOrHeight = 0.5f;
 
             return canvasObject;
-        }
-
-        private GameObject CreateSafeAreaRoot(Transform parent)
-        {
-            var safeAreaObject = new GameObject("Safe Area", typeof(RectTransform), typeof(SafeAreaView));
-            safeAreaObject.transform.SetParent(parent, false);
-            var rect = safeAreaObject.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
-            return safeAreaObject;
         }
 
         private void BuildMainMenu()
@@ -1324,6 +1330,18 @@ namespace PotionPopQuest.Unity
             }
         }
 
+        private GameObject CreateSafeAreaRoot(Transform parent)
+        {
+            var safeAreaObject = new GameObject("Safe Area", typeof(RectTransform), typeof(SafeAreaView));
+            safeAreaObject.transform.SetParent(parent, false);
+            var rect = safeAreaObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            return safeAreaObject;
+        }
+
         private GameObject CreateScreen(string name)
         {
             var screen = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup));
@@ -1335,7 +1353,7 @@ namespace PotionPopQuest.Unity
             rect.offsetMax = Vector2.zero;
 
             var image = screen.GetComponent<Image>();
-            if (name == "Modal")
+            if (name == "Modal" || name == "Shop Modal" || name == "Daily Reward Modal")
             {
                 image.color = UiColorPalette.ModalBackdrop;
             }
@@ -1345,7 +1363,7 @@ namespace PotionPopQuest.Unity
                 image.type = Image.Type.Simple;
                 image.color = Color.white;
             }
-            if (name != "Modal")
+            if (name != "Modal" && name != "Shop Modal" && name != "Daily Reward Modal")
             {
                 _backdropView.Build(screen.transform);
             }
@@ -1360,6 +1378,59 @@ namespace PotionPopQuest.Unity
 
             screen.SetActive(false);
             return screen;
+        }
+
+        private void BuildShopModal()
+        {
+            var content = CreatePanel(_shopModal.transform, "Content", UiColorPalette.HudBackground);
+            var rect = content.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(600, 500);
+            _themeAssets.AddRoundedCorners(content, 20);
+            
+            var layout = content.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(40, 40, 40, 40);
+            layout.spacing = 20;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+
+            CreateLabel(content.transform, "Coin Shop", 48, UiColorPalette.TextLight);
+
+            CreateButton(content.transform, "Buy 100 Coins", () => { _buyCoinPackage?.Invoke(100); }, UiColorPalette.Gold, new Vector2(400, 80));
+            CreateButton(content.transform, "Buy 500 Coins", () => { _buyCoinPackage?.Invoke(500); }, UiColorPalette.Gold, new Vector2(400, 80));
+            CreateButton(content.transform, "Buy 1200 Coins", () => { _buyCoinPackage?.Invoke(1200); }, UiColorPalette.Gold, new Vector2(400, 80));
+
+            CreateButton(content.transform, "Close", () => { _shopModal.SetActive(false); _closeShop?.Invoke(); }, UiColorPalette.ButtonDisabled, new Vector2(200, 60));
+            _shopModal.SetActive(false);
+        }
+
+        private void BuildDailyRewardModal()
+        {
+            var content = CreatePanel(_dailyRewardModal.transform, "Content", UiColorPalette.HudBackground);
+            var rect = content.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(500, 400);
+            _themeAssets.AddRoundedCorners(content, 20);
+            
+            var layout = content.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(40, 40, 40, 40);
+            layout.spacing = 30;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+
+            CreateLabel(content.transform, "Daily Reward!", 48, UiColorPalette.TextLight);
+            CreateLabel(content.transform, "Log in every day for bigger rewards!", 24, UiColorPalette.TextDim);
+
+            CreateButton(content.transform, "Claim Coins", () => { _claimDailyReward?.Invoke(); _dailyRewardModal.SetActive(false); }, UiColorPalette.Emerald, new Vector2(300, 80));
+            _dailyRewardModal.SetActive(false);
+        }
+
+        public void ShowShop()
+        {
+            _playSfx?.Invoke(GameSfxCue.Tap);
+            _screenTransition.ScaleReveal(_shopModal);
+        }
+
+        public void ShowDailyReward()
+        {
+            _playSfx?.Invoke(GameSfxCue.Tap);
+            _screenTransition.ScaleReveal(_dailyRewardModal);
         }
 
         /// <summary>Smoothly transitions between screens using ScreenTransitionController.</summary>
@@ -1573,6 +1644,8 @@ namespace PotionPopQuest.Unity
             _game.SetActive(false);
             _settings.SetActive(false);
             _modal.SetActive(false);
+            _shopModal.SetActive(false);
+            _dailyRewardModal.SetActive(false);
         }
 
         private void ShowPauseMenu()
