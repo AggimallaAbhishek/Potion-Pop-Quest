@@ -159,6 +159,218 @@
         { "row": 6, "column": 3, "type": "WoodenBox" },
         { "row": 6, "column": 4, "type": "WoodenBox" }
       ]
+    },
+    {
+      "levelNumber": 11,
+      "displayName": "Stone Block Lesson",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 24,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
+      "starThresholds": { "oneStar": 9000, "twoStars": 13500, "threeStars": 18000 },
+      "goals": [{ "goalType": "BreakObstacle", "goalItem": "StoneBlock", "goalAmount": 6 }],
+      "obstacles": [
+        { "row": 2, "column": 2, "type": "StoneBlock" },
+        { "row": 2, "column": 5, "type": "StoneBlock" },
+        { "row": 3, "column": 3, "type": "StoneBlock" },
+        { "row": 3, "column": 4, "type": "StoneBlock" },
+        { "row": 5, "column": 2, "type": "StoneBlock" },
+        { "row": 5, "column": 5, "type": "StoneBlock" }
+      ]
+    },
+    {
+      "levelNumber": 12,
+      "displayName": "Double Brew",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 24,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom", "OrangeFireDrop"],
+      "starThresholds": { "oneStar": 11000, "twoStars": 16500, "threeStars": 22000 },
+      "goals": [
+        { "goalType": "CollectIngredient", "goalItem": "RedHerb", "goalAmount": 18 },
+        { "goalType": "CollectIngredient", "goalItem": "BlueCrystal", "goalAmount": 18 }
+      ],
+      "obstacles": []
+    },
+    {
+      "levelNumber": 13,
+      "displayName": "Cursed Floor",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 25,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
+      "starThresholds": { "oneStar": 9500, "twoStars": 14000, "threeStars": 19000 },
+      "goals": [{ "goalType": "ClearTile", "goalItem": "DarkTile", "goalAmount": 8 }],
+      "obstacles": [
+        { "row": 1, "column": 1, "type": "DarkTile" },
+        { "row": 1, "column": 6, "type": "DarkTile" },
+        { "row": 2, "column": 3, "type": "DarkTile" },
+        { "row": 2, "column": 4, "type": "DarkTile" },
+        { "row": 5, "column": 3, "type": "DarkTile" },
+        { "row": 5, "column": 4, "type": "DarkTile" },
+        { "row": 6, "column": 1, "type": "DarkTile" },
+        { "row": 6, "column": 6, "type": "DarkTile" }
+      ]
+    },
+    {
+      "levelNumber": 14,
+      "displayName": "Blocked Shelves",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 27,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
+      "starThresholds": { "oneStar": 10000, "twoStars": 15500, "threeStars": 21000 },
+      "goals": [
+        { "goalType": "BreakObstacle", "goalItem": "WoodenBox", "goalAmount": 8 },
+        { "goalType": "BreakObstacle", "goalItem": "StoneBlock", "goalAmount": 4 }
+      ],
+      "obstacles": [
+        { "row": 2, "column": 1, "type": "WoodenBox" },
+        { "row": 2, "column": 2, "type": "WoodenBox" },
+        { "row": 2, "column": 5, "type": "WoodenBox" },
+        { "row": 2, "column": 6, "type": "WoodenBox" },
+        { "row": 5, "column": 1, "type": "WoodenBox" },
+        { "row": 5, "column": 2, "type": "WoodenBox" },
+        { "row": 5, "column": 5, "type": "WoodenBox" },
+        { "row": 5, "column": 6, "type": "WoodenBox" },
+        { "row": 3, "column": 3, "type": "StoneBlock" },
+        { "row": 3, "column": 4, "type": "StoneBlock" },
+        { "row": 4, "column": 3, "type": "StoneBlock" },
+        { "row": 4, "column": 4, "type": "StoneBlock" }
+      ]
+    },
+    {
+      "levelNumber": 15,
+      "displayName": "Lightning Study",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 30,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
+      "starThresholds": { "oneStar": 9000, "twoStars": 15000, "threeStars": 24000 },
+      "goals": [{ "goalType": "CreatePotion", "goalItem": "Lightning", "goalAmount": 1 }],
+      "obstacles": []
+    },
+    {
+      "levelNumber": 16,
+      "displayName": "Fire Drop Storage",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 26,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom", "OrangeFireDrop"],
+      "starThresholds": { "oneStar": 10500, "twoStars": 15000, "threeStars": 20500 },
+      "goals": [
+        { "goalType": "CollectIngredient", "goalItem": "OrangeFireDrop", "goalAmount": 18 },
+        { "goalType": "BreakObstacle", "goalItem": "WoodenBox", "goalAmount": 6 }
+      ],
+      "obstacles": [
+        { "row": 3, "column": 1, "type": "WoodenBox" },
+        { "row": 3, "column": 2, "type": "WoodenBox" },
+        { "row": 3, "column": 3, "type": "WoodenBox" },
+        { "row": 4, "column": 4, "type": "WoodenBox" },
+        { "row": 4, "column": 5, "type": "WoodenBox" },
+        { "row": 4, "column": 6, "type": "WoodenBox" }
+      ]
+    },
+    {
+      "levelNumber": 17,
+      "displayName": "Bomb The Curse",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 30,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
+      "starThresholds": { "oneStar": 13000, "twoStars": 21000, "threeStars": 32000 },
+      "goals": [
+        { "goalType": "CreatePotion", "goalItem": "Bomb", "goalAmount": 1 },
+        { "goalType": "ClearTile", "goalItem": "DarkTile", "goalAmount": 4 }
+      ],
+      "obstacles": [
+        { "row": 2, "column": 2, "type": "DarkTile" },
+        { "row": 2, "column": 5, "type": "DarkTile" },
+        { "row": 5, "column": 2, "type": "DarkTile" },
+        { "row": 5, "column": 5, "type": "DarkTile" }
+      ]
+    },
+    {
+      "levelNumber": 18,
+      "displayName": "East Wing Restore",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 28,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom", "OrangeFireDrop"],
+      "starThresholds": { "oneStar": 12500, "twoStars": 17000, "threeStars": 22500 },
+      "goals": [{ "goalType": "RestorePotionLab", "goalItem": "None", "goalAmount": 100 }],
+      "obstacles": [
+        { "row": 1, "column": 3, "type": "WoodenBox" },
+        { "row": 1, "column": 4, "type": "WoodenBox" },
+        { "row": 3, "column": 2, "type": "DarkTile" },
+        { "row": 3, "column": 5, "type": "DarkTile" },
+        { "row": 4, "column": 2, "type": "DarkTile" },
+        { "row": 4, "column": 5, "type": "DarkTile" },
+        { "row": 6, "column": 3, "type": "StoneBlock" },
+        { "row": 6, "column": 4, "type": "StoneBlock" }
+      ]
+    },
+    {
+      "levelNumber": 19,
+      "displayName": "Stone Circle",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 30,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom"],
+      "starThresholds": { "oneStar": 11500, "twoStars": 17000, "threeStars": 23500 },
+      "goals": [{ "goalType": "BreakObstacle", "goalItem": "StoneBlock", "goalAmount": 8 }],
+      "obstacles": [
+        { "row": 1, "column": 2, "type": "StoneBlock" },
+        { "row": 1, "column": 5, "type": "StoneBlock" },
+        { "row": 2, "column": 1, "type": "StoneBlock" },
+        { "row": 2, "column": 6, "type": "StoneBlock" },
+        { "row": 5, "column": 1, "type": "StoneBlock" },
+        { "row": 5, "column": 6, "type": "StoneBlock" },
+        { "row": 6, "column": 2, "type": "StoneBlock" },
+        { "row": 6, "column": 5, "type": "StoneBlock" }
+      ]
+    },
+    {
+      "levelNumber": 20,
+      "displayName": "Potion Lab Finale",
+      "gridWidth": 8,
+      "gridHeight": 8,
+      "moves": 34,
+      "tutorialLevel": false,
+      "activeIngredients": ["RedHerb", "BlueCrystal", "GreenLeaf", "YellowStarDust", "PurpleMushroom", "OrangeFireDrop"],
+      "starThresholds": { "oneStar": 15000, "twoStars": 23000, "threeStars": 33000 },
+      "goals": [
+        { "goalType": "RestorePotionLab", "goalItem": "None", "goalAmount": 100 },
+        { "goalType": "BreakObstacle", "goalItem": "WoodenBox", "goalAmount": 8 },
+        { "goalType": "ClearTile", "goalItem": "DarkTile", "goalAmount": 6 }
+      ],
+      "obstacles": [
+        { "row": 1, "column": 1, "type": "DarkTile" },
+        { "row": 1, "column": 6, "type": "DarkTile" },
+        { "row": 2, "column": 3, "type": "WoodenBox" },
+        { "row": 2, "column": 4, "type": "WoodenBox" },
+        { "row": 3, "column": 2, "type": "StoneBlock" },
+        { "row": 3, "column": 5, "type": "StoneBlock" },
+        { "row": 4, "column": 2, "type": "StoneBlock" },
+        { "row": 4, "column": 5, "type": "StoneBlock" },
+        { "row": 5, "column": 3, "type": "WoodenBox" },
+        { "row": 5, "column": 4, "type": "WoodenBox" },
+        { "row": 6, "column": 1, "type": "DarkTile" },
+        { "row": 6, "column": 6, "type": "DarkTile" },
+        { "row": 0, "column": 3, "type": "WoodenBox" },
+        { "row": 0, "column": 4, "type": "WoodenBox" },
+        { "row": 7, "column": 3, "type": "WoodenBox" },
+        { "row": 7, "column": 4, "type": "WoodenBox" }
+      ]
     }
   ]
 }

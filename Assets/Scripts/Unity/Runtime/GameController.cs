@@ -58,26 +58,27 @@ namespace PotionPopQuest.Unity
             ApplyMusicState();
 
             _ui = new GeneratedGameUi(_logger);
-            _ui.Build(
-                transform,
-                StartFirstUnlockedLevel,
-                ShowLevelSelect,
-                ShowSettings,
-                QuitGame,
-                StartLevel,
-                HandleTilePressed,
-                RequestHint,
-                RestartCurrentLevel,
-                StartNextLevel,
-                ShowMainMenu,
-                ResetProgress,
-                ToggleMusic,
-                ToggleSfx,
-                SetMusicVolume,
-                SetSfxVolume,
-                ToggleVibration,
-                DismissLevelIntro,
-                PlaySfx);
+            _ui.Build(transform, new GeneratedGameUiActions
+            {
+                Play = StartFirstUnlockedLevel,
+                ShowLevels = ShowLevelSelect,
+                ShowSettings = ShowSettings,
+                Quit = QuitGame,
+                StartLevel = StartLevel,
+                TilePressed = HandleTilePressed,
+                HintRequested = RequestHint,
+                Restart = RestartCurrentLevel,
+                NextLevel = StartNextLevel,
+                MainMenu = ShowMainMenu,
+                ResetProgress = ResetProgress,
+                ToggleMusic = ToggleMusic,
+                ToggleSfx = ToggleSfx,
+                SetMusicVolume = SetMusicVolume,
+                SetSfxVolume = SetSfxVolume,
+                ToggleVibration = ToggleVibration,
+                LevelIntroDismissed = DismissLevelIntro,
+                PlaySfx = PlaySfx
+            });
 
             ShowMainMenu();
         }

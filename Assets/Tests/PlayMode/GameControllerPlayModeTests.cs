@@ -51,6 +51,9 @@ namespace PotionPopQuest.PlayMode.Tests
             Assert.That(GameObject.Find("HUD Moves Badge"), Is.Not.Null);
             Assert.That(GameObject.Find("HUD Goal Strip"), Is.Not.Null);
             Assert.That(GameObject.Find("HUD Score Badge"), Is.Not.Null);
+            var starProgressStars = GameObject.Find("Star Progress Stars");
+            Assert.That(starProgressStars, Is.Not.Null);
+            Assert.That(starProgressStars.GetComponentsInChildren<Image>().Length, Is.EqualTo(3));
             Assert.That(GameObject.Find("Level Intro Overlay"), Is.Not.Null);
             Assert.That(GameObject.Find("Intro Obstacle Preview"), Is.Not.Null);
             Assert.That(GameObject.Find("Tutorial Banner"), Is.Not.Null);

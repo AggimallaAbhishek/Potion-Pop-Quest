@@ -40,12 +40,14 @@ namespace PotionPopQuest.Core
     public sealed class LevelQaSimulator
     {
         private const int DefaultMaxMovesPerAttempt = 400;
+        private readonly MatchFinder _matchFinder;
         private readonly BoardMoveFinder _moveFinder;
         private readonly IGameLogger _logger;
 
-        public LevelQaSimulator(BoardMoveFinder moveFinder = null, IGameLogger logger = null)
+        public LevelQaSimulator(MatchFinder matchFinder = null, BoardMoveFinder moveFinder = null, IGameLogger logger = null)
         {
-            _moveFinder = moveFinder ?? new BoardMoveFinder();
+            _matchFinder = matchFinder ?? new MatchFinder();
+            _moveFinder = moveFinder ?? new BoardMoveFinder(_matchFinder);
             _logger = logger ?? new NullGameLogger();
         }
 
@@ -102,7 +104,7 @@ namespace PotionPopQuest.Core
                         continue;
                     }
 
-                    var candidate = ChooseMove(validMoves, random);
+                    var candidate = ChooseMove(session, validMoves, random);
                     var result = session.TrySwap(candidate.First, candidate.Second);
                     if (!result.ValidMove)
                     {
@@ -145,9 +147,117 @@ namespace PotionPopQuest.Core
                 failureReasons);
         }
 
-        private static CandidateMove ChooseMove(IReadOnlyList<CandidateMove> validMoves, IRandomSource random)
+        private CandidateMove ChooseMove(GameSession session, IReadOnlyList<CandidateMove> validMoves, IRandomSource random)
         {
-            return validMoves[random.Range(0, validMoves.Count)];
+            var bestScore = int.MinValue;
+            var bestMoves = new List<CandidateMove>();
+            foreach (var move in validMoves)
+            {
+                var score = ScoreMove(session, move) + random.Range(0, 4);
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestMoves.Clear();
+                    bestMoves.Add(move);
+                }
+                else if (score == bestScore)
+                {
+                    bestMoves.Add(move);
+                }
+            }
+
+            return bestMoves[random.Range(0, bestMoves.Count)];
+        }
+
+        private int ScoreMove(GameSession session, CandidateMove move)
+        {
+            var clone = session.Board.Clone();
+            clone.SwapIngredients(move.First, move.Second);
+            var matches = _matchFinder.FindMatches(clone, move.Second);
+            var score = matches.Sum(match => match.Positions.Count);
+            foreach (var match in matches)
+            {
+                score += MatchKindScore(match.Kind);
+                foreach (var goal in session.GoalTracker.Goals.Where(item => !item.IsComplete))
+                {
+                    score += GoalScore(session.Board, goal.Goal, match);
+                }
+            }
+
+            return score;
+        }
+
+        private static int MatchKindScore(MatchKind kind)
+        {
+            switch (kind)
+            {
+                case MatchKind.Lightning:
+                    return 50;
+                case MatchKind.Bomb:
+                    return 40;
+                case MatchKind.Line:
+                    return 28;
+                default:
+                    return 10;
+            }
+        }
+
+        private static int GoalScore(BoardState board, GoalData goal, MatchGroup match)
+        {
+            switch (goal.GoalType)
+            {
+                case GoalType.CollectIngredient:
+                    return match.Ingredient == goal.Ingredient ? match.Positions.Count * 12 : 0;
+                case GoalType.CreatePotion:
+                    return PotionMatches(goal.Potion, match.CreatedPotion) ? 120 : 0;
+                case GoalType.BreakObstacle:
+                    return match.Positions.Sum(position => AdjacentObstacleScore(board, position, goal.Obstacle, clearTile: false));
+                case GoalType.ClearTile:
+                    return match.Positions.Sum(position => AdjacentObstacleScore(board, position, goal.Obstacle, clearTile: true));
+                case GoalType.RestorePotionLab:
+                    return match.Positions.Count * 8 + (match.CreatedPotion == PotionType.None ? 0 : 30);
+                default:
+                    return 0;
+            }
+        }
+
+        private static bool PotionMatches(PotionType goalPotion, PotionType createdPotion)
+        {
+            if (goalPotion == PotionType.LineHorizontal || goalPotion == PotionType.LineVertical)
+            {
+                return createdPotion == PotionType.LineHorizontal || createdPotion == PotionType.LineVertical;
+            }
+
+            return goalPotion == createdPotion;
+        }
+
+        private static int AdjacentObstacleScore(BoardState board, GridPosition position, ObstacleType obstacle, bool clearTile)
+        {
+            var score = 0;
+            foreach (var candidate in Adjacent(position).Where(board.InBounds))
+            {
+                var cell = board.GetCell(candidate);
+                if (cell.Obstacle == obstacle)
+                {
+                    score += clearTile && candidate.Equals(position) ? 30 : 20;
+                }
+            }
+
+            var currentCell = board.GetCell(position);
+            if (clearTile && currentCell.Obstacle == obstacle)
+            {
+                score += 40;
+            }
+
+            return score;
+        }
+
+        private static IEnumerable<GridPosition> Adjacent(GridPosition position)
+        {
+            yield return new GridPosition(position.Row - 1, position.Column);
+            yield return new GridPosition(position.Row + 1, position.Column);
+            yield return new GridPosition(position.Row, position.Column - 1);
+            yield return new GridPosition(position.Row, position.Column + 1);
         }
 
         private static void AddReason(IDictionary<string, int> reasons, string reason)

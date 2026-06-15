@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using PotionPopQuest.Core;
 using PotionPopQuest.Unity;
 using UnityEditor;
@@ -66,7 +67,10 @@ namespace PotionPopQuest.Editor
         [MenuItem("Potion Pop Quest/QA/Unlock All MVP Levels")]
         public static void UnlockAllMvpLevels()
         {
-            var levels = MvpLevelCatalog.CreateLevels();
+            var levels = new LevelCatalogLoader(new NullGameLogger())
+                .LoadLevels(null)
+                .OrderBy(level => level.LevelNumber)
+                .ToArray();
             var saveData = new SaveData
             {
                 highestUnlockedLevel = levels.Count,

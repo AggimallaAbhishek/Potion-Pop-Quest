@@ -14,6 +14,7 @@ namespace PotionPopQuest.Unity
         private readonly IGameLogger _logger;
         private readonly TileIconFactory _iconFactory;
         private readonly UiThemeAssets _themeAssets;
+        private readonly UiElementFactory _uiFactory;
         private Transform _root;
         private UiFeedbackAnimator _feedbackAnimator;
         private BoardAnimationController _boardAnimationController;
@@ -67,6 +68,7 @@ namespace PotionPopQuest.Unity
             _logger = logger;
             _iconFactory = new TileIconFactory();
             _themeAssets = new UiThemeAssets();
+            _uiFactory = new UiElementFactory(_iconFactory, _themeAssets, () => Font);
         }
 
         private Font Font
@@ -77,45 +79,27 @@ namespace PotionPopQuest.Unity
             }
         }
 
-        public void Build(
-            Transform parent,
-            Action play,
-            Action showLevels,
-            Action showSettings,
-            Action quit,
-            Action<int> startLevel,
-            Action<GridPosition> tilePressed,
-            Action hintRequested,
-            Action restart,
-            Action nextLevel,
-            Action mainMenu,
-            Action resetProgress,
-            Action<bool> toggleMusic,
-            Action<bool> toggleSfx,
-            Action<float> setMusicVolume,
-            Action<float> setSfxVolume,
-            Action<bool> toggleVibration,
-            Action levelIntroDismissed,
-            Action<GameSfxCue> playSfx)
+        public void Build(Transform parent, GeneratedGameUiActions actions)
         {
-            _play = play;
-            _showLevels = showLevels;
-            _showSettings = showSettings;
-            _quit = quit;
-            _startLevel = startLevel;
-            _tilePressed = tilePressed;
-            _hintRequested = hintRequested;
-            _restart = restart;
-            _nextLevel = nextLevel;
-            _mainMenuAction = mainMenu;
-            _resetProgress = resetProgress;
-            _toggleMusic = toggleMusic;
-            _toggleSfx = toggleSfx;
-            _setMusicVolume = setMusicVolume;
-            _setSfxVolume = setSfxVolume;
-            _toggleVibration = toggleVibration;
-            _levelIntroDismissed = levelIntroDismissed;
-            _playSfx = playSfx;
+            actions = actions ?? new GeneratedGameUiActions();
+            _play = actions.Play;
+            _showLevels = actions.ShowLevels;
+            _showSettings = actions.ShowSettings;
+            _quit = actions.Quit;
+            _startLevel = actions.StartLevel;
+            _tilePressed = actions.TilePressed;
+            _hintRequested = actions.HintRequested;
+            _restart = actions.Restart;
+            _nextLevel = actions.NextLevel;
+            _mainMenuAction = actions.MainMenu;
+            _resetProgress = actions.ResetProgress;
+            _toggleMusic = actions.ToggleMusic;
+            _toggleSfx = actions.ToggleSfx;
+            _setMusicVolume = actions.SetMusicVolume;
+            _setSfxVolume = actions.SetSfxVolume;
+            _toggleVibration = actions.ToggleVibration;
+            _levelIntroDismissed = actions.LevelIntroDismissed;
+            _playSfx = actions.PlaySfx;
 
             EnsureEventSystem();
             var canvasObject = CreateCanvas(parent);
@@ -1349,14 +1333,7 @@ namespace PotionPopQuest.Unity
 
         private GameObject CreatePanel(Transform parent, string name, Color color)
         {
-            var panel = new GameObject(name, typeof(RectTransform), typeof(Image));
-            panel.transform.SetParent(parent, false);
-            var image = panel.GetComponent<Image>();
-            image.sprite = _iconFactory.GetRoundedRectSprite(32);
-            image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 3f;
-            image.color = color;
-            return panel;
+            return _uiFactory.CreatePanel(parent, name, color);
         }
 
         private GameObject CreateSettingsSection(Transform parent, string title, float height, Color? color = null)
@@ -1391,54 +1368,16 @@ namespace PotionPopQuest.Unity
 
         private Text CreateLabel(Transform parent, string text, int size, TextAnchor alignment)
         {
-            var labelObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
-            labelObject.transform.SetParent(parent, false);
-            var label = labelObject.GetComponent<Text>();
-            label.text = text;
-            label.font = Font;
-            label.color = Color.white;
-            label.fontSize = size;
-            label.alignment = alignment;
-            label.resizeTextForBestFit = true;
-            label.resizeTextMinSize = 16;
-            label.resizeTextMaxSize = size;
-            label.horizontalOverflow = HorizontalWrapMode.Wrap;
-            label.verticalOverflow = VerticalWrapMode.Truncate;
-            label.rectTransform.sizeDelta = new Vector2(840, Mathf.Max(64, size * 2));
-            label.raycastTarget = false;
-            return label;
+            return _uiFactory.CreateLabel(parent, text, size, alignment);
         }
 
         private Button CreateButton(Transform parent, string text, Action action, Color color, Vector2? size = null)
         {
-            var buttonObject = new GameObject($"Button - {text}", typeof(RectTransform), typeof(Image), typeof(Button));
-            buttonObject.transform.SetParent(parent, false);
-            buttonObject.AddComponent<ButtonPressFeedback>();
-            var rect = buttonObject.GetComponent<RectTransform>();
-            rect.sizeDelta = size ?? new Vector2(180, 80);
-
-            var image = buttonObject.GetComponent<Image>();
-            image.sprite = _iconFactory.GetPillSprite();
-            image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 2f;
-            image.color = color;
-
-            var button = buttonObject.GetComponent<Button>();
-            button.targetGraphic = image;
-            button.onClick.AddListener(() =>
+            return _uiFactory.CreateButton(parent, text, () =>
             {
                 _playSfx?.Invoke(GameSfxCue.Tap);
                 action?.Invoke();
-            });
-
-            var label = CreateLabel(buttonObject.transform, text, 28, TextAnchor.MiddleCenter);
-            label.rectTransform.anchorMin = Vector2.zero;
-            label.rectTransform.anchorMax = Vector2.one;
-            label.rectTransform.offsetMin = new Vector2(8, 6);
-            label.rectTransform.offsetMax = new Vector2(-8, -6);
-            label.raycastTarget = false;
-            _themeAssets.AddHighValueTextShadow(label);
-            return button;
+            }, color, size);
         }
 
         private IEnumerator AnimateScore(int from, int to)
