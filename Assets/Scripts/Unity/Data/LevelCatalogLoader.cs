@@ -76,13 +76,13 @@ namespace PotionPopQuest.Unity
     }
 
     [Serializable]
-    internal sealed class LevelCatalogJson
+    public sealed class LevelCatalogJson
     {
         public LevelJson[] levels;
     }
 
     [Serializable]
-    internal sealed class LevelJson
+    public sealed class LevelJson
     {
         public int levelNumber;
         public string displayName;
@@ -135,7 +135,7 @@ namespace PotionPopQuest.Unity
     }
 
     [Serializable]
-    internal sealed class GoalJson
+    public sealed class GoalJson
     {
         public string goalType;
         public string goalItem;
@@ -152,7 +152,7 @@ namespace PotionPopQuest.Unity
     }
 
     [Serializable]
-    internal sealed class ObstacleJson
+    public sealed class ObstacleJson
     {
         public int row;
         public int column;
@@ -167,7 +167,7 @@ namespace PotionPopQuest.Unity
     }
 
     [Serializable]
-    internal sealed class StarThresholdJson
+    public sealed class StarThresholdJson
     {
         public int oneStar;
         public int twoStars;
