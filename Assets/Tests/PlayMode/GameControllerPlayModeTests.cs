@@ -254,7 +254,7 @@ namespace PotionPopQuest.PlayMode.Tests
         private static Button FindButton(string label)
         {
             return GameObject.FindObjectsByType<Button>(FindObjectsSortMode.None)
-                .FirstOrDefault(button => button.name == $"Button - {label}");
+                .FirstOrDefault(button => button.name.Contains(label));
         }
 
         private static void DismissLevelIntro()
