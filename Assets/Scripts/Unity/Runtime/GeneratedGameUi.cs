@@ -64,6 +64,17 @@ namespace PotionPopQuest.Unity
         private Action _levelIntroDismissed;
         private Action<GameSfxCue> _playSfx;
 
+        // Economy
+        private Action _buyLivesPressed;
+        private Action _hammerBoosterPressed;
+        private Action _shuffleBoosterPressed;
+
+        private GameObject _economyPanel;
+        private Text _livesText;
+        private Text _coinsText;
+        private Text _hammerText;
+        private Text _shuffleText;
+
         public GeneratedGameUi(IGameLogger logger)
         {
             _logger = logger;
@@ -102,6 +113,9 @@ namespace PotionPopQuest.Unity
             _toggleVibration = actions.ToggleVibration;
             _levelIntroDismissed = actions.LevelIntroDismissed;
             _playSfx = actions.PlaySfx;
+            _buyLivesPressed = actions.BuyLivesPressed;
+            _hammerBoosterPressed = actions.HammerBoosterPressed;
+            _shuffleBoosterPressed = actions.ShuffleBoosterPressed;
 
             EnsureEventSystem();
             var canvasObject = CreateCanvas(parent);
@@ -116,8 +130,53 @@ namespace PotionPopQuest.Unity
             _game = CreateScreen("Game");
             _settings = CreateScreen("Settings");
             _modal = CreateScreen("Modal");
+            BuildEconomyHud();
             BuildMainMenu();
             BuildGameScreen();
+        }
+
+        private void BuildEconomyHud()
+        {
+            _economyPanel = CreatePanel(_root, "Economy HUD", UiColorPalette.HudBackground);
+            var rect = _economyPanel.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 1);
+            rect.anchorMax = new Vector2(1, 1);
+            rect.pivot = new Vector2(0.5f, 1);
+            rect.offsetMin = new Vector2(0, -60);
+            rect.offsetMax = new Vector2(0, 0);
+
+            var layout = _economyPanel.AddComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.spacing = 20;
+
+            var livesBtn = CreateButton(_economyPanel.transform, "❤️ 5", _buyLivesPressed, UiColorPalette.Ruby, new Vector2(160, 40));
+            _livesText = livesBtn.GetComponentInChildren<Text>();
+
+            var coinsBtn = CreateButton(_economyPanel.transform, "🪙 100", null, UiColorPalette.Gold, new Vector2(160, 40));
+            _coinsText = coinsBtn.GetComponentInChildren<Text>();
+            
+            _economyPanel.SetActive(true);
+        }
+
+        public void UpdateEconomy(int lives, long regenTimeSeconds, int coins, int hammers, int shuffles)
+        {
+            if (_livesText != null)
+            {
+                var regenText = lives < 5 && regenTimeSeconds > 0 ? $" ({regenTimeSeconds / 60}:{(regenTimeSeconds % 60):D2})" : "";
+                _livesText.text = $"❤️ {lives}" + regenText;
+            }
+            if (_coinsText != null)
+            {
+                _coinsText.text = $"🪙 {coins}";
+            }
+            if (_hammerText != null)
+            {
+                _hammerText.text = $"🔨 {hammers}";
+            }
+            if (_shuffleText != null)
+            {
+                _shuffleText.text = $"🔀 {shuffles}";
+            }
         }
 
         public void ShowMainMenu()
@@ -723,12 +782,24 @@ namespace PotionPopQuest.Unity
             _tutorialText.rectTransform.offsetMax = new Vector2(-18, -10);
             _tutorialPanel.SetActive(false);
 
+            var touchHeight = UiLayoutMetrics.GameTouchHeight();
+            var boosters = CreatePanel(_game.transform, "Game Boosters", new Color(0, 0, 0, 0));
+            AddLayoutElement(boosters, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.GameActionsHeight());
+            var boostersLayout = boosters.AddComponent<HorizontalLayoutGroup>();
+            boostersLayout.childAlignment = TextAnchor.MiddleCenter;
+            boostersLayout.spacing = 14;
+            
+            var hammerBtn = CreateButton(boosters.transform, "🔨 0", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(204, touchHeight));
+            _hammerText = hammerBtn.GetComponentInChildren<Text>();
+            
+            var shuffleBtn = CreateButton(boosters.transform, "🔀 0", _shuffleBoosterPressed, UiColorPalette.Gold, new Vector2(204, touchHeight));
+            _shuffleText = shuffleBtn.GetComponentInChildren<Text>();
+
             var actions = CreatePanel(_game.transform, "Game Actions", new Color(0, 0, 0, 0));
             AddLayoutElement(actions, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.GameActionsHeight());
             var actionsLayout = actions.AddComponent<HorizontalLayoutGroup>();
             actionsLayout.childAlignment = TextAnchor.MiddleCenter;
             actionsLayout.spacing = 14;
-            var touchHeight = UiLayoutMetrics.GameTouchHeight();
             CreateButton(actions.transform, "\u2728 Hint", _hintRequested, UiColorPalette.Emerald, new Vector2(204, touchHeight));
             CreateButton(actions.transform, "\u21BB Restart", _restart, UiColorPalette.Ruby, new Vector2(204, touchHeight));
             CreateButton(actions.transform, "\u2606 Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(204, touchHeight));

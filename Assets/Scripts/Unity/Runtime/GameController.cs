@@ -77,16 +77,31 @@ namespace PotionPopQuest.Unity
                 SetSfxVolume = SetSfxVolume,
                 ToggleVibration = ToggleVibration,
                 LevelIntroDismissed = DismissLevelIntro,
-                PlaySfx = PlaySfx
+                PlaySfx = PlaySfx,
+                BuyLivesPressed = HandleBuyLives,
+                HammerBoosterPressed = RequestHammerBooster,
+                ShuffleBoosterPressed = RequestShuffleBooster
             });
 
             ShowMainMenu();
         }
 
+        private bool _hammerModeActive;
+
         private void Update()
         {
+            if (_saveData != null)
+            {
+                EconomyManager.ProcessLifeRegeneration(_saveData);
+            }
+
             if (Input.GetKeyDown(KeyCode.Escape))
             {
+                if (_hammerModeActive)
+                {
+                    CancelHammerMode();
+                    return;
+                }
                 HandleBackRequested();
                 return;
             }
@@ -135,6 +150,12 @@ namespace PotionPopQuest.Unity
 
         private void StartLevel(int levelNumber)
         {
+            if (_saveData.currentLives <= 0)
+            {
+                _logger.Log(LogCategory.UI, "Out of lives.");
+                return;
+            }
+
             var level = _levels.FirstOrDefault(item => item.LevelNumber == levelNumber);
             if (level == null)
             {
@@ -183,6 +204,17 @@ namespace PotionPopQuest.Unity
             }
 
             ClearHintState();
+
+            if (_hammerModeActive)
+            {
+                _hammerModeActive = false;
+                _saveData.hammerBoosters--;
+                _saveRepository.Save(_saveData);
+                UpdateEconomyUi();
+                StartCoroutine(ResolveMove(_session.UseHammer(position)));
+                return;
+            }
+
             if (!_selectedTile.HasValue)
             {
                 _selectedTile = position;
@@ -248,6 +280,9 @@ namespace PotionPopQuest.Unity
                 }
                 else if (_session.State == GameSessionState.Lost)
                 {
+                    EconomyManager.TryConsumeLife(_saveData);
+                    _saveRepository.Save(_saveData);
+                    UpdateEconomyUi();
                     PlaySfx(GameSfxCue.Lose);
                     _ui.ShowLose(_session);
                 }
@@ -270,6 +305,7 @@ namespace PotionPopQuest.Unity
         {
             SaveProgressService.ApplyLevelCompleted(_saveData, _currentLevelNumber, _session.Score, _session.Stars, HasNextLevel());
             _saveRepository.Save(_saveData);
+            UpdateEconomyUi();
         }
 
         private bool HasNextLevel()
@@ -360,6 +396,65 @@ namespace PotionPopQuest.Unity
             }
 
             ShowMainMenu();
+        }
+
+        private void UpdateEconomyUi()
+        {
+            _ui.UpdateEconomy(_saveData.currentLives, EconomyManager.GetSecondsUntilNextLife(_saveData), _saveData.coins, _saveData.hammerBoosters, _saveData.shuffleBoosters);
+        }
+
+        private void HandleBuyLives()
+        {
+            if (EconomyManager.TryPurchaseLives(_saveData))
+            {
+                _saveRepository.Save(_saveData);
+                UpdateEconomyUi();
+                _logger.Log(LogCategory.UI, "Bought lives.");
+            }
+        }
+
+        private void RequestHammerBooster()
+        {
+            if (_session == null || _session.State != GameSessionState.Playing) return;
+
+            if (_saveData.hammerBoosters > 0)
+            {
+                _hammerModeActive = true;
+                _ui.ShowGame(_session, null, "Select a tile to smash!");
+            }
+            else if (EconomyManager.TryPurchaseBooster(_saveData, BoosterType.Hammer))
+            {
+                _saveRepository.Save(_saveData);
+                UpdateEconomyUi();
+                _hammerModeActive = true;
+                _ui.ShowGame(_session, null, "Select a tile to smash!");
+            }
+        }
+
+        private void CancelHammerMode()
+        {
+            _hammerModeActive = false;
+            _ui.ShowGame(_session, null, "");
+        }
+
+        private void RequestShuffleBooster()
+        {
+            if (_session == null || _session.State != GameSessionState.Playing) return;
+
+            if (_saveData.shuffleBoosters > 0)
+            {
+                _saveData.shuffleBoosters--;
+                _saveRepository.Save(_saveData);
+                StartCoroutine(ResolveMove(_session.ForceShuffle()));
+                UpdateEconomyUi();
+            }
+            else if (EconomyManager.TryPurchaseBooster(_saveData, BoosterType.Shuffle))
+            {
+                _saveData.shuffleBoosters--; // Consume it immediately
+                _saveRepository.Save(_saveData);
+                StartCoroutine(ResolveMove(_session.ForceShuffle()));
+                UpdateEconomyUi();
+            }
         }
 
         private static UiFeedbackCue FeedbackFor(MoveResult result)
