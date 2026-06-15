@@ -210,7 +210,7 @@ namespace PotionPopQuest.Core
                 return Invalid($"Level is already {State}.", boardBeforeMove);
             }
             
-            if (!Board.IsValid(position))
+            if (!Board.InBounds(position))
             {
                 return Invalid("Invalid tile for hammer.", boardBeforeMove);
             }
