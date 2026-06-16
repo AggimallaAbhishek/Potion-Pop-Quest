@@ -1680,6 +1680,13 @@ namespace PotionPopQuest.Unity
             element.preferredHeight = preferredHeight;
             element.flexibleWidth = 0;
             element.flexibleHeight = 0;
+
+            var rect = target.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.sizeDelta = new Vector2(preferredWidth, preferredHeight);
+            }
+
             return element;
         }
 
