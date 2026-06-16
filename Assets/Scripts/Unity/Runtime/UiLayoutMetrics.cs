@@ -71,18 +71,7 @@ namespace PotionPopQuest.Unity
 
         public static int LevelSelectColumnCount()
         {
-            var width = Mathf.Min(Screen.width, Screen.height);
-            if (width <= 900)
-            {
-                return 3;
-            }
-
-            if (width <= 1300)
-            {
-                return 4;
-            }
-
-            return 5;
+            return 3;
         }
 
         private static bool IsShortWideScreen()

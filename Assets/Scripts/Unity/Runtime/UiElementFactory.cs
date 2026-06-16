@@ -131,7 +131,7 @@ namespace PotionPopQuest.Unity
             button.targetGraphic = image;
             button.onClick.AddListener(() => action?.Invoke());
 
-            CreateButtonDepthLayers(buttonObject.transform, color);
+
 
             var labelSize = rect.sizeDelta.y <= 58f ? 22 : rect.sizeDelta.y <= 70f ? 24 : 26;
             var label = CreateLabel(buttonObject.transform, text, labelSize, TextAnchor.MiddleCenter);
@@ -168,42 +168,7 @@ namespace PotionPopQuest.Unity
             glowRect.offsetMax = Vector2.zero;
             glow.GetComponent<Image>().color = UiColorPalette.WithAlpha(color, 0.11f);
             glow.GetComponent<Image>().raycastTarget = false;
-
-            var highlight = new GameObject("BadgeHighlight", typeof(RectTransform), typeof(Image));
-            highlight.transform.SetParent(badge.transform, false);
-            var hlRect = highlight.GetComponent<RectTransform>();
-            hlRect.anchorMin = new Vector2(0.10f, 0.80f);
-            hlRect.anchorMax = new Vector2(0.90f, 0.92f);
-            hlRect.offsetMin = Vector2.zero;
-            hlRect.offsetMax = Vector2.zero;
-            highlight.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.07f);
-            highlight.GetComponent<Image>().raycastTarget = false;
-
             return badge;
-        }
-
-        /// <summary>Adds a restrained highlight/shadow pair without turning every button into a large striped card.</summary>
-        private static void CreateButtonDepthLayers(Transform parent, Color baseColor)
-        {
-            var topHighlight = new GameObject("ButtonHighlight", typeof(RectTransform), typeof(Image));
-            topHighlight.transform.SetParent(parent, false);
-            var topRect = topHighlight.GetComponent<RectTransform>();
-            topRect.anchorMin = new Vector2(0.08f, 0.82f);
-            topRect.anchorMax = new Vector2(0.92f, 0.93f);
-            topRect.offsetMin = Vector2.zero;
-            topRect.offsetMax = Vector2.zero;
-            topHighlight.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.10f);
-            topHighlight.GetComponent<Image>().raycastTarget = false;
-
-            var bottomShadow = new GameObject("ButtonShadow", typeof(RectTransform), typeof(Image));
-            bottomShadow.transform.SetParent(parent, false);
-            var bottomRect = bottomShadow.GetComponent<RectTransform>();
-            bottomRect.anchorMin = new Vector2(0.08f, 0.04f);
-            bottomRect.anchorMax = new Vector2(0.92f, 0.12f);
-            bottomRect.offsetMin = Vector2.zero;
-            bottomRect.offsetMax = Vector2.zero;
-            bottomShadow.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.10f);
-            bottomShadow.GetComponent<Image>().raycastTarget = false;
         }
 
         /// <summary>Adds a subtle inner highlight at the top edge of a panel.</summary>
