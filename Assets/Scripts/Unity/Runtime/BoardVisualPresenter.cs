@@ -23,14 +23,13 @@ namespace PotionPopQuest.Unity
         private readonly Func<TMP_FontAsset> _fontProvider;
         private readonly Dictionary<GridPosition, RectTransform> _tileViews = new Dictionary<GridPosition, RectTransform>();
         private readonly Dictionary<GridPosition, BoardCellSnapshot> _viewCells = new Dictionary<GridPosition, BoardCellSnapshot>();
-        private readonly Stack<Button> _tileButtonPool = new Stack<Button>();
-        private readonly Stack<Image> _vfxImagePool = new Stack<Image>();
+        private readonly BoardTilePool _tilePool;
+        private readonly BoardInputHandler _inputHandler;
         private readonly List<Outline> _selectionOutlines = new List<Outline>();
 
         private RectTransform _boardRoot;
         private RectTransform _floatingLayer;
-        private Action<GridPosition> _tilePressed;
-        private Action<GameSfxCue> _playSfx;
+        
         private int _width = 8;
         private int _height = 8;
         private float _boardSize = BoardSizeFallback;
@@ -42,6 +41,8 @@ namespace PotionPopQuest.Unity
             _logger = logger ?? new NullGameLogger();
             _iconFactory = iconFactory ?? new TileIconFactory();
             _fontProvider = fontProvider ?? (() => null);
+            _tilePool = new BoardTilePool(_iconFactory);
+            _inputHandler = new BoardInputHandler();
         }
 
         public IReadOnlyDictionary<GridPosition, RectTransform> TileViews => _tileViews;
@@ -54,8 +55,7 @@ namespace PotionPopQuest.Unity
         {
             _boardRoot = boardRoot;
             _floatingLayer = floatingLayer;
-            _tilePressed = tilePressed;
-            _playSfx = playSfx;
+            _inputHandler.Configure(tilePressed, playSfx);
         }
 
         public bool TryGetTile(GridPosition position, out RectTransform rect)
@@ -433,7 +433,7 @@ namespace PotionPopQuest.Unity
 
         private RectTransform CreateTileView(GridPosition position, BoardCellSnapshot cell, bool register = true)
         {
-            var button = GetTileButton();
+            var button = _tilePool.GetTileButton();
             var rect = button.GetComponent<RectTransform>();
             button.gameObject.SetActive(true);
             button.transform.SetParent(_boardRoot, false);
@@ -501,7 +501,7 @@ namespace PotionPopQuest.Unity
                 new Vector2(0.04f, 0.90f), new Vector2(0.96f, 1f),
                 UiColorPalette.TileBaseGradientTop);
 
-            ConfigureTileInteraction(position, rect, cell);
+            _inputHandler.ConfigureTileInteraction(position, rect, cell);
 
             if (cell.Obstacle == ObstacleType.DarkTile)
             {
@@ -589,30 +589,7 @@ namespace PotionPopQuest.Unity
             layerImage.raycastTarget = false;
         }
 
-        private void ConfigureTileInteraction(GridPosition position, RectTransform rect, BoardCellSnapshot cell)
-        {
-            var button = rect.GetComponent<Button>();
-            var image = rect.GetComponent<Image>();
-            button.targetGraphic = image;
-            button.interactable = cell.CanMoveIngredient;
-            button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(() =>
-            {
-                _playSfx?.Invoke(GameSfxCue.Tap);
-                _tilePressed?.Invoke(position);
-            });
-        }
 
-        private Button GetTileButton()
-        {
-            if (_tileButtonPool.Count > 0)
-            {
-                return _tileButtonPool.Pop();
-            }
-
-            var buttonObject = new GameObject("Tile", typeof(RectTransform), typeof(Image), typeof(Button));
-            return buttonObject.GetComponent<Button>();
-        }
 
         private void ReleaseTile(GridPosition position)
         {
@@ -625,7 +602,7 @@ namespace PotionPopQuest.Unity
 
             _tileViews.Remove(position);
             _viewCells.Remove(position);
-            PoolTile(rect);
+            _tilePool.PoolTile(rect);
         }
 
         private void ReleaseAllTiles()
@@ -634,7 +611,7 @@ namespace PotionPopQuest.Unity
             {
                 if (rect != null)
                 {
-                    PoolTile(rect);
+                    _tilePool.PoolTile(rect);
                 }
             }
 
@@ -642,26 +619,6 @@ namespace PotionPopQuest.Unity
             _viewCells.Clear();
         }
 
-        private void PoolTile(RectTransform rect)
-        {
-            ClearChildren(rect);
-            ClearTileOutlines(rect);
-            foreach (var animator in rect.GetComponents<UiTileAnimator>())
-            {
-                UnityEngine.Object.Destroy(animator);
-            }
-
-            foreach (var group in rect.GetComponents<CanvasGroup>())
-            {
-                group.alpha = 1f;
-            }
-
-            var button = rect.GetComponent<Button>();
-            button.onClick.RemoveAllListeners();
-            rect.localScale = Vector3.one;
-            rect.gameObject.SetActive(false);
-            _tileButtonPool.Push(button);
-        }
 
         private void ApplyMovementMappings(IReadOnlyList<TileMotion> motions, IReadOnlyList<TileMotion> spawnedMotions = null)
         {
@@ -731,7 +688,7 @@ namespace PotionPopQuest.Unity
                 _logger.Warn(LogCategory.Drop, $"Replacing an existing tile view at {motion.To} during movement mapping; final board sync will recover if this was unexpected.");
                 if (!incomingRects.Contains(existing))
                 {
-                    PoolTile(existing);
+                    _tilePool.PoolTile(existing);
                 }
             }
 
@@ -1026,57 +983,11 @@ namespace PotionPopQuest.Unity
 
             foreach (var image in active)
             {
-                ReleaseVfxImage(image);
+                _tilePool.ReleaseVfxImage(image, _boardRoot);
             }
         }
 
-        private Image RentVfxImage(string name, Color color, Vector2 size, Vector2 anchoredPosition)
-        {
-            Image image;
-            if (_vfxImagePool.Count > 0)
-            {
-                image = _vfxImagePool.Pop();
-                image.gameObject.name = name;
-                image.gameObject.SetActive(true);
-            }
-            else
-            {
-                var effectObject = new GameObject(name, typeof(RectTransform), typeof(Image));
-                image = effectObject.GetComponent<Image>();
-            }
 
-            image.transform.SetParent(_boardRoot, false);
-            image.sprite = _iconFactory.GetPillSprite();
-            image.color = color;
-            image.raycastTarget = false;
-            var rect = image.rectTransform;
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = size;
-            rect.anchoredPosition = anchoredPosition;
-            rect.localScale = Vector3.one;
-            rect.localRotation = Quaternion.identity;
-            return image;
-        }
-
-        private void ReleaseVfxImage(Image image)
-        {
-            if (image == null)
-            {
-                return;
-            }
-
-            image.gameObject.SetActive(false);
-            image.transform.SetParent(_boardRoot, false);
-            if (_vfxImagePool.Count >= GameplayPresentationConfig.MaxActiveVfxImages)
-            {
-                UnityEngine.Object.Destroy(image.gameObject);
-                return;
-            }
-
-            _vfxImagePool.Push(image);
-        }
 
         private IEnumerator MoveTiles(IReadOnlyList<TileMotion> motions, float duration, TileTweenEase ease)
         {
