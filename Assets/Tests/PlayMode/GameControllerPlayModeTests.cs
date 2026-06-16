@@ -4,6 +4,7 @@ using NUnit.Framework;
 using PotionPopQuest.Core;
 using PotionPopQuest.Unity;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.TestTools;
 
@@ -30,6 +31,8 @@ namespace PotionPopQuest.PlayMode.Tests
         {
             CreateRuntime();
             yield return null;
+            DismissDailyRewardIfVisible();
+            yield return null;
 
             Assert.That(GameObject.Find("Potion Pop Quest Canvas"), Is.Not.Null);
             Assert.That(GameObject.Find("Potion Lab Back Wall"), Is.Not.Null);
@@ -44,18 +47,20 @@ namespace PotionPopQuest.PlayMode.Tests
         {
             CreateRuntime();
             yield return null;
+            DismissDailyRewardIfVisible();
+            yield return null;
 
             FindButton("Play").onClick.Invoke();
             yield return null;
 
             Assert.That(GameObject.Find("Board Panel"), Is.Not.Null);
-            Assert.That(GameObject.Find("Star Progress"), Is.Not.Null);
+            Assert.That(FindObjectIncludingInactive("Star Progress"), Is.Not.Null);
             Assert.That(GameObject.Find("HUD Moves Badge"), Is.Not.Null);
             Assert.That(GameObject.Find("HUD Goal Strip"), Is.Not.Null);
             Assert.That(GameObject.Find("HUD Score Badge"), Is.Not.Null);
-            var starProgressStars = GameObject.Find("Star Progress Stars");
+            var starProgressStars = FindObjectIncludingInactive("Star Progress Stars");
             Assert.That(starProgressStars, Is.Not.Null);
-            Assert.That(starProgressStars.GetComponentsInChildren<Image>().Length, Is.EqualTo(3));
+            Assert.That(starProgressStars.GetComponentsInChildren<Image>(includeInactive: true).Length, Is.EqualTo(3));
             Assert.That(GameObject.Find("Level Intro Overlay"), Is.Not.Null);
             Assert.That(GameObject.Find("Intro Obstacle Preview"), Is.Not.Null);
             Assert.That(GameObject.Find("Tutorial Banner"), Is.Not.Null);
@@ -67,6 +72,8 @@ namespace PotionPopQuest.PlayMode.Tests
         public IEnumerator SettingsScreen_ShowsAudioSlidersAndVibrationToggle()
         {
             CreateRuntime();
+            yield return null;
+            DismissDailyRewardIfVisible();
             yield return null;
 
             FindButton("Settings").onClick.Invoke();
@@ -85,13 +92,15 @@ namespace PotionPopQuest.PlayMode.Tests
         {
             CreateRuntime();
             yield return null;
+            DismissDailyRewardIfVisible();
+            yield return null;
 
             FindButton("Levels").onClick.Invoke();
             yield return null;
 
             var grid = GameObject.Find("Levels Grid");
             Assert.That(grid, Is.Not.Null);
-            Assert.That(grid.transform.childCount, Is.EqualTo(20));
+            Assert.That(grid.GetComponentsInChildren<Button>(includeInactive: false).Length, Is.EqualTo(20));
         }
 
         [UnityTest]
@@ -99,16 +108,18 @@ namespace PotionPopQuest.PlayMode.Tests
         {
             CreateRuntime();
             yield return null;
+            DismissDailyRewardIfVisible();
+            yield return null;
 
             FindButton("+").onClick.Invoke();
             yield return null;
 
-            var modal = GameObject.Find("Shop Modal");
+            var modal = FindObjectIncludingInactive("Shop Modal");
             Assert.That(modal, Is.Not.Null);
             Assert.That(modal.activeInHierarchy, Is.True);
-            Assert.That(FindButton("Test: Add 100 Coins"), Is.Not.Null);
+            Assert.That(FindButton("Test: Add 100 Coins", modal), Is.Not.Null);
 
-            FindButton("Close").onClick.Invoke();
+            FindButton("Close", modal).onClick.Invoke();
             yield return null;
 
             Assert.That(modal.activeInHierarchy, Is.False);
@@ -142,6 +153,8 @@ namespace PotionPopQuest.PlayMode.Tests
         {
             CreateRuntime();
             yield return null;
+            DismissDailyRewardIfVisible();
+            yield return null;
 
             FindButton("Settings").onClick.Invoke();
             yield return null;
@@ -158,6 +171,8 @@ namespace PotionPopQuest.PlayMode.Tests
             DestroyExistingRuntime();
             CreateRuntime();
             yield return null;
+            DismissDailyRewardIfVisible();
+            yield return null;
             FindButton("Settings").onClick.Invoke();
             yield return null;
 
@@ -172,13 +187,17 @@ namespace PotionPopQuest.PlayMode.Tests
         {
             CreateRuntime();
             yield return null;
+            DismissDailyRewardIfVisible();
+            yield return null;
 
             FindButton("Play").onClick.Invoke();
             yield return null;
             DismissLevelIntro();
             yield return null;
 
-            FindButton("Hint").onClick.Invoke();
+            var hintButton = FindButton("Hint");
+            Assert.That(hintButton, Is.Not.Null);
+            hintButton.onClick.Invoke();
             yield return null;
 
             Assert.That(GameObject.FindObjectsByType<Outline>(FindObjectsSortMode.None).Length, Is.GreaterThanOrEqualTo(2));
@@ -340,8 +359,27 @@ namespace PotionPopQuest.PlayMode.Tests
 
         private static Button FindButton(string label)
         {
-            return GameObject.FindObjectsByType<Button>(FindObjectsSortMode.None)
-                .FirstOrDefault(button => button.name.Contains(label));
+            return Resources.FindObjectsOfTypeAll<Button>()
+                .Where(button => button != null && button.gameObject.scene.IsValid() && button.gameObject.activeInHierarchy)
+                .FirstOrDefault(button => ButtonMatches(button, label));
+        }
+
+        private static Button FindButton(string label, GameObject root)
+        {
+            Assert.That(root, Is.Not.Null);
+            return root.GetComponentsInChildren<Button>(includeInactive: false)
+                .FirstOrDefault(button => ButtonMatches(button, label));
+        }
+
+        private static bool ButtonMatches(Button button, string label)
+        {
+            if (button.name.Contains(label))
+            {
+                return true;
+            }
+
+            var text = button.GetComponentInChildren<Text>(includeInactive: false);
+            return text != null && text.text.Contains(label);
         }
 
         private static GameObject FindObjectIncludingInactive(string name)
@@ -359,6 +397,19 @@ namespace PotionPopQuest.PlayMode.Tests
             button.onClick.Invoke();
         }
 
+        private static void DismissDailyRewardIfVisible()
+        {
+            var modal = FindObjectIncludingInactive("Daily Reward Modal");
+            if (modal == null || !modal.activeInHierarchy)
+            {
+                return;
+            }
+
+            var claim = FindButton("Claim Test Coins", modal);
+            Assert.That(claim, Is.Not.Null);
+            claim.onClick.Invoke();
+        }
+
         private static void DestroyExistingRuntime()
         {
             foreach (var controller in GameObject.FindObjectsByType<GameController>(FindObjectsSortMode.None))
@@ -373,11 +424,21 @@ namespace PotionPopQuest.PlayMode.Tests
                     Object.DestroyImmediate(canvas.gameObject);
                 }
             }
+
+            foreach (var eventSystem in GameObject.FindObjectsByType<EventSystem>(FindObjectsSortMode.None))
+            {
+                Object.DestroyImmediate(eventSystem.gameObject);
+            }
         }
 
         private static BoardVisualPresenter CreatePresenter(out GameObject canvas)
         {
             canvas = new GameObject("Presenter Test Canvas", typeof(Canvas));
+            if (GameObject.FindObjectsByType<AudioListener>(FindObjectsSortMode.None).Length == 0)
+            {
+                canvas.AddComponent<AudioListener>();
+            }
+
             var boardObject = new GameObject("Board Panel", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             boardObject.transform.SetParent(canvas.transform, false);
             var floatingObject = new GameObject("Floating Feedback Layer", typeof(RectTransform));

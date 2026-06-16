@@ -811,6 +811,8 @@ namespace PotionPopQuest.Unity
             boostersLayout.childAlignment = TextAnchor.MiddleCenter;
             boostersLayout.spacing = 20;
             
+            CreateButton(boosters.transform, "Hint", _hintRequested, UiColorPalette.Sapphire, new Vector2(160, touchHeight));
+
             var hammerBtn = CreateButton(boosters.transform, "[Smash] 0", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(160, touchHeight));
             _hammerText = hammerBtn.GetComponentInChildren<Text>();
             

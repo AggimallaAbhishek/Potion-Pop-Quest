@@ -1,0 +1,12 @@
+# ninja log v5
+1	151	1781581946193392998	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	cd718129bd80cc03
+152	253	1781581946264023461	/Users/aggimallaabhishek/Documents/Potion-Pop-Quest/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/Debug/6kl5945n/obj/arm64-v8a/libswappywrapper.so	49f63625e13fd8ed
+0	589	1781581946628953318	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	43500657485c845e
+0	598	1781581946636958209	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	7def76ce55c97719
+0	602	1781581946641472116	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	3f5083f61a49946a
+1	603	1781581946641870369	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	1fac9ac323f95090
+1	615	1781581946655864510	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	37e7ccee2e8ece16
+1	639	1781581946679190552	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	3bfdaf2b81261696
+1	662	1781581946700661997	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	6940de9ca8695071
+0	670	1781581946709033307	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	19f367d04f8b2003
+670	706	1781581946746610366	/Users/aggimallaabhishek/Documents/Potion-Pop-Quest/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/Debug/6kl5945n/obj/arm64-v8a/libgame.so	14c8548c6816586
