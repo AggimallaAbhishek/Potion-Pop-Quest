@@ -93,7 +93,7 @@ namespace PotionPopQuest.Unity
             _backdropView = new PotionLabBackdropView(_uiFactory);
         }
 
-        private Font Font
+        private TMP_FontAsset Font
         {
             get
             {
@@ -601,7 +601,7 @@ namespace PotionPopQuest.Unity
             }
         }
 
-        private static IEnumerator FloatingScoreRoutine(Text label)
+        private static IEnumerator FloatingScoreRoutine(TextMeshProUGUI label)
         {
             var rect = label.rectTransform;
             var group = label.gameObject.AddComponent<CanvasGroup>();
@@ -1114,7 +1114,7 @@ namespace PotionPopQuest.Unity
             return image;
         }
 
-        private static IEnumerator AnimateModalScore(Text label, int finalScore)
+        private static IEnumerator AnimateModalScore(TextMeshProUGUI label, int finalScore)
         {
             if (label == null)
             {
