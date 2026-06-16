@@ -41,6 +41,7 @@ namespace PotionPopQuest.Unity
         private bool _hintVisible;
         private float _idleHintTimer;
         private bool _musicGestureUnlocked;
+        private float _nextEconomyUiRefreshTime;
 
         private void Start()
         {
@@ -87,6 +88,7 @@ namespace PotionPopQuest.Unity
                 ClaimDailyReward = ClaimDailyReward
             });
 
+            UpdateEconomyUi();
             ShowMainMenu();
         }
 
@@ -96,7 +98,15 @@ namespace PotionPopQuest.Unity
         {
             if (_saveData != null)
             {
-                EconomyManager.ProcessLifeRegeneration(_saveData);
+                if (EconomyManager.ProcessLifeRegeneration(_saveData))
+                {
+                    _saveRepository.Save(_saveData);
+                    UpdateEconomyUi();
+                }
+                else if (Time.unscaledTime >= _nextEconomyUiRefreshTime)
+                {
+                    UpdateEconomyUi();
+                }
             }
 
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -405,7 +415,13 @@ namespace PotionPopQuest.Unity
 
         private void UpdateEconomyUi()
         {
+            if (_ui == null || _saveData == null)
+            {
+                return;
+            }
+
             _ui.UpdateEconomy(_saveData.currentLives, EconomyManager.GetSecondsUntilNextLife(_saveData), _saveData.coins, _saveData.hammerBoosters, _saveData.shuffleBoosters);
+            _nextEconomyUiRefreshTime = Time.unscaledTime + 1f;
         }
 
         private void HandleBuyLives()

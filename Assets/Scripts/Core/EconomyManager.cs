@@ -7,11 +7,11 @@ namespace PotionPopQuest.Core
         public const int MaxLives = 5;
         public const int LifeRegenDurationSeconds = 1800; // 30 minutes
         
-        public static void ProcessLifeRegeneration(SaveData data)
+        public static bool ProcessLifeRegeneration(SaveData data)
         {
             if (data == null || data.currentLives >= MaxLives)
             {
-                return;
+                return false;
             }
 
             var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -20,12 +20,14 @@ namespace PotionPopQuest.Core
             if (data.nextLifeRegenTime <= 0)
             {
                 data.nextLifeRegenTime = now + LifeRegenDurationSeconds;
-                return;
+                return true;
             }
 
+            var changed = false;
             while (now >= data.nextLifeRegenTime && data.currentLives < MaxLives)
             {
                 data.currentLives++;
+                changed = true;
                 if (data.currentLives < MaxLives)
                 {
                     data.nextLifeRegenTime += LifeRegenDurationSeconds;
@@ -36,6 +38,8 @@ namespace PotionPopQuest.Core
                     break;
                 }
             }
+
+            return changed;
         }
 
         public static bool TryConsumeLife(SaveData data)

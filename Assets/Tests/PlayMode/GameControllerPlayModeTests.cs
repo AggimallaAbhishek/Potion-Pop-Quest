@@ -81,6 +81,93 @@ namespace PotionPopQuest.PlayMode.Tests
         }
 
         [UnityTest]
+        public IEnumerator LevelSelect_ShowsAllTwentyJsonLevels()
+        {
+            CreateRuntime();
+            yield return null;
+
+            FindButton("Levels").onClick.Invoke();
+            yield return null;
+
+            var grid = GameObject.Find("Levels Grid");
+            Assert.That(grid, Is.Not.Null);
+            Assert.That(grid.transform.childCount, Is.EqualTo(20));
+        }
+
+        [UnityTest]
+        public IEnumerator ShopModal_RendersAndCloses()
+        {
+            CreateRuntime();
+            yield return null;
+
+            FindButton("+").onClick.Invoke();
+            yield return null;
+
+            var modal = GameObject.Find("Shop Modal");
+            Assert.That(modal, Is.Not.Null);
+            Assert.That(modal.activeInHierarchy, Is.True);
+            Assert.That(FindButton("Test: Add 100 Coins"), Is.Not.Null);
+
+            FindButton("Close").onClick.Invoke();
+            yield return null;
+
+            Assert.That(modal.activeInHierarchy, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator DailyRewardModal_ClaimClosesAndDoesNotRepeatImmediately()
+        {
+            CreateRuntime();
+            yield return null;
+
+            var modal = FindObjectIncludingInactive("Daily Reward Modal");
+            Assert.That(modal, Is.Not.Null);
+            Assert.That(modal.activeInHierarchy, Is.True);
+
+            FindButton("Claim Test Coins").onClick.Invoke();
+            yield return null;
+            Assert.That(modal.activeInHierarchy, Is.False);
+
+            DestroyExistingRuntime();
+            CreateRuntime();
+            yield return null;
+
+            modal = FindObjectIncludingInactive("Daily Reward Modal");
+            Assert.That(modal, Is.Not.Null);
+            Assert.That(modal.activeInHierarchy, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator SettingsPersistence_ReloadsSlidersAndVibrationToggle()
+        {
+            CreateRuntime();
+            yield return null;
+
+            FindButton("Settings").onClick.Invoke();
+            yield return null;
+
+            var musicSlider = GameObject.Find("Slider - Music Volume").GetComponentInChildren<Slider>();
+            var vibrationToggle = GameObject.Find("Toggle - Vibration").GetComponent<Toggle>();
+            Assert.That(musicSlider, Is.Not.Null);
+            Assert.That(vibrationToggle, Is.Not.Null);
+
+            musicSlider.value = 0.25f;
+            vibrationToggle.isOn = false;
+            yield return null;
+
+            DestroyExistingRuntime();
+            CreateRuntime();
+            yield return null;
+            FindButton("Settings").onClick.Invoke();
+            yield return null;
+
+            musicSlider = GameObject.Find("Slider - Music Volume").GetComponentInChildren<Slider>();
+            vibrationToggle = GameObject.Find("Toggle - Vibration").GetComponent<Toggle>();
+            Assert.That(musicSlider.value, Is.EqualTo(0.25f).Within(0.01f));
+            Assert.That(vibrationToggle.isOn, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator HintButton_HighlightsCandidateMove()
         {
             CreateRuntime();
@@ -255,6 +342,12 @@ namespace PotionPopQuest.PlayMode.Tests
         {
             return GameObject.FindObjectsByType<Button>(FindObjectsSortMode.None)
                 .FirstOrDefault(button => button.name.Contains(label));
+        }
+
+        private static GameObject FindObjectIncludingInactive(string name)
+        {
+            return Resources.FindObjectsOfTypeAll<GameObject>()
+                .FirstOrDefault(item => item.name == name && item.scene.IsValid());
         }
 
         private static void DismissLevelIntro()

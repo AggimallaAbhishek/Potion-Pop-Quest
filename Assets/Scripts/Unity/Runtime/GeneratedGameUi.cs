@@ -1390,12 +1390,12 @@ namespace PotionPopQuest.Unity
             layout.spacing = 20;
             layout.childAlignment = TextAnchor.MiddleCenter;
 
-            var title = CreateLabel(content.transform, "Coin Shop", 48, TextAnchor.MiddleCenter);
+            var title = CreateLabel(content.transform, "Test Coin Shop", 48, TextAnchor.MiddleCenter);
             title.color = UiColorPalette.TextPrimary;
 
-            CreateButton(content.transform, "Buy 100 Coins", () => { _buyCoinPackage?.Invoke(100); }, UiColorPalette.Gold, new Vector2(400, 80));
-            CreateButton(content.transform, "Buy 500 Coins", () => { _buyCoinPackage?.Invoke(500); }, UiColorPalette.Gold, new Vector2(400, 80));
-            CreateButton(content.transform, "Buy 1200 Coins", () => { _buyCoinPackage?.Invoke(1200); }, UiColorPalette.Gold, new Vector2(400, 80));
+            CreateButton(content.transform, "Test: Add 100 Coins", () => { _buyCoinPackage?.Invoke(100); }, UiColorPalette.Gold, new Vector2(400, 80));
+            CreateButton(content.transform, "Test: Add 500 Coins", () => { _buyCoinPackage?.Invoke(500); }, UiColorPalette.Gold, new Vector2(400, 80));
+            CreateButton(content.transform, "Test: Add 1200 Coins", () => { _buyCoinPackage?.Invoke(1200); }, UiColorPalette.Gold, new Vector2(400, 80));
 
             CreateButton(content.transform, "Close", () => { _shopModal.SetActive(false); _closeShop?.Invoke(); }, UiColorPalette.StoneBlock, new Vector2(200, 60));
             _shopModal.SetActive(false);
@@ -1417,7 +1417,7 @@ namespace PotionPopQuest.Unity
             var subtitle = CreateLabel(content.transform, "Log in every day for bigger rewards!", 24, TextAnchor.MiddleCenter);
             subtitle.color = UiColorPalette.TextSecondary;
 
-            CreateButton(content.transform, "Claim Coins", () => { _claimDailyReward?.Invoke(); _dailyRewardModal.SetActive(false); }, UiColorPalette.Emerald, new Vector2(300, 80));
+            CreateButton(content.transform, "Claim Test Coins", () => { _claimDailyReward?.Invoke(); _dailyRewardModal.SetActive(false); }, UiColorPalette.Emerald, new Vector2(300, 80));
             _dailyRewardModal.SetActive(false);
         }
 
@@ -1650,7 +1650,7 @@ namespace PotionPopQuest.Unity
 
         private void ShowPauseMenu()
         {
-            _playSfx(GameSfxCue.Tap);
+            _playSfx?.Invoke(GameSfxCue.Tap);
             
             ClearChildren(_modal.transform);
             var modalPanel = CreatePanel(_modal.transform, "Pause Menu", UiColorPalette.HudBackground);
