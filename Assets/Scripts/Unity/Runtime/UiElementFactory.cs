@@ -101,7 +101,7 @@ namespace PotionPopQuest.Unity
             label.enableAutoSizing = true;
             label.fontSizeMin = 16;
             label.fontSizeMax = size;
-            label.enableWordWrapping = true;
+            label.textWrappingMode = TextWrappingModes.Normal;
             label.overflowMode = TextOverflowModes.Truncate;
             label.rectTransform.sizeDelta = new Vector2(840, Mathf.Max(64, size * 2));
             label.raycastTarget = false;

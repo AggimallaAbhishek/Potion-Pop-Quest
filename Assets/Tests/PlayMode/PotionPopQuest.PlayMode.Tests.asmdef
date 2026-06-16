@@ -3,7 +3,8 @@
   "rootNamespace": "PotionPopQuest.PlayMode.Tests",
   "references": [
     "PotionPopQuest.Core",
-    "PotionPopQuest.Unity"
+    "PotionPopQuest.Unity",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
