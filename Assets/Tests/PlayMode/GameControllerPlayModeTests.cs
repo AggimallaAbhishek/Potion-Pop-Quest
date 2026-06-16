@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.TestTools;
+using TMPro;
 
 namespace PotionPopQuest.PlayMode.Tests
 {
@@ -378,7 +379,7 @@ namespace PotionPopQuest.PlayMode.Tests
                 return true;
             }
 
-            var text = button.GetComponentInChildren<Text>(includeInactive: false);
+            var text = button.GetComponentInChildren<TextMeshProUGUI>(includeInactive: false);
             return text != null && text.text.Contains(label);
         }
 
@@ -447,7 +448,7 @@ namespace PotionPopQuest.PlayMode.Tests
             var presenter = new BoardVisualPresenter(
                 new NullGameLogger(),
                 new TileIconFactory(),
-                () => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
+                () => Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF"));
             presenter.Configure(boardObject.GetComponent<RectTransform>(), floatingObject.GetComponent<RectTransform>(), _ => { }, _ => { });
             return presenter;
         }
