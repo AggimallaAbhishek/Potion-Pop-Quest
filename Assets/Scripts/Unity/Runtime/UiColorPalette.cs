@@ -162,14 +162,14 @@ namespace PotionPopQuest.Unity
 
         // ── Backdrop Elements ───────────────────────────────────────
 
-        public static readonly Color LabBackWall = new Color(0.04f, 0.06f, 0.10f, 0.76f);
-        public static readonly Color LabShelf = new Color(0.20f, 0.14f, 0.18f, 0.50f);
-        public static readonly Color LabTable = new Color(0.14f, 0.08f, 0.12f, 0.68f);
+        public static readonly Color LabBackWall = new Color(0.04f, 0.06f, 0.10f, 0.54f);
+        public static readonly Color LabShelf = new Color(0.20f, 0.14f, 0.18f, 0.34f);
+        public static readonly Color LabTable = new Color(0.14f, 0.08f, 0.12f, 0.52f);
 
         // ── Ambient Light Rays ──────────────────────────────────────
 
-        public static readonly Color LightRay = new Color(0.80f, 0.70f, 1f, 0.06f);
-        public static readonly Color LightRayWarm = new Color(1f, 0.85f, 0.55f, 0.05f);
+        public static readonly Color LightRay = new Color(0.80f, 0.70f, 1f, 0.035f);
+        public static readonly Color LightRayWarm = new Color(1f, 0.85f, 0.55f, 0.03f);
 
         // ── Particle Glow Colors ────────────────────────────────────
 

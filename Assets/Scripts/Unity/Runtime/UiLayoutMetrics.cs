@@ -4,19 +4,19 @@ namespace PotionPopQuest.Unity
 {
     internal static class UiLayoutMetrics
     {
-        public const float ScreenMaxWidth = 960f;
-        public const float HudWidth = 960f;
-        public const float HudHeight = 110f; // Was 174f
-        public const float StarProgressWidth = 920f;
+        public const float ScreenMaxWidth = 920f;
+        public const float HudWidth = 920f;
+        public const float HudHeight = 96f;
+        public const float StarProgressWidth = 880f;
         public const float StarProgressHeight = 0f; // Was 54f
         public const float BoardSize = 780f;
-        public const float MessageWidth = 900f;
-        public const float MessageHeight = 56f;
-        public const float TutorialWidth = 920f;
-        public const float TutorialHeight = 82f;
-        public const float ActionsWidth = 920f;
-        public const float ActionsHeight = 78f;
-        public const float TouchHeight = 70f;
+        public const float MessageWidth = 860f;
+        public const float MessageHeight = 42f;
+        public const float TutorialWidth = 880f;
+        public const float TutorialHeight = 64f;
+        public const float ActionsWidth = 880f;
+        public const float ActionsHeight = 66f;
+        public const float TouchHeight = 58f;
         public const float ModalWidth = 740f;
         public const float TileCornerRadius = 14f;
         public const float ButtonCornerRadius = 16f;
@@ -66,7 +66,7 @@ namespace PotionPopQuest.Unity
         {
             return IsShortWideScreen()
                 ? new RectOffset(24, 24, 20, 20)
-                : new RectOffset(36, 36, 72, 72);
+                : new RectOffset(34, 34, 58, 48);
         }
 
         public static int LevelSelectColumnCount()

@@ -27,9 +27,6 @@ namespace PotionPopQuest.Unity
             image.pixelsPerUnitMultiplier = 3f;
             image.color = color;
 
-            // Inner border highlight for depth
-            CreateInnerHighlight(panel.transform);
-
             return panel;
         }
 
@@ -103,6 +100,11 @@ namespace PotionPopQuest.Unity
             buttonObject.AddComponent<ButtonPressFeedback>();
             var rect = buttonObject.GetComponent<RectTransform>();
             rect.sizeDelta = size ?? new Vector2(180, 80);
+            var layoutElement = buttonObject.AddComponent<LayoutElement>();
+            layoutElement.preferredWidth = rect.sizeDelta.x;
+            layoutElement.preferredHeight = rect.sizeDelta.y;
+            layoutElement.flexibleWidth = 0;
+            layoutElement.flexibleHeight = 0;
 
             var image = buttonObject.GetComponent<Image>();
             image.sprite = _iconFactory.GetPillSprite();
@@ -114,10 +116,10 @@ namespace PotionPopQuest.Unity
             button.targetGraphic = image;
             button.onClick.AddListener(() => action?.Invoke());
 
-            // Gradient depth layers for 3D button look
             CreateButtonDepthLayers(buttonObject.transform, color);
 
-            var label = CreateLabel(buttonObject.transform, text, 28, TextAnchor.MiddleCenter);
+            var labelSize = rect.sizeDelta.y <= 58f ? 22 : rect.sizeDelta.y <= 70f ? 24 : 26;
+            var label = CreateLabel(buttonObject.transform, text, labelSize, TextAnchor.MiddleCenter);
             label.rectTransform.anchorMin = Vector2.zero;
             label.rectTransform.anchorMax = Vector2.one;
             label.rectTransform.offsetMin = new Vector2(8, 6);
@@ -141,55 +143,51 @@ namespace PotionPopQuest.Unity
             var rect = badge.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(diameter, diameter);
 
-            // Glow behind badge
             var glow = new GameObject("BadgeGlow", typeof(RectTransform), typeof(Image));
             glow.transform.SetParent(badge.transform, false);
             glow.transform.SetAsFirstSibling();
             var glowRect = glow.GetComponent<RectTransform>();
-            glowRect.anchorMin = new Vector2(-0.06f, -0.06f);
-            glowRect.anchorMax = new Vector2(1.06f, 1.06f);
+            glowRect.anchorMin = new Vector2(-0.035f, -0.035f);
+            glowRect.anchorMax = new Vector2(1.035f, 1.035f);
             glowRect.offsetMin = Vector2.zero;
             glowRect.offsetMax = Vector2.zero;
-            glow.GetComponent<Image>().color = UiColorPalette.WithAlpha(color, 0.18f);
+            glow.GetComponent<Image>().color = UiColorPalette.WithAlpha(color, 0.11f);
             glow.GetComponent<Image>().raycastTarget = false;
 
-            // Top highlight for 3D look
             var highlight = new GameObject("BadgeHighlight", typeof(RectTransform), typeof(Image));
             highlight.transform.SetParent(badge.transform, false);
             var hlRect = highlight.GetComponent<RectTransform>();
-            hlRect.anchorMin = new Vector2(0.08f, 0.75f);
-            hlRect.anchorMax = new Vector2(0.92f, 0.96f);
+            hlRect.anchorMin = new Vector2(0.10f, 0.80f);
+            hlRect.anchorMax = new Vector2(0.90f, 0.92f);
             hlRect.offsetMin = Vector2.zero;
             hlRect.offsetMax = Vector2.zero;
-            highlight.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.10f);
+            highlight.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.07f);
             highlight.GetComponent<Image>().raycastTarget = false;
 
             return badge;
         }
 
-        /// <summary>Adds 3D depth layers to a button (top highlight, bottom shadow).</summary>
+        /// <summary>Adds a restrained highlight/shadow pair without turning every button into a large striped card.</summary>
         private static void CreateButtonDepthLayers(Transform parent, Color baseColor)
         {
-            // Top highlight band — makes button look convex/lit from above
             var topHighlight = new GameObject("ButtonHighlight", typeof(RectTransform), typeof(Image));
             topHighlight.transform.SetParent(parent, false);
             var topRect = topHighlight.GetComponent<RectTransform>();
-            topRect.anchorMin = new Vector2(0.06f, 0.72f);
-            topRect.anchorMax = new Vector2(0.94f, 0.96f);
+            topRect.anchorMin = new Vector2(0.08f, 0.82f);
+            topRect.anchorMax = new Vector2(0.92f, 0.93f);
             topRect.offsetMin = Vector2.zero;
             topRect.offsetMax = Vector2.zero;
-            topHighlight.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.16f);
+            topHighlight.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.10f);
             topHighlight.GetComponent<Image>().raycastTarget = false;
 
-            // Bottom shadow band — adds depth
             var bottomShadow = new GameObject("ButtonShadow", typeof(RectTransform), typeof(Image));
             bottomShadow.transform.SetParent(parent, false);
             var bottomRect = bottomShadow.GetComponent<RectTransform>();
-            bottomRect.anchorMin = new Vector2(0.06f, 0.04f);
-            bottomRect.anchorMax = new Vector2(0.94f, 0.22f);
+            bottomRect.anchorMin = new Vector2(0.08f, 0.04f);
+            bottomRect.anchorMax = new Vector2(0.92f, 0.12f);
             bottomRect.offsetMin = Vector2.zero;
             bottomRect.offsetMax = Vector2.zero;
-            bottomShadow.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.14f);
+            bottomShadow.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.10f);
             bottomShadow.GetComponent<Image>().raycastTarget = false;
         }
 

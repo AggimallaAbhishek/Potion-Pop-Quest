@@ -77,6 +77,7 @@ namespace PotionPopQuest.Unity
         private GameObject _economyPanel;
         private GameObject _shopModal;
         private GameObject _dailyRewardModal;
+        private GameObject _pauseButtonObject;
         private Text _livesText;
         private Text _coinsText;
         private Text _hammerText;
@@ -161,32 +162,40 @@ namespace PotionPopQuest.Unity
             rect.anchorMin = new Vector2(0, 1);
             rect.anchorMax = new Vector2(1, 1);
             rect.pivot = new Vector2(0.5f, 1);
-            rect.offsetMin = new Vector2(20, -80);
-            rect.offsetMax = new Vector2(-20, -20);
+            rect.offsetMin = new Vector2(24, -70);
+            rect.offsetMax = new Vector2(-24, -14);
 
-            var layout = _economyPanel.AddComponent<HorizontalLayoutGroup>();
-            layout.childAlignment = TextAnchor.MiddleRight;
-            layout.spacing = 15;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
+            _pauseButtonObject = CreateButton(_economyPanel.transform, "II", _pauseRequested, UiColorPalette.Amethyst, new Vector2(54, 44)).gameObject;
+            var pauseRect = _pauseButtonObject.GetComponent<RectTransform>();
+            pauseRect.anchorMin = new Vector2(0, 0.5f);
+            pauseRect.anchorMax = new Vector2(0, 0.5f);
+            pauseRect.pivot = new Vector2(0, 0.5f);
+            pauseRect.anchoredPosition = Vector2.zero;
+            _pauseButtonObject.SetActive(false);
 
-            CreateButton(_economyPanel.transform, "⏸", _pauseRequested, UiColorPalette.Amethyst, new Vector2(60, 50));
+            var rightCluster = new GameObject("Economy Right Cluster", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            rightCluster.transform.SetParent(_economyPanel.transform, false);
+            var rightRect = rightCluster.GetComponent<RectTransform>();
+            rightRect.anchorMin = new Vector2(1, 0.5f);
+            rightRect.anchorMax = new Vector2(1, 0.5f);
+            rightRect.pivot = new Vector2(1, 0.5f);
+            rightRect.anchoredPosition = Vector2.zero;
+            rightRect.sizeDelta = new Vector2(330, 48);
+            var rightLayout = rightCluster.GetComponent<HorizontalLayoutGroup>();
+            rightLayout.childAlignment = TextAnchor.MiddleRight;
+            rightLayout.spacing = 8;
+            rightLayout.childControlWidth = false;
+            rightLayout.childControlHeight = false;
+            rightLayout.childForceExpandWidth = false;
+            rightLayout.childForceExpandHeight = false;
 
-            var livesBtn = CreateButton(_economyPanel.transform, "Lives: 5", _buyLivesPressed, UiColorPalette.Ruby, new Vector2(160, 50));
+            var livesBtn = CreateButton(rightCluster.transform, "Lives 5", _buyLivesPressed, UiColorPalette.Ruby, new Vector2(112, 44));
             _livesText = livesBtn.GetComponentInChildren<Text>();
 
-            var coinContainer = new GameObject("CoinContainer", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            coinContainer.transform.SetParent(_economyPanel.transform, false);
-            var coinLayout = coinContainer.GetComponent<HorizontalLayoutGroup>();
-            coinLayout.spacing = 5;
-            coinLayout.childAlignment = TextAnchor.MiddleRight;
-            coinLayout.childForceExpandHeight = false;
-            coinLayout.childForceExpandWidth = false;
-
-            var coinsBtn = CreateButton(coinContainer.transform, "Coins: 100", _showShop, UiColorPalette.Gold, new Vector2(160, 50));
+            var coinsBtn = CreateButton(rightCluster.transform, "Coins 100", _showShop, UiColorPalette.Gold, new Vector2(126, 44));
             _coinsText = coinsBtn.GetComponentInChildren<Text>();
 
-            CreateButton(coinContainer.transform, "+", _showShop, UiColorPalette.Emerald, new Vector2(50, 50));
+            CreateButton(rightCluster.transform, "+", _showShop, UiColorPalette.Emerald, new Vector2(44, 44));
             
             _economyPanel.SetActive(true);
         }
@@ -196,19 +205,19 @@ namespace PotionPopQuest.Unity
             if (_livesText != null)
             {
                 var regenText = lives < 5 && regenTimeSeconds > 0 ? $" ({regenTimeSeconds / 60}:{(regenTimeSeconds % 60):D2})" : "";
-                _livesText.text = $"Lives: {lives}" + regenText;
+                _livesText.text = $"Lives {lives}" + regenText;
             }
             if (_coinsText != null)
             {
-                _coinsText.text = $"Coins: {coins}";
+                _coinsText.text = $"Coins {coins}";
             }
             if (_hammerText != null)
             {
-                _hammerText.text = $"[Smash]: {hammers}";
+                _hammerText.text = $"Smash {hammers}";
             }
             if (_shuffleText != null)
             {
-                _shuffleText.text = $"[Shuffle]: {shuffles}";
+                _shuffleText.text = $"Shuffle {shuffles}";
             }
         }
 
@@ -226,22 +235,43 @@ namespace PotionPopQuest.Unity
             ClearChildren(_levelSelect.transform);
             _backdropView.Build(_levelSelect.transform);
 
-            CreateTitle(_levelSelect.transform, "Level Select", 50);
-            var grid = CreatePanel(_levelSelect.transform, "Levels Grid", UiColorPalette.LevelGridBackground);
-            var gridRect = grid.GetComponent<RectTransform>();
+            CreateTitle(_levelSelect.transform, "Level Select", 44);
+            var scrollFrame = CreatePanel(_levelSelect.transform, "Levels Scroll View", UiColorPalette.LevelGridBackground);
             var columns = UiLayoutMetrics.LevelSelectColumnCount();
             var rows = Mathf.CeilToInt(levels.Count / (float)columns);
-            var cellSize = columns <= 3 ? 156f : columns == 4 ? 142f : 130f;
-            var gridWidth = columns * cellSize + (columns - 1) * 14f + 48f;
-            var gridHeight = rows * cellSize + Mathf.Max(0, rows - 1) * 14f + 48f;
-            gridRect.sizeDelta = new Vector2(Mathf.Min(UiLayoutMetrics.ScreenMaxWidth, gridWidth), Mathf.Min(760f, gridHeight));
-            AddLayoutElement(grid, Mathf.Min(UiLayoutMetrics.ScreenMaxWidth, gridWidth), Mathf.Min(760f, gridHeight));
+            var cellSize = columns <= 3 ? 124f : columns == 4 ? 116f : 110f;
+            var spacing = columns <= 3 ? 12f : 10f;
+            var gridWidth = columns * cellSize + (columns - 1) * spacing + 40f;
+            var gridHeight = rows * cellSize + Mathf.Max(0, rows - 1) * spacing + 40f;
+            var frameWidth = Mathf.Min(UiLayoutMetrics.ScreenMaxWidth, gridWidth);
+            var frameHeight = Mathf.Min(680f, gridHeight);
+            AddLayoutElement(scrollFrame, frameWidth, frameHeight);
+            var scrollRect = scrollFrame.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 28f;
+            var mask = scrollFrame.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            var grid = new GameObject("Levels Grid", typeof(RectTransform));
+            grid.transform.SetParent(scrollFrame.transform, false);
+            var gridRect = grid.GetComponent<RectTransform>();
+            gridRect.anchorMin = new Vector2(0.5f, 1f);
+            gridRect.anchorMax = new Vector2(0.5f, 1f);
+            gridRect.pivot = new Vector2(0.5f, 1f);
+            gridRect.anchoredPosition = Vector2.zero;
+            gridRect.sizeDelta = new Vector2(gridWidth, gridHeight);
+            scrollRect.content = gridRect;
+            scrollRect.viewport = scrollFrame.GetComponent<RectTransform>();
+
             var layout = grid.AddComponent<GridLayoutGroup>();
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             layout.constraintCount = columns;
             layout.cellSize = new Vector2(cellSize, cellSize);
-            layout.spacing = new Vector2(14, 14);
-            layout.padding = new RectOffset(24, 24, 24, 24);
+            layout.spacing = new Vector2(spacing, spacing);
+            layout.padding = new RectOffset(20, 20, 20, 20);
+            layout.childAlignment = TextAnchor.UpperCenter;
 
             foreach (var level in levels)
             {
@@ -250,7 +280,7 @@ namespace PotionPopQuest.Unity
                 CreateLevelCard(grid.transform, level.LevelNumber, stars, locked);
             }
 
-            CreateButton(_levelSelect.transform, "Back", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(260, 72));
+            CreateButton(_levelSelect.transform, "Back", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(240, 58));
             TransitionTo(_levelSelect);
         }
 
@@ -278,7 +308,7 @@ namespace PotionPopQuest.Unity
             }
 
             // Level number (large, with shadow)
-            var numberLabel = CreateLabel(button.transform, locked ? "\U0001F512" : levelNumber.ToString(), locked ? 28 : 40, TextAnchor.MiddleCenter);
+            var numberLabel = CreateLabel(button.transform, locked ? $"Lock\n{levelNumber}" : levelNumber.ToString(), locked ? 20 : 34, TextAnchor.MiddleCenter);
             numberLabel.rectTransform.anchorMin = new Vector2(0, 0.32f);
             numberLabel.rectTransform.anchorMax = new Vector2(1, 1);
             numberLabel.rectTransform.offsetMin = Vector2.zero;
@@ -305,7 +335,7 @@ namespace PotionPopQuest.Unity
                 starLayout.spacing = 4;
                 for (var i = 1; i <= 3; i++)
                 {
-                    CreateStarImage(starRow.transform, i <= stars, 30);
+                    CreateStarImage(starRow.transform, i <= stars, 24);
                 }
             }
 
@@ -329,19 +359,19 @@ namespace PotionPopQuest.Unity
             HideLevelIntro();
             ClearChildren(_settings.transform);
             _backdropView.Build(_settings.transform);
-            CreateTitle(_settings.transform, "Settings", 50);
-            var audioSection = CreateSettingsSection(_settings.transform, "Audio", 332);
+            CreateTitle(_settings.transform, "Settings", 44);
+            var audioSection = CreateSettingsSection(_settings.transform, "Audio", 314);
             CreateToggle(audioSection.transform, "Music", musicEnabled, _toggleMusic);
             CreateSlider(audioSection.transform, "Music Volume", musicVolume, _setMusicVolume);
             CreateToggle(audioSection.transform, "SFX", sfxEnabled, _toggleSfx);
             CreateSlider(audioSection.transform, "SFX Volume", sfxVolume, _setSfxVolume);
 
-            var gameplaySection = CreateSettingsSection(_settings.transform, "Gameplay", 126);
+            var gameplaySection = CreateSettingsSection(_settings.transform, "Gameplay", 106);
             CreateToggle(gameplaySection.transform, "Vibration", vibrationEnabled, _toggleVibration);
 
-            var resetSection = CreateSettingsSection(_settings.transform, "Progress", 144, UiColorPalette.WithAlpha(UiColorPalette.Ruby, 0.16f));
-            CreateButton(resetSection.transform, "Reset Progress", _resetProgress, UiColorPalette.Ruby, new Vector2(360, 70));
-            CreateButton(_settings.transform, "Back", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(260, 70));
+            var resetSection = CreateSettingsSection(_settings.transform, "Progress", 124, UiColorPalette.WithAlpha(UiColorPalette.Ruby, 0.14f));
+            CreateButton(resetSection.transform, "Reset Progress", _resetProgress, UiColorPalette.Ruby, new Vector2(300, 58));
+            CreateButton(_settings.transform, "Back", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(240, 58));
             TransitionTo(_settings);
         }
 
@@ -365,6 +395,7 @@ namespace PotionPopQuest.Unity
         {
             HideAll();
             _game.SetActive(true);
+            SetGameplayChromeVisible(true);
             _boardPresenter.Render(result.BoardBeforeMove ?? BoardSnapshot.From(session.Board), selectedTile, UiFeedbackCue.None);
             var finalScore = session.Score;
             var startingScore = Math.Max(0, finalScore - result.ScoreGained);
@@ -648,29 +679,28 @@ namespace PotionPopQuest.Unity
         private void BuildMainMenu()
         {
             // Animated title with glow effects
-            var titleText = CreateTitle(_mainMenu.transform, "Potion Pop Quest", 64);
+            var titleText = CreateTitle(_mainMenu.transform, "Potion Pop Quest", 58);
             titleText.color = UiColorPalette.Gold;
             _themeAssets.AddTitleTextEffects(titleText);
-            AddLayoutElement(titleText.gameObject, 840, 100);
+            AddLayoutElement(titleText.gameObject, 820, 86);
 
-            var subtitleLabel = CreateLabel(_mainMenu.transform, "\u2728 2D Match-3 Potion Puzzle \u2728", 28, TextAnchor.MiddleCenter);
+            var subtitleLabel = CreateLabel(_mainMenu.transform, "2D Match-3 Potion Puzzle", 24, TextAnchor.MiddleCenter);
             subtitleLabel.color = UiColorPalette.TextSecondary;
-            AddLayoutElement(subtitleLabel.gameObject, 600, 48);
+            AddLayoutElement(subtitleLabel.gameObject, 560, 42);
 
             // Decorative potion icon between title and buttons
             var potionIcon = new GameObject("Menu Potion Icon", typeof(RectTransform), typeof(Image));
             potionIcon.transform.SetParent(_mainMenu.transform, false);
-            AddLayoutElement(potionIcon, 96, 96);
+            AddLayoutElement(potionIcon, 82, 82);
             var potionImage = potionIcon.GetComponent<Image>();
             potionImage.sprite = _iconFactory.GetPotionSprite(PotionType.Mega);
             potionImage.preserveAspect = true;
             potionImage.raycastTarget = false;
 
-            // Buttons with generous sizing
-            CreateButton(_mainMenu.transform, "\u25B6  Play", _play, UiColorPalette.Emerald, new Vector2(340, 86));
-            CreateButton(_mainMenu.transform, "\u2606  Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(340, 82));
-            CreateButton(_mainMenu.transform, "\u2699  Settings", _showSettings, UiColorPalette.Amethyst, new Vector2(340, 82));
-            CreateButton(_mainMenu.transform, "Exit", _quit, UiColorPalette.Ruby, new Vector2(340, 74));
+            CreateButton(_mainMenu.transform, "Play", _play, UiColorPalette.Emerald, new Vector2(360, 72));
+            CreateButton(_mainMenu.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(310, 62));
+            CreateButton(_mainMenu.transform, "Settings", _showSettings, UiColorPalette.Amethyst, new Vector2(310, 62));
+            CreateButton(_mainMenu.transform, "Exit", _quit, UiColorPalette.Ruby, new Vector2(220, 50));
         }
 
         private void BuildGameScreen()
@@ -700,38 +730,36 @@ namespace PotionPopQuest.Unity
             AddLayoutElement(hud, UiLayoutMetrics.HudWidth, hudHeight);
             var hudLayout = hud.AddComponent<HorizontalLayoutGroup>();
             hudLayout.childAlignment = TextAnchor.MiddleCenter;
-            hudLayout.spacing = 16;
-            hudLayout.padding = new RectOffset(18, 18, 14, 14);
+            hudLayout.spacing = 14;
+            hudLayout.padding = new RectOffset(16, 16, 10, 10);
 
-            // Moves badge with enhanced styling
-            var movesBadge = _uiFactory.CreateGlowingBadge(hud.transform, "HUD Moves Badge", 166, UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.58f));
-            AddLayoutElement(movesBadge, 166, Mathf.Max(96f, hudHeight - 30f));
+            var movesBadge = _uiFactory.CreateGlowingBadge(hud.transform, "HUD Moves Badge", 138, UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.58f));
+            AddLayoutElement(movesBadge, 138, Mathf.Max(76f, hudHeight - 20f));
             _movesBadgeImage = movesBadge.GetComponent<Image>();
-            _movesText = CreateLabel(movesBadge.transform, "Moves\n0", 28, TextAnchor.MiddleCenter);
+            _movesText = CreateLabel(movesBadge.transform, "Moves\n0", 23, TextAnchor.MiddleCenter);
             StretchInside(_movesText.rectTransform, 8, 6);
             _themeAssets.AddHighValueTextShadow(_movesText);
 
-            var goalPanel = CreateHudBadge(hud.transform, "HUD Goal Panel", 520, UiColorPalette.WithAlpha(UiColorPalette.Amethyst, 0.48f));
+            var goalPanel = CreateHudBadge(hud.transform, "HUD Goal Panel", 540, UiColorPalette.WithAlpha(UiColorPalette.Amethyst, 0.42f));
             var goalLayout = goalPanel.AddComponent<VerticalLayoutGroup>();
             goalLayout.childAlignment = TextAnchor.MiddleCenter;
-            goalLayout.spacing = 8;
-            goalLayout.padding = new RectOffset(12, 12, 10, 10);
-            _goalText = CreateLabel(goalPanel.transform, "Goals", 20, TextAnchor.MiddleCenter);
+            goalLayout.spacing = 4;
+            goalLayout.padding = new RectOffset(12, 12, 8, 8);
+            _goalText = CreateLabel(goalPanel.transform, "Goal", 18, TextAnchor.MiddleCenter);
             _goalText.color = UiColorPalette.GoldLight;
-            AddLayoutElement(_goalText.gameObject, 490, 26);
+            AddLayoutElement(_goalText.gameObject, 508, 22);
             var goalStripObject = new GameObject("HUD Goal Strip", typeof(RectTransform));
             goalStripObject.transform.SetParent(goalPanel.transform, false);
             _goalStrip = goalStripObject.GetComponent<RectTransform>();
-            AddLayoutElement(goalStripObject, 490, Mathf.Max(52f, hudHeight - 76f));
+            AddLayoutElement(goalStripObject, 508, Mathf.Max(44f, hudHeight - 54f));
             var goalStripLayout = goalStripObject.AddComponent<VerticalLayoutGroup>();
             goalStripLayout.childAlignment = TextAnchor.MiddleCenter;
             goalStripLayout.spacing = 6;
             goalStripLayout.padding = new RectOffset(0, 0, 0, 0);
 
-            // Score badge with glow
-            var scoreBadge = _uiFactory.CreateGlowingBadge(hud.transform, "HUD Score Badge", 166, UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.52f));
-            AddLayoutElement(scoreBadge, 166, Mathf.Max(96f, hudHeight - 30f));
-            _scoreText = CreateLabel(scoreBadge.transform, "Score\n0", 28, TextAnchor.MiddleCenter);
+            var scoreBadge = _uiFactory.CreateGlowingBadge(hud.transform, "HUD Score Badge", 138, UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.52f));
+            AddLayoutElement(scoreBadge, 138, Mathf.Max(76f, hudHeight - 20f));
+            _scoreText = CreateLabel(scoreBadge.transform, "Score\n0", 23, TextAnchor.MiddleCenter);
             StretchInside(_scoreText.rectTransform, 8, 6);
             _themeAssets.AddHighValueTextShadow(_scoreText);
 
@@ -809,14 +837,14 @@ namespace PotionPopQuest.Unity
             AddLayoutElement(boosters, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.GameActionsHeight());
             var boostersLayout = boosters.AddComponent<HorizontalLayoutGroup>();
             boostersLayout.childAlignment = TextAnchor.MiddleCenter;
-            boostersLayout.spacing = 20;
+            boostersLayout.spacing = 14;
             
-            CreateButton(boosters.transform, "Hint", _hintRequested, UiColorPalette.Sapphire, new Vector2(160, touchHeight));
+            CreateButton(boosters.transform, "Hint", _hintRequested, UiColorPalette.Sapphire, new Vector2(150, touchHeight));
 
-            var hammerBtn = CreateButton(boosters.transform, "[Smash] 0", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(160, touchHeight));
+            var hammerBtn = CreateButton(boosters.transform, "Smash 0", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(150, touchHeight));
             _hammerText = hammerBtn.GetComponentInChildren<Text>();
             
-            var shuffleBtn = CreateButton(boosters.transform, "[Shuffle] 0", _shuffleBoosterPressed, UiColorPalette.Gold, new Vector2(160, touchHeight));
+            var shuffleBtn = CreateButton(boosters.transform, "Shuffle 0", _shuffleBoosterPressed, UiColorPalette.Gold, new Vector2(150, touchHeight));
             _shuffleText = shuffleBtn.GetComponentInChildren<Text>();
         }
 
@@ -962,7 +990,7 @@ namespace PotionPopQuest.Unity
         private GameObject CreateHudBadge(Transform parent, string name, float width, Color color)
         {
             var badge = CreatePanel(parent, name, color);
-            AddLayoutElement(badge, width, Mathf.Max(96f, UiLayoutMetrics.GameHudHeight() - 30f));
+            AddLayoutElement(badge, width, Mathf.Max(68f, UiLayoutMetrics.GameHudHeight() - 20f));
             return badge;
         }
 
@@ -971,23 +999,23 @@ namespace PotionPopQuest.Unity
             var row = CreatePanel(parent, "HUD Goal Row", progress.IsComplete
                 ? UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.35f)
                 : UiColorPalette.WithAlpha(UiColorPalette.BackgroundSolid, 0.20f));
-            AddLayoutElement(row, 490, 42);
+            AddLayoutElement(row, 504, 36);
             var layout = row.AddComponent<HorizontalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 10;
-            layout.padding = new RectOffset(8, 10, 4, 4);
+            layout.spacing = 8;
+            layout.padding = new RectOffset(8, 8, 3, 3);
 
             var iconObject = new GameObject("HUD Goal Icon", typeof(RectTransform), typeof(Image));
             iconObject.transform.SetParent(row.transform, false);
-            AddLayoutElement(iconObject, 34, 34);
+            AddLayoutElement(iconObject, 30, 30);
             var icon = iconObject.GetComponent<Image>();
             icon.sprite = GoalSprite(progress.Goal);
             icon.preserveAspect = true;
             icon.raycastTarget = false;
 
-            var label = CreateLabel(row.transform, $"{GoalName(progress.Goal)}  {progress.CurrentAmount}/{progress.Goal.Amount}", 19, TextAnchor.MiddleLeft);
+            var label = CreateLabel(row.transform, $"{GoalName(progress.Goal)}  {progress.CurrentAmount}/{progress.Goal.Amount}", 18, TextAnchor.MiddleLeft);
             label.color = progress.IsComplete ? UiColorPalette.TextSuccess : UiColorPalette.TextPrimary;
-            AddLayoutElement(label.gameObject, 420, 36);
+            AddLayoutElement(label.gameObject, 452, 32);
         }
 
         private GameObject CreateModalPanel(float height, int spacing)
@@ -1376,6 +1404,10 @@ namespace PotionPopQuest.Unity
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.spacing = 24;
             layout.padding = new RectOffset(40, 40, 80, 80);
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
 
             screen.SetActive(false);
             return screen;
@@ -1440,11 +1472,13 @@ namespace PotionPopQuest.Unity
         {
             if (_currentScreen == target)
             {
+                SetGameplayChromeVisible(target == _game);
                 return;
             }
 
             var previous = _currentScreen;
             _currentScreen = target;
+            SetGameplayChromeVisible(target == _game);
 
             if (previous == null)
             {
@@ -1464,6 +1498,14 @@ namespace PotionPopQuest.Unity
             _screenTransition.CrossDissolve(previous, target, GameplayPresentationConfig.ScreenTransitionDuration);
         }
 
+        private void SetGameplayChromeVisible(bool visible)
+        {
+            if (_pauseButtonObject != null)
+            {
+                _pauseButtonObject.SetActive(visible);
+            }
+        }
+
         private GameObject CreatePanel(Transform parent, string name, Color color)
         {
             return _uiFactory.CreatePanel(parent, name, color);
@@ -1475,12 +1517,12 @@ namespace PotionPopQuest.Unity
             AddLayoutElement(section, 680, height);
             var layout = section.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 10;
-            layout.padding = new RectOffset(24, 24, 18, 18);
+            layout.spacing = 6;
+            layout.padding = new RectOffset(24, 24, 14, 14);
 
-            var heading = CreateLabel(section.transform, title, 24, TextAnchor.MiddleCenter);
+            var heading = CreateLabel(section.transform, title, 22, TextAnchor.MiddleCenter);
             heading.color = UiColorPalette.GoldLight;
-            AddLayoutElement(heading.gameObject, 600, 34);
+            AddLayoutElement(heading.gameObject, 600, 30);
             return section;
         }
 
@@ -1539,15 +1581,15 @@ namespace PotionPopQuest.Unity
         {
             var toggleObject = new GameObject($"Toggle - {label}", typeof(RectTransform), typeof(Toggle));
             toggleObject.transform.SetParent(parent, false);
-            AddLayoutElement(toggleObject, 560, 62);
+            AddLayoutElement(toggleObject, 560, 48);
 
             var background = new GameObject("Background", typeof(RectTransform), typeof(Image));
             background.transform.SetParent(toggleObject.transform, false);
             var backgroundRect = background.GetComponent<RectTransform>();
             backgroundRect.anchorMin = new Vector2(0, 0.2f);
             backgroundRect.anchorMax = new Vector2(0, 0.8f);
-            backgroundRect.sizeDelta = new Vector2(56, 56);
-            backgroundRect.anchoredPosition = new Vector2(32, 0);
+            backgroundRect.sizeDelta = new Vector2(42, 42);
+            backgroundRect.anchoredPosition = new Vector2(28, 0);
             background.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
 
             var check = new GameObject("Checkmark", typeof(RectTransform), typeof(Image));
@@ -1559,10 +1601,10 @@ namespace PotionPopQuest.Unity
             checkRect.offsetMax = Vector2.zero;
             check.GetComponent<Image>().color = new Color(0.32f, 0.78f, 0.56f);
 
-            var text = CreateLabel(toggleObject.transform, label, 28, TextAnchor.MiddleLeft);
+            var text = CreateLabel(toggleObject.transform, label, 24, TextAnchor.MiddleLeft);
             text.rectTransform.anchorMin = new Vector2(0, 0);
             text.rectTransform.anchorMax = new Vector2(1, 1);
-            text.rectTransform.offsetMin = new Vector2(90, 0);
+            text.rectTransform.offsetMin = new Vector2(76, 0);
             text.rectTransform.offsetMax = Vector2.zero;
 
             var toggle = toggleObject.GetComponent<Toggle>();
@@ -1580,18 +1622,18 @@ namespace PotionPopQuest.Unity
         {
             var sliderObject = new GameObject($"Slider - {label}", typeof(RectTransform));
             sliderObject.transform.SetParent(parent, false);
-            AddLayoutElement(sliderObject, 560, 78);
+            AddLayoutElement(sliderObject, 560, 58);
             var layout = sliderObject.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 5;
+            layout.spacing = 4;
 
-            var caption = CreateLabel(sliderObject.transform, $"{label} {Mathf.RoundToInt(Mathf.Clamp01(value) * 100f)}%", 22, TextAnchor.MiddleCenter);
-            AddLayoutElement(caption.gameObject, 540, 28);
+            var caption = CreateLabel(sliderObject.transform, $"{label} {Mathf.RoundToInt(Mathf.Clamp01(value) * 100f)}%", 18, TextAnchor.MiddleCenter);
+            AddLayoutElement(caption.gameObject, 540, 22);
             caption.color = UiColorPalette.TextSecondary;
 
             var trackObject = new GameObject("Track", typeof(RectTransform), typeof(Image), typeof(Slider));
             trackObject.transform.SetParent(sliderObject.transform, false);
-            AddLayoutElement(trackObject, 540, 34);
+            AddLayoutElement(trackObject, 540, 28);
             var trackImage = trackObject.GetComponent<Image>();
             trackImage.color = new Color(0.12f, 0.14f, 0.20f, 0.95f);
 
@@ -1607,7 +1649,7 @@ namespace PotionPopQuest.Unity
             var handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
             handleObject.transform.SetParent(trackObject.transform, false);
             var handleRect = handleObject.GetComponent<RectTransform>();
-            handleRect.sizeDelta = new Vector2(34, 34);
+            handleRect.sizeDelta = new Vector2(28, 28);
             handleObject.GetComponent<Image>().color = UiColorPalette.GoldLight;
 
             var slider = trackObject.GetComponent<Slider>();

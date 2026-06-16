@@ -49,11 +49,11 @@ namespace PotionPopQuest.Unity
             tableRect.offsetMax = Vector2.zero;
 
             // Decorative bottles with gradient fills
-            CreateLabBottle(parent, "Bottle - Ruby Tonic", new Vector2(0.15f, 0.820f), new Vector2(48, 88), UiColorPalette.WithAlpha(UiColorPalette.Ruby, 0.46f));
-            CreateLabBottle(parent, "Bottle - Sapphire Elixir", new Vector2(0.28f, 0.745f), new Vector2(42, 76), UiColorPalette.WithAlpha(UiColorPalette.SapphireLight, 0.42f));
-            CreateLabBottle(parent, "Bottle - Emerald Brew", new Vector2(0.72f, 0.820f), new Vector2(52, 92), UiColorPalette.WithAlpha(UiColorPalette.Emerald, 0.40f));
-            CreateLabBottle(parent, "Bottle - Golden Dust", new Vector2(0.84f, 0.668f), new Vector2(44, 74), UiColorPalette.WithAlpha(UiColorPalette.Gold, 0.42f));
-            CreateLabBottle(parent, "Bottle - Amethyst Tincture", new Vector2(0.50f, 0.746f), new Vector2(38, 68), UiColorPalette.WithAlpha(UiColorPalette.AmethystLight, 0.36f));
+            CreateLabBottle(parent, "Bottle - Ruby Tonic", new Vector2(0.15f, 0.820f), new Vector2(48, 88), UiColorPalette.WithAlpha(UiColorPalette.Ruby, 0.30f));
+            CreateLabBottle(parent, "Bottle - Sapphire Elixir", new Vector2(0.28f, 0.745f), new Vector2(42, 76), UiColorPalette.WithAlpha(UiColorPalette.SapphireLight, 0.27f));
+            CreateLabBottle(parent, "Bottle - Emerald Brew", new Vector2(0.72f, 0.820f), new Vector2(52, 92), UiColorPalette.WithAlpha(UiColorPalette.Emerald, 0.28f));
+            CreateLabBottle(parent, "Bottle - Golden Dust", new Vector2(0.84f, 0.668f), new Vector2(44, 74), UiColorPalette.WithAlpha(UiColorPalette.Gold, 0.28f));
+            CreateLabBottle(parent, "Bottle - Amethyst Tincture", new Vector2(0.50f, 0.746f), new Vector2(38, 68), UiColorPalette.WithAlpha(UiColorPalette.AmethystLight, 0.24f));
 
             // Ambient light rays
             CreateLightRay(parent, "Light Ray Left", new Vector2(0.02f, 0.40f), new Vector2(0.35f, 1f), UiColorPalette.LightRay, -8f);
