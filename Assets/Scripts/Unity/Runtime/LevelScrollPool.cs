@@ -79,7 +79,7 @@ namespace PotionPopQuest.Unity
                     cell.gameObject.SetActive(true);
                     
                     var gridWidth = columns * cellSize + (columns - 1) * spacing;
-                    var startX = (content.rect.width - gridWidth) / 2f;
+                    var startX = -gridWidth / 2f + cellSize / 2f;
                     
                     var x = startX + col * (cellSize + spacing);
                     var y = -20f - actualRow * (cellSize + spacing);

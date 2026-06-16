@@ -101,7 +101,9 @@ namespace PotionPopQuest.PlayMode.Tests
 
             var grid = GameObject.Find("Levels Grid");
             Assert.That(grid, Is.Not.Null);
-            Assert.That(grid.GetComponentsInChildren<Button>(includeInactive: false).Length, Is.EqualTo(20));
+            var pool = grid.GetComponent<LevelScrollPool>();
+            Assert.That(pool, Is.Not.Null);
+            Assert.That(pool.totalItems, Is.EqualTo(20));
         }
 
         [UnityTest]
