@@ -6,6 +6,7 @@ using PotionPopQuest.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
 
 namespace PotionPopQuest.Unity
 {
@@ -29,17 +30,17 @@ namespace PotionPopQuest.Unity
         private GameObject _levelIntroOverlay;
         private GameObject _currentScreen;
         private RectTransform _boardRoot;
-        private Text _movesText;
-        private Text _goalText;
-        private Text _scoreText;
-        private Text _messageText;
+        private TextMeshProUGUI _movesText;
+        private TextMeshProUGUI _goalText;
+        private TextMeshProUGUI _scoreText;
+        private TextMeshProUGUI _messageText;
         private Image _movesBadgeImage;
         private RectTransform _goalStrip;
         private Image _starProgressFill;
-        private Text _starProgressText;
+        private TextMeshProUGUI _starProgressText;
         private readonly List<Image> _starProgressIcons = new List<Image>();
         private GameObject _tutorialPanel;
-        private Text _tutorialText;
+        private TextMeshProUGUI _tutorialText;
         private RectTransform _floatingLayer;
         private string _lastGoalSummary;
         private Coroutine _goalPulseRoutine;
@@ -78,10 +79,10 @@ namespace PotionPopQuest.Unity
         private GameObject _shopModal;
         private GameObject _dailyRewardModal;
         private GameObject _pauseButtonObject;
-        private Text _livesText;
-        private Text _coinsText;
-        private Text _hammerText;
-        private Text _shuffleText;
+        private TextMeshProUGUI _livesText;
+        private TextMeshProUGUI _coinsText;
+        private TextMeshProUGUI _hammerText;
+        private TextMeshProUGUI _shuffleText;
 
         public GeneratedGameUi(IGameLogger logger)
         {
@@ -190,10 +191,10 @@ namespace PotionPopQuest.Unity
             rightLayout.childForceExpandHeight = false;
 
             var livesBtn = CreateButton(rightCluster.transform, "Lives 5", _buyLivesPressed, UiColorPalette.Ruby, new Vector2(112, 44));
-            _livesText = livesBtn.GetComponentInChildren<Text>();
+            _livesText = livesBtn.GetComponentInChildren<TextMeshProUGUI>();
 
             var coinsBtn = CreateButton(rightCluster.transform, "Coins 100", _showShop, UiColorPalette.Gold, new Vector2(126, 44));
-            _coinsText = coinsBtn.GetComponentInChildren<Text>();
+            _coinsText = coinsBtn.GetComponentInChildren<TextMeshProUGUI>();
 
             CreateButton(rightCluster.transform, "+", _showShop, UiColorPalette.Emerald, new Vector2(44, 44));
             
@@ -1536,14 +1537,14 @@ namespace PotionPopQuest.Unity
             rect.offsetMax = new Vector2(-horizontalPadding, -verticalPadding);
         }
 
-        private Text CreateTitle(Transform parent, string text, int size)
+        private TextMeshProUGUI CreateTitle(Transform parent, string text, int size)
         {
             var title = CreateLabel(parent, text, size, TextAnchor.MiddleCenter);
             _themeAssets.AddHighValueTextShadow(title);
             return title;
         }
 
-        private Text CreateLabel(Transform parent, string text, int size, TextAnchor alignment)
+        private TextMeshProUGUI CreateLabel(Transform parent, string text, int size, TextAnchor alignment)
         {
             return _uiFactory.CreateLabel(parent, text, size, alignment);
         }

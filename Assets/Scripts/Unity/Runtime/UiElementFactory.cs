@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,9 +9,9 @@ namespace PotionPopQuest.Unity
     {
         private readonly TileIconFactory _iconFactory;
         private readonly UiThemeAssets _themeAssets;
-        private readonly Func<Font> _fontProvider;
+        private readonly Func<TMP_FontAsset> _fontProvider;
 
-        public UiElementFactory(TileIconFactory iconFactory, UiThemeAssets themeAssets, Func<Font> fontProvider)
+        public UiElementFactory(TileIconFactory iconFactory, UiThemeAssets themeAssets, Func<TMP_FontAsset> fontProvider)
         {
             _iconFactory = iconFactory;
             _themeAssets = themeAssets;
@@ -73,21 +74,35 @@ namespace PotionPopQuest.Unity
             return panel;
         }
 
-        public Text CreateLabel(Transform parent, string text, int size, TextAnchor alignment)
+        public TextMeshProUGUI CreateLabel(Transform parent, string text, int size, TextAnchor alignment)
         {
-            var labelObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            var labelObject = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
             labelObject.transform.SetParent(parent, false);
-            var label = labelObject.GetComponent<Text>();
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.text = text;
             label.font = _fontProvider();
             label.color = Color.white;
             label.fontSize = size;
-            label.alignment = alignment;
-            label.resizeTextForBestFit = true;
-            label.resizeTextMinSize = 16;
-            label.resizeTextMaxSize = size;
-            label.horizontalOverflow = HorizontalWrapMode.Wrap;
-            label.verticalOverflow = VerticalWrapMode.Truncate;
+            
+            switch (alignment)
+            {
+                case TextAnchor.UpperLeft: label.alignment = TextAlignmentOptions.TopLeft; break;
+                case TextAnchor.UpperCenter: label.alignment = TextAlignmentOptions.Top; break;
+                case TextAnchor.UpperRight: label.alignment = TextAlignmentOptions.TopRight; break;
+                case TextAnchor.MiddleLeft: label.alignment = TextAlignmentOptions.Left; break;
+                case TextAnchor.MiddleCenter: label.alignment = TextAlignmentOptions.Center; break;
+                case TextAnchor.MiddleRight: label.alignment = TextAlignmentOptions.Right; break;
+                case TextAnchor.LowerLeft: label.alignment = TextAlignmentOptions.BottomLeft; break;
+                case TextAnchor.LowerCenter: label.alignment = TextAlignmentOptions.Bottom; break;
+                case TextAnchor.LowerRight: label.alignment = TextAlignmentOptions.BottomRight; break;
+                default: label.alignment = TextAlignmentOptions.Center; break;
+            }
+
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 16;
+            label.fontSizeMax = size;
+            label.enableWordWrapping = true;
+            label.overflowMode = TextOverflowModes.Truncate;
             label.rectTransform.sizeDelta = new Vector2(840, Mathf.Max(64, size * 2));
             label.raycastTarget = false;
             return label;

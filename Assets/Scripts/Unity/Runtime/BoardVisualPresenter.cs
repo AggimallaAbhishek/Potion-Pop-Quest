@@ -5,6 +5,7 @@ using System.Linq;
 using PotionPopQuest.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 namespace PotionPopQuest.Unity
 {
@@ -19,7 +20,7 @@ namespace PotionPopQuest.Unity
 
         private readonly IGameLogger _logger;
         private readonly TileIconFactory _iconFactory;
-        private readonly Func<Font> _fontProvider;
+        private readonly Func<TMP_FontAsset> _fontProvider;
         private readonly Dictionary<GridPosition, RectTransform> _tileViews = new Dictionary<GridPosition, RectTransform>();
         private readonly Dictionary<GridPosition, BoardCellSnapshot> _viewCells = new Dictionary<GridPosition, BoardCellSnapshot>();
         private readonly Stack<Button> _tileButtonPool = new Stack<Button>();
@@ -36,7 +37,7 @@ namespace PotionPopQuest.Unity
         private float _cellSize = 78f;
         private float _spacing = 8f;
 
-        public BoardVisualPresenter(IGameLogger logger, TileIconFactory iconFactory, Func<Font> fontProvider)
+        public BoardVisualPresenter(IGameLogger logger, TileIconFactory iconFactory, Func<TMP_FontAsset> fontProvider)
         {
             _logger = logger ?? new NullGameLogger();
             _iconFactory = iconFactory ?? new TileIconFactory();
@@ -1193,21 +1194,35 @@ namespace PotionPopQuest.Unity
             image.raycastTarget = false;
         }
 
-        private Text CreateAnchoredText(Transform parent, string text, int size, TextAnchor anchor)
+        private TextMeshProUGUI CreateAnchoredText(Transform parent, string text, int size, TextAnchor anchor)
         {
-            var labelObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            var labelObject = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI));
             labelObject.transform.SetParent(parent, false);
-            var label = labelObject.GetComponent<Text>();
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.text = text;
             label.font = _fontProvider();
             label.color = Color.white;
             label.fontSize = size;
-            label.alignment = anchor;
-            label.resizeTextForBestFit = true;
-            label.resizeTextMinSize = 12;
-            label.resizeTextMaxSize = size;
-            label.horizontalOverflow = HorizontalWrapMode.Wrap;
-            label.verticalOverflow = VerticalWrapMode.Truncate;
+            
+            switch (anchor)
+            {
+                case TextAnchor.UpperLeft: label.alignment = TextAlignmentOptions.TopLeft; break;
+                case TextAnchor.UpperCenter: label.alignment = TextAlignmentOptions.Top; break;
+                case TextAnchor.UpperRight: label.alignment = TextAlignmentOptions.TopRight; break;
+                case TextAnchor.MiddleLeft: label.alignment = TextAlignmentOptions.Left; break;
+                case TextAnchor.MiddleCenter: label.alignment = TextAlignmentOptions.Center; break;
+                case TextAnchor.MiddleRight: label.alignment = TextAlignmentOptions.Right; break;
+                case TextAnchor.LowerLeft: label.alignment = TextAlignmentOptions.BottomLeft; break;
+                case TextAnchor.LowerCenter: label.alignment = TextAlignmentOptions.Bottom; break;
+                case TextAnchor.LowerRight: label.alignment = TextAlignmentOptions.BottomRight; break;
+                default: label.alignment = TextAlignmentOptions.Center; break;
+            }
+
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 12;
+            label.fontSizeMax = size;
+            label.enableWordWrapping = true;
+            label.overflowMode = TextOverflowModes.Truncate;
             label.rectTransform.anchorMin = Vector2.zero;
             label.rectTransform.anchorMax = Vector2.one;
             label.rectTransform.offsetMin = new Vector2(8, 6);

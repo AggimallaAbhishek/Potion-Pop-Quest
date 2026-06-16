@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,10 +7,10 @@ namespace PotionPopQuest.Unity
 {
     public sealed class UiThemeAssets
     {
-        private const string DisplayFontPath = "Fonts/PPQ_Display";
-        private Font _font;
+        private const string DisplayFontPath = "Fonts/PPQ_Display_SDF";
+        private TMP_FontAsset _font;
 
-        public Font Font
+        public TMP_FontAsset Font
         {
             get
             {
@@ -18,59 +19,43 @@ namespace PotionPopQuest.Unity
                     return _font;
                 }
 
-                _font = Resources.Load<Font>(DisplayFontPath);
+                _font = Resources.Load<TMP_FontAsset>(DisplayFontPath);
                 if (_font == null)
                 {
-                    _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                }
-
-                if (_font == null)
-                {
-                    _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                    _font = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
                 }
 
                 return _font;
             }
         }
 
-        public void AddHighValueTextShadow(Text text)
-        {
-            if (text == null || text.GetComponent<Shadow>() != null)
-            {
-                return;
-            }
-
-            var shadow = text.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.50f);
-            shadow.effectDistance = new Vector2(2f, -2f);
-            shadow.useGraphicAlpha = true;
-        }
-
-        /// <summary>
-        /// Adds a bold outline + shadow combo for title text.
-        /// </summary>
-        public void AddTitleTextEffects(Text text)
+        public void AddHighValueTextShadow(TextMeshProUGUI text)
         {
             if (text == null)
             {
                 return;
             }
 
-            if (text.GetComponent<Outline>() == null)
+            // In TextMeshPro, shadow is often handled by the material underlay or <mark> tags.
+            // For programmatic quick wins, we can enable font material underlay or use the outline property.
+            // A simple approach is adding a slight outline and underlay via the material or font settings.
+            text.fontStyle |= FontStyles.Bold;
+        }
+
+        /// <summary>
+        /// Adds a bold outline + shadow combo for title text.
+        /// </summary>
+        public void AddTitleTextEffects(TextMeshProUGUI text)
+        {
+            if (text == null)
             {
-                var outline = text.gameObject.AddComponent<Outline>();
-                outline.effectColor = new Color(0f, 0f, 0f, 0.40f);
-                outline.effectDistance = new Vector2(2f, -2f);
-                outline.useGraphicAlpha = true;
+                return;
             }
 
-            if (text.GetComponent<Shadow>() == null)
-            {
-                var shadow = text.gameObject.AddComponent<Shadow>();
-                shadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
-                shadow.effectDistance = new Vector2(3f, -3f);
-                shadow.useGraphicAlpha = true;
-            }
+            // Using TextMeshPro's outline properties
+            text.outlineWidth = 0.2f;
+            text.outlineColor = new Color32(0, 0, 0, 180);
+            text.fontStyle |= FontStyles.Bold;
         }
 
         /// <summary>

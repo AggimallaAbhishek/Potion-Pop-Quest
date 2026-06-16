@@ -3,7 +3,8 @@
   "rootNamespace": "PotionPopQuest.Unity",
   "references": [
     "PotionPopQuest.Core",
-    "UnityEngine.AudioModule"
+    "UnityEngine.AudioModule",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
