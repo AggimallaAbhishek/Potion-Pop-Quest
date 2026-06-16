@@ -845,10 +845,10 @@ namespace PotionPopQuest.Unity
             CreateButton(boosters.transform, "Hint", _hintRequested, UiColorPalette.Sapphire, new Vector2(150, touchHeight));
 
             var hammerBtn = CreateButton(boosters.transform, "Smash 0", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(150, touchHeight));
-            _hammerText = hammerBtn.GetComponentInChildren<Text>();
+            _hammerText = hammerBtn.GetComponentInChildren<TextMeshProUGUI>();
             
             var shuffleBtn = CreateButton(boosters.transform, "Shuffle 0", _shuffleBoosterPressed, UiColorPalette.Gold, new Vector2(150, touchHeight));
-            _shuffleText = shuffleBtn.GetComponentInChildren<Text>();
+            _shuffleText = shuffleBtn.GetComponentInChildren<TextMeshProUGUI>();
         }
 
         private void UpdateHud(GameSession session, string message)
