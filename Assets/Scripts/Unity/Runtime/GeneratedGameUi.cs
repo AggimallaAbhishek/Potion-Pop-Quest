@@ -251,8 +251,7 @@ namespace PotionPopQuest.Unity
             scrollRect.vertical = true;
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
             scrollRect.scrollSensitivity = 28f;
-            var mask = scrollFrame.AddComponent<Mask>();
-            mask.showMaskGraphic = false;
+            scrollFrame.AddComponent<RectMask2D>();
 
             var grid = new GameObject("Levels Grid", typeof(RectTransform));
             grid.transform.SetParent(scrollFrame.transform, false);
@@ -433,21 +432,22 @@ namespace PotionPopQuest.Unity
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.sizeDelta = new Vector2(760, 700);
+            panelRect.sizeDelta = new Vector2(700, 560);
             panel.AddComponent<CanvasGroup>();
             var layout = panel.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 16;
-            layout.padding = new RectOffset(34, 34, 36, 30);
+            layout.spacing = 12;
+            layout.padding = new RectOffset(30, 30, 30, 26);
 
-            var title = CreateTitle(panel.transform, $"Level {session.Level.LevelNumber}", 52);
+            var title = CreateTitle(panel.transform, $"Level {session.Level.LevelNumber}", 44);
             title.color = UiColorPalette.Gold;
-            var subtitle = CreateLabel(panel.transform, session.Level.DisplayName, 30, TextAnchor.MiddleCenter);
+            var subtitle = CreateLabel(panel.transform, session.Level.DisplayName, 24, TextAnchor.MiddleCenter);
             subtitle.color = UiColorPalette.TextSecondary;
+            AddLayoutElement(subtitle.gameObject, 600, 36);
 
             var goalsPanel = CreatePanel(panel.transform, "Intro Goals", new Color(0.12f, 0.14f, 0.20f, 0.85f));
             goalsPanel.GetComponent<Image>().raycastTarget = false;
-            AddLayoutElement(goalsPanel, 660, Mathf.Max(110, session.Level.Goals.Count * 82));
+            AddLayoutElement(goalsPanel, 620, Mathf.Max(86, session.Level.Goals.Count * 66));
             var goalsLayout = goalsPanel.AddComponent<VerticalLayoutGroup>();
             goalsLayout.childAlignment = TextAnchor.MiddleCenter;
             goalsLayout.spacing = 8;
@@ -459,10 +459,12 @@ namespace PotionPopQuest.Unity
 
             CreateIntroObstaclePreview(panel.transform, session.Level);
 
-            var movesLabel = CreateLabel(panel.transform, $"{session.MovesRemaining} Moves", 34, TextAnchor.MiddleCenter);
+            var movesLabel = CreateLabel(panel.transform, $"{session.MovesRemaining} Moves", 30, TextAnchor.MiddleCenter);
             movesLabel.color = UiColorPalette.TextSuccess;
-            var tapLabel = CreateLabel(panel.transform, "Tap to Start", 28, TextAnchor.MiddleCenter);
+            AddLayoutElement(movesLabel.gameObject, 600, 42);
+            var tapLabel = CreateLabel(panel.transform, "Tap to Start", 24, TextAnchor.MiddleCenter);
             tapLabel.color = UiColorPalette.GoldLight;
+            AddLayoutElement(tapLabel.gameObject, 600, 34);
 
             blocker.onClick.AddListener(() =>
             {
@@ -941,18 +943,18 @@ namespace PotionPopQuest.Unity
 
         private void ShowWinModal(GameSession session, bool hasNextLevel)
         {
-            var panel = CreateModalPanel(800, 18);
+            var panel = CreateModalPanel(700, 14);
 
             // Golden gradient header
             var headerGlow = CreatePanel(panel.transform, "WinHeaderGlow", UiColorPalette.WithAlpha(UiColorPalette.Gold, 0.12f));
             AddLayoutElement(headerGlow, 680, 8);
             headerGlow.GetComponent<Image>().raycastTarget = false;
 
-            var titleText = CreateTitle(panel.transform, "\u2728 Level Complete \u2728", 50);
+            var titleText = CreateTitle(panel.transform, "Level Complete", 44);
             titleText.color = UiColorPalette.Gold;
             _themeAssets.AddTitleTextEffects(titleText);
 
-            var scoreLabel = CreateLabel(panel.transform, "Score 0", 36, TextAnchor.MiddleCenter);
+            var scoreLabel = CreateLabel(panel.transform, "Score 0", 32, TextAnchor.MiddleCenter);
             scoreLabel.color = UiColorPalette.TextPrimary;
             AddLayoutElement(scoreLabel.gameObject, 560, 60);
 
@@ -969,19 +971,19 @@ namespace PotionPopQuest.Unity
 
         private void ShowLoseModal(GameSession session)
         {
-            var panel = CreateModalPanel(740, 16);
+            var panel = CreateModalPanel(640, 14);
 
             // Dramatic red header
             var headerGlow = CreatePanel(panel.transform, "LoseHeaderGlow", UiColorPalette.WithAlpha(UiColorPalette.Ruby, 0.15f));
             AddLayoutElement(headerGlow, 680, 8);
             headerGlow.GetComponent<Image>().raycastTarget = false;
 
-            var titleText = CreateTitle(panel.transform, "Out of Moves", 48);
+            var titleText = CreateTitle(panel.transform, "Out of Moves", 42);
             titleText.color = UiColorPalette.RubyLight;
             _themeAssets.AddTitleTextEffects(titleText);
-            var body = CreateLabel(panel.transform, "Try again to finish the remaining goals.", 26, TextAnchor.MiddleCenter);
+            var body = CreateLabel(panel.transform, "Try again to finish the remaining goals.", 23, TextAnchor.MiddleCenter);
             body.color = UiColorPalette.TextSecondary;
-            AddLayoutElement(body.gameObject, 590, 60);
+            AddLayoutElement(body.gameObject, 560, 48);
             CreateGoalSummary(panel.transform, session.GoalTracker.Goals, true);
             CreateModalActions(panel.transform, "\u21BB  Retry", _restart, showLevelsButton: true);
             _feedbackAnimator.PlayModalIntro(panel.GetComponent<RectTransform>());
@@ -1037,14 +1039,14 @@ namespace PotionPopQuest.Unity
         {
             var labels = new List<Image>();
             var starRow = CreatePanel(parent, "Stars", new Color(0, 0, 0, 0));
-            AddLayoutElement(starRow, 380, 72);
+            AddLayoutElement(starRow, 340, 58);
             var starLayout = starRow.AddComponent<HorizontalLayoutGroup>();
             starLayout.childAlignment = TextAnchor.MiddleCenter;
             starLayout.spacing = 18;
 
             for (var i = 1; i <= 3; i++)
             {
-                labels.Add(CreateStarImage(starRow.transform, false, 66));
+                labels.Add(CreateStarImage(starRow.transform, false, 54));
             }
 
             return labels;
@@ -1053,7 +1055,7 @@ namespace PotionPopQuest.Unity
         private void CreateGoalSummary(Transform parent, IReadOnlyList<GoalProgress> goals, bool remainingOnly)
         {
             var summary = CreatePanel(parent, remainingOnly ? "Remaining Goals" : "Completed Goals", UiColorPalette.WithAlpha(UiColorPalette.Amethyst, 0.32f));
-            AddLayoutElement(summary, 620, Mathf.Clamp(goals.Count * 58 + 28, 112, 232));
+            AddLayoutElement(summary, 600, Mathf.Clamp(goals.Count * 50 + 24, 96, 202));
             var layout = summary.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.spacing = 8;
@@ -1065,7 +1067,7 @@ namespace PotionPopQuest.Unity
                     ? $"{progress.RemainingAmount} left"
                     : $"{progress.CurrentAmount}/{progress.Goal.Amount}";
                 var row = CreatePanel(summary.transform, "Modal Goal Row", new Color(0, 0, 0, 0));
-                AddLayoutElement(row, 560, 48);
+                AddLayoutElement(row, 540, 42);
                 row.GetComponent<Image>().raycastTarget = false;
                 var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
                 rowLayout.childAlignment = TextAnchor.MiddleCenter;
@@ -1073,29 +1075,29 @@ namespace PotionPopQuest.Unity
 
                 var iconObject = new GameObject("Goal Icon", typeof(RectTransform), typeof(Image));
                 iconObject.transform.SetParent(row.transform, false);
-                AddLayoutElement(iconObject, 42, 42);
+                AddLayoutElement(iconObject, 34, 34);
                 var icon = iconObject.GetComponent<Image>();
                 icon.sprite = GoalSprite(progress.Goal);
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
 
-                var label = CreateLabel(row.transform, $"{GoalName(progress.Goal)}  {amount}", 22, TextAnchor.MiddleLeft);
+                var label = CreateLabel(row.transform, $"{GoalName(progress.Goal)}  {amount}", 20, TextAnchor.MiddleLeft);
                 label.color = remainingOnly && progress.RemainingAmount > 0 ? UiColorPalette.GoldLight : UiColorPalette.TextSuccess;
-                AddLayoutElement(label.gameObject, 490, 44);
+                AddLayoutElement(label.gameObject, 474, 38);
             }
         }
 
         private void CreateModalActions(Transform parent, string primaryLabel, Action primaryAction, bool showLevelsButton)
         {
-            CreateButton(parent, primaryLabel, primaryAction, UiColorPalette.Emerald, new Vector2(320, 74));
-            CreateButton(parent, "Replay", _restart, UiColorPalette.Sapphire, new Vector2(320, 68));
+            CreateButton(parent, primaryLabel, primaryAction, UiColorPalette.Emerald, new Vector2(292, 62));
+            CreateButton(parent, "Replay", _restart, UiColorPalette.Sapphire, new Vector2(292, 56));
             if (showLevelsButton)
             {
-                CreateButton(parent, "Levels", _showLevels, UiColorPalette.Amethyst, new Vector2(320, 68));
+                CreateButton(parent, "Levels", _showLevels, UiColorPalette.Amethyst, new Vector2(292, 56));
             }
             else
             {
-                CreateButton(parent, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(320, 68));
+                CreateButton(parent, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(292, 56));
             }
         }
 
@@ -1272,7 +1274,7 @@ namespace PotionPopQuest.Unity
         private void CreateIntroGoalRow(Transform parent, GoalData goal)
         {
             var row = CreatePanel(parent, "Intro Goal Row", new Color(0, 0, 0, 0));
-            AddLayoutElement(row, 620, 66);
+            AddLayoutElement(row, 580, 54);
             row.GetComponent<Image>().raycastTarget = false;
             var layout = row.AddComponent<HorizontalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
@@ -1281,30 +1283,30 @@ namespace PotionPopQuest.Unity
 
             var iconObject = new GameObject("Goal Icon", typeof(RectTransform), typeof(Image));
             iconObject.transform.SetParent(row.transform, false);
-            AddLayoutElement(iconObject, 54, 54);
+            AddLayoutElement(iconObject, 44, 44);
             var icon = iconObject.GetComponent<Image>();
             icon.sprite = GoalSprite(goal);
             icon.color = Color.white;
             icon.preserveAspect = true;
             icon.raycastTarget = false;
 
-            var label = CreateLabel(row.transform, $"{GoalName(goal)}  0/{goal.Amount}", 24, TextAnchor.MiddleLeft);
-            AddLayoutElement(label.gameObject, 500, 58);
+            var label = CreateLabel(row.transform, $"{GoalName(goal)}  0/{goal.Amount}", 22, TextAnchor.MiddleLeft);
+            AddLayoutElement(label.gameObject, 488, 48);
             label.color = UiColorPalette.TextPrimary;
         }
 
         private void CreateIntroObstaclePreview(Transform parent, LevelData level)
         {
             var preview = CreatePanel(parent, "Intro Obstacle Preview", UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.18f));
-            AddLayoutElement(preview, 660, 72);
+            AddLayoutElement(preview, 620, 58);
             var layout = preview.AddComponent<HorizontalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.spacing = 12;
             layout.padding = new RectOffset(16, 16, 8, 8);
 
-            var label = CreateLabel(preview.transform, "Obstacles", 22, TextAnchor.MiddleRight);
+            var label = CreateLabel(preview.transform, "Obstacles", 20, TextAnchor.MiddleRight);
             label.color = UiColorPalette.TextSecondary;
-            AddLayoutElement(label.gameObject, 140, 54);
+            AddLayoutElement(label.gameObject, 126, 42);
 
             var obstacleTypes = level.Obstacles
                 .Select(item => item.ObstacleType)
@@ -1314,16 +1316,16 @@ namespace PotionPopQuest.Unity
 
             if (obstacleTypes.Length == 0)
             {
-                var none = CreateLabel(preview.transform, "None", 24, TextAnchor.MiddleLeft);
+                var none = CreateLabel(preview.transform, "None", 22, TextAnchor.MiddleLeft);
                 none.color = UiColorPalette.TextSuccess;
-                AddLayoutElement(none.gameObject, 450, 54);
+                AddLayoutElement(none.gameObject, 420, 42);
                 return;
             }
 
             foreach (var obstacle in obstacleTypes)
             {
                 var item = CreatePanel(preview.transform, $"Obstacle Preview - {ObstacleName(obstacle)}", UiColorPalette.WithAlpha(UiColorPalette.BackgroundSolid, 0.22f));
-                AddLayoutElement(item, 150, 54);
+                AddLayoutElement(item, 136, 42);
                 var itemLayout = item.AddComponent<HorizontalLayoutGroup>();
                 itemLayout.childAlignment = TextAnchor.MiddleCenter;
                 itemLayout.spacing = 8;
@@ -1331,15 +1333,15 @@ namespace PotionPopQuest.Unity
 
                 var iconObject = new GameObject("Obstacle Icon", typeof(RectTransform), typeof(Image));
                 iconObject.transform.SetParent(item.transform, false);
-                AddLayoutElement(iconObject, 38, 38);
+                AddLayoutElement(iconObject, 30, 30);
                 var icon = iconObject.GetComponent<Image>();
                 icon.sprite = _iconFactory.GetObstacleSprite(obstacle);
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
 
-                var text = CreateLabel(item.transform, ObstacleName(obstacle), 18, TextAnchor.MiddleLeft);
+                var text = CreateLabel(item.transform, ObstacleName(obstacle), 16, TextAnchor.MiddleLeft);
                 text.color = UiColorPalette.TextPrimary;
-                AddLayoutElement(text.gameObject, 88, 40);
+                AddLayoutElement(text.gameObject, 82, 34);
             }
         }
 
