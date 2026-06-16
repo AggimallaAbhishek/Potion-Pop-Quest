@@ -59,6 +59,43 @@ namespace PotionPopQuest.Core
             return MergeRunsIntoGroups(runs, priorityAnchor);
         }
 
+        public bool HasAnyMatch(BoardState board)
+        {
+            if (board == null) return false;
+
+            // Check rows
+            for (var row = 0; row < board.Height; row++)
+            {
+                for (var column = 0; column < board.Width - 2; column++)
+                {
+                    var ingredient = MatchableIngredientAt(board, new GridPosition(row, column));
+                    if (ingredient != IngredientType.None &&
+                        MatchableIngredientAt(board, new GridPosition(row, column + 1)) == ingredient &&
+                        MatchableIngredientAt(board, new GridPosition(row, column + 2)) == ingredient)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            // Check columns
+            for (var column = 0; column < board.Width; column++)
+            {
+                for (var row = 0; row < board.Height - 2; row++)
+                {
+                    var ingredient = MatchableIngredientAt(board, new GridPosition(row, column));
+                    if (ingredient != IngredientType.None &&
+                        MatchableIngredientAt(board, new GridPosition(row + 1, column)) == ingredient &&
+                        MatchableIngredientAt(board, new GridPosition(row + 2, column)) == ingredient)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private static List<MatchRun> FindRuns(BoardState board)
         {
             var runs = new List<MatchRun>();

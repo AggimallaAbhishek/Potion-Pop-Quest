@@ -94,7 +94,7 @@ namespace PotionPopQuest.Core
         private bool CreatesMatchAfterSwap(BoardState board, GridPosition first, GridPosition second)
         {
             board.SwapIngredients(first, second);
-            var hasMatch = _matchFinder.FindMatches(board, second).Count > 0;
+            var hasMatch = _matchFinder.HasAnyMatch(board);
             board.SwapIngredients(first, second);
             return hasMatch;
         }

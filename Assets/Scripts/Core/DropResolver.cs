@@ -132,6 +132,14 @@ namespace PotionPopQuest.Core
                 movement.spawned);
         }
 
+        private static readonly GridPosition[] _adjacentOffsets = new GridPosition[]
+        {
+            new GridPosition(-1, 0),
+            new GridPosition(1, 0),
+            new GridPosition(0, -1),
+            new GridPosition(0, 1)
+        };
+
         private static void DamageAdjacentObstacles(
             BoardState board,
             IEnumerable<GridPosition> clearPositions,
@@ -141,8 +149,9 @@ namespace PotionPopQuest.Core
         {
             foreach (var position in clearPositions)
             {
-                foreach (var neighbor in Adjacent(position))
+                foreach (var offset in _adjacentOffsets)
                 {
+                    var neighbor = new GridPosition(position.Row + offset.Row, position.Column + offset.Column);
                     if (!board.InBounds(neighbor) || damaged.Contains(neighbor))
                     {
                         continue;
@@ -167,14 +176,6 @@ namespace PotionPopQuest.Core
             }
         }
 
-        private static IEnumerable<GridPosition> Adjacent(GridPosition position)
-        {
-            yield return new GridPosition(position.Row - 1, position.Column);
-            yield return new GridPosition(position.Row + 1, position.Column);
-            yield return new GridPosition(position.Row, position.Column - 1);
-            yield return new GridPosition(position.Row, position.Column + 1);
-        }
-
         private static (int dropped, int spawned, IReadOnlyList<TileMovementEvent> droppedTiles, IReadOnlyList<TileSpawnEvent> spawnedTiles) ApplyGravity(
             BoardState board,
             IReadOnlyList<IngredientType> activeIngredients,
@@ -184,6 +185,7 @@ namespace PotionPopQuest.Core
             var spawned = 0;
             var droppedTiles = new List<TileMovementEvent>();
             var spawnedTiles = new List<TileSpawnEvent>();
+            var falling = new List<(IngredientType ingredient, PotionType potion, int originalRow)>();
 
             for (var column = 0; column < board.Width; column++)
             {
@@ -203,7 +205,7 @@ namespace PotionPopQuest.Core
                     }
 
                     var segmentTop = row + 1;
-                    var falling = new List<(IngredientType ingredient, PotionType potion, int originalRow)>();
+                    falling.Clear();
                     for (var scan = segmentBottom; scan >= segmentTop; scan--)
                     {
                         var cell = board.GetCell(new GridPosition(scan, column));
