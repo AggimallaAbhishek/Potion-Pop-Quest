@@ -230,14 +230,6 @@ namespace PotionPopQuest.Unity
             }
         }
 
-            }
-        }
-
-
-
-
-
-
         private IEnumerator LevelIntroReveal(RectTransform panel)
         {
             if (panel == null)

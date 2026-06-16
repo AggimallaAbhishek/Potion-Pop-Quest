@@ -1088,6 +1088,23 @@ namespace PotionPopQuest.Unity
             return group != null ? group : target.gameObject.AddComponent<CanvasGroup>();
         }
 
+        private void ConfigureTileInteraction(GridPosition position, RectTransform rect, BoardCellSnapshot cell)
+        {
+            _inputHandler.ConfigureTileInteraction(position, rect, cell);
+        }
+
+        private Image RentVfxImage(string name, Color color, Vector2 size, Vector2 anchoredPosition)
+        {
+            var parent = _floatingLayer != null ? _floatingLayer : _boardRoot;
+            return _tilePool.RentVfxImage(name, color, size, anchoredPosition, parent);
+        }
+
+        private void ReleaseVfxImage(Image image)
+        {
+            var parent = _floatingLayer != null ? _floatingLayer : _boardRoot;
+            _tilePool.ReleaseVfxImage(image, parent);
+        }
+
         private void CreateIconImage(Transform parent, Sprite sprite, Vector2 anchorMin, Vector2 anchorMax, Color color)
         {
             var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(Image));
