@@ -97,6 +97,8 @@ namespace PotionPopQuest.Unity
                     DrawEllipseAA(texture, cx, cy - 16, 24, 36, light);
                     // Stem
                     DrawLine(texture, cx, cy + 50, cx, cy + 74, new Color(0.30f, 0.14f, 0.10f, 1f), 8);
+                    // Accessibility Shape: Triangle
+                    DrawTriangle(texture, cx, cy - 6, 14, false, new Color(1f, 1f, 1f, 0.40f));
                     // Specular highlight
                     DrawSpecularHighlight(texture, cx - 14, cy - 28, 16, 10);
                     break;
@@ -110,6 +112,8 @@ namespace PotionPopQuest.Unity
                     // Facet line
                     DrawLine(texture, cx, cy - 68, cx, cy + 68, new Color(0.08f, 0.34f, 0.78f, 0.50f), 4);
                     DrawLine(texture, cx - 48, cy, cx + 48, cy, new Color(0.08f, 0.34f, 0.78f, 0.30f), 3);
+                    // Accessibility Shape: Square
+                    DrawRect(texture, cx - 10, cy - 10, 20, 20, new Color(1f, 1f, 1f, 0.30f));
                     DrawSpecularHighlight(texture, cx - 16, cy - 34, 14, 8);
                     break;
 
@@ -126,6 +130,9 @@ namespace PotionPopQuest.Unity
                     // Dewdrop
                     DrawCircleAA(texture, cx - 12, cy + 14, 8, new Color(0.80f, 1f, 0.90f, 0.60f));
                     DrawCircleAA(texture, cx - 14, cy + 12, 4, new Color(1f, 1f, 1f, 0.50f));
+                    // Accessibility Shape: Circle
+                    DrawCircleAA(texture, cx, cy, 14, new Color(1f, 1f, 1f, 0.40f));
+                    DrawCircleAA(texture, cx, cy, 10, primary); // hollow center
                     DrawSpecularHighlight(texture, cx - 16, cy - 10, 18, 10);
                     break;
 
@@ -139,6 +146,8 @@ namespace PotionPopQuest.Unity
                     DrawSparkle(texture, cx + 44, cy + 42, 8, new Color(1f, 0.96f, 0.60f, 0.65f));
                     DrawSparkle(texture, cx + 38, cy - 44, 9, new Color(1f, 0.96f, 0.60f, 0.60f));
                     DrawSparkle(texture, cx - 36, cy - 38, 7, new Color(1f, 0.96f, 0.60f, 0.55f));
+                    // Accessibility Shape: Inner Star
+                    DrawStar(texture, cx, cy, 18, 8, new Color(1f, 1f, 1f, 0.40f));
                     DrawSpecularHighlight(texture, cx - 12, cy - 24, 14, 8);
                     break;
 
@@ -153,11 +162,16 @@ namespace PotionPopQuest.Unity
                     // Stem
                     DrawRectRounded(texture, cx - 16, cy + 12, 32, 48, new Color(0.92f, 0.82f, 0.70f, 1f), 8);
                     DrawRectRounded(texture, cx - 10, cy + 16, 14, 38, new Color(0.96f, 0.90f, 0.82f, 0.50f), 6);
+                    // Accessibility Shape: Cross
+                    DrawLine(texture, cx - 12, cy - 12, cx + 12, cy - 12, new Color(1f, 1f, 1f, 0.40f), 4);
+                    DrawLine(texture, cx, cy - 24, cx, cy, new Color(1f, 1f, 1f, 0.40f), 4);
                     DrawSpecularHighlight(texture, cx - 18, cy - 26, 16, 10);
                     break;
 
                 case IngredientType.OrangeFireDrop:
                     DrawFlame(texture, primary, light);
+                    // Accessibility Shape: Inner Diamond
+                    DrawDiamond(texture, cx, 150, 14, 22, new Color(1f, 1f, 1f, 0.35f));
                     DrawSpecularHighlight(texture, cx - 10, cy - 24, 12, 8);
                     break;
             }
