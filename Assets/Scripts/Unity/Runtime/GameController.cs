@@ -167,7 +167,8 @@ namespace PotionPopQuest.Unity
         {
             if (_saveData.currentLives <= 0)
             {
-                _logger.Log(LogCategory.UI, "Out of lives.");
+                _logger.Log(LogCategory.UI, "Out of lives. Prompting shop.");
+                ShowShop();
                 return;
             }
 
@@ -404,6 +405,12 @@ namespace PotionPopQuest.Unity
         private void HandleBackRequested()
         {
             ClearHintState();
+            if (_ui != null && _ui.IsModalOpen())
+            {
+                _ui.CloseTopModal();
+                return;
+            }
+
             if (_session != null && _session.State == GameSessionState.Playing)
             {
                 ShowSettings();

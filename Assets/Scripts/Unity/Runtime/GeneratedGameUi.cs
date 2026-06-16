@@ -230,6 +230,27 @@ namespace PotionPopQuest.Unity
             }
         }
 
+        public bool IsModalOpen()
+        {
+            return (_shopModal != null && _shopModal.activeInHierarchy) ||
+                   (_dailyRewardModal != null && _dailyRewardModal.activeInHierarchy);
+        }
+
+        public void CloseTopModal()
+        {
+            if (_dailyRewardModal != null && _dailyRewardModal.activeInHierarchy)
+            {
+                _dailyRewardModal.SetActive(false);
+                return;
+            }
+            if (_shopModal != null && _shopModal.activeInHierarchy)
+            {
+                _shopModal.SetActive(false);
+                _closeShop?.Invoke();
+                return;
+            }
+        }
+
         public void ShowMainMenu()
         {
             ClearHint();
@@ -273,124 +294,124 @@ namespace PotionPopQuest.Unity
             scrollRect.content = gridRect;
             scrollRect.viewport = scrollFrame.GetComponent<RectTransform>();
 
-            var layout = grid.AddComponent<GridLayoutGroup>();
-            layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            layout.constraintCount = columns;
-            layout.cellSize = new Vector2(cellSize, cellSize);
-            layout.spacing = new Vector2(spacing, spacing);
-            layout.padding = new RectOffset(20, 20, 20, 20);
-            layout.childAlignment = TextAnchor.UpperCenter;
+            var pool = grid.AddComponent<LevelScrollPool>();
+            pool.scrollRect = scrollRect;
+            pool.content = gridRect;
+            pool.columns = columns;
+            pool.cellSize = cellSize;
+            pool.spacing = spacing;
+            
+            pool.onBindCell = (index, cell) => {
+                var levelData = levels[index];
+                var locked = levelData.LevelNumber > highestUnlocked;
+                var isNext = levelData.LevelNumber == highestUnlocked;
+                var stars = starsForLevel(levelData.LevelNumber);
+                var view = cell.GetComponent<LevelCardView>();
+                view.Bind(levelData.LevelNumber, stars, locked, isNext, _startLevel);
+            };
 
-            foreach (var level in levels)
-            {
-                var locked = level.LevelNumber > highestUnlocked;
-                var isNext = level.LevelNumber == highestUnlocked;
-                var stars = starsForLevel(level.LevelNumber);
-                CreateLevelCard(grid.transform, level.LevelNumber, stars, locked, isNext);
-            }
+            pool.Initialize(levels.Count, () => CreateLevelCardPrefab(grid.transform).transform);
 
             CreateButton(_levelSelect.transform, "Back", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(240, 58));
             TransitionTo(_levelSelect);
         }
 
-        /// <summary>Creates a styled level card with number, star display, and premium visual effects.</summary>
-        private void CreateLevelCard(Transform parent, int levelNumber, int stars, bool locked, bool isNext)
+        private GameObject CreateLevelCardPrefab(Transform parent)
         {
-            var cardColor = locked ? UiColorPalette.LevelCardLocked : UiColorPalette.LevelCardUnlocked;
-            var button = CreateButton(parent, "", () => _startLevel(levelNumber), cardColor);
-            button.interactable = !locked;
-            var cardRect = button.GetComponent<RectTransform>();
+            var button = CreateButton(parent, "", null, UiColorPalette.LevelCardUnlocked);
+            var cardView = button.gameObject.AddComponent<LevelCardView>();
+            cardView.button = button;
+            cardView.backgroundImage = button.GetComponent<Image>();
 
             // Gradient overlay for unlocked cards
-            if (!locked)
-            {
-                var gradient = new GameObject("CardGradient", typeof(RectTransform), typeof(Image));
-                gradient.transform.SetParent(button.transform, false);
-                gradient.transform.SetAsFirstSibling();
-                var gradRect = gradient.GetComponent<RectTransform>();
-                gradRect.anchorMin = new Vector2(0f, 0f);
-                gradRect.anchorMax = new Vector2(1f, 0.50f);
-                gradRect.offsetMin = Vector2.zero;
-                gradRect.offsetMax = Vector2.zero;
-                gradient.GetComponent<Image>().color = UiColorPalette.WithAlpha(UiColorPalette.LevelCardUnlockedGradient, 0.40f);
-                gradient.GetComponent<Image>().raycastTarget = false;
-            }
+            var gradient = new GameObject("CardGradient", typeof(RectTransform), typeof(Image));
+            gradient.transform.SetParent(button.transform, false);
+            gradient.transform.SetAsFirstSibling();
+            var gradRect = gradient.GetComponent<RectTransform>();
+            gradRect.anchorMin = new Vector2(0f, 0f);
+            gradRect.anchorMax = new Vector2(1f, 0.50f);
+            gradRect.offsetMin = Vector2.zero;
+            gradRect.offsetMax = Vector2.zero;
+            gradient.GetComponent<Image>().color = UiColorPalette.WithAlpha(UiColorPalette.LevelCardUnlockedGradient, 0.40f);
+            gradient.GetComponent<Image>().raycastTarget = false;
+            cardView.gradientOverlay = gradient;
 
             // Current level outline
-            if (isNext)
-            {
-                var outline = new GameObject("CurrentOutline", typeof(RectTransform), typeof(Image));
-                outline.transform.SetParent(button.transform, false);
-                var outRect = outline.GetComponent<RectTransform>();
-                outRect.anchorMin = Vector2.zero;
-                outRect.anchorMax = Vector2.one;
-                outRect.offsetMin = new Vector2(-4, -4);
-                outRect.offsetMax = new Vector2(4, 4);
-                outline.GetComponent<Image>().sprite = _iconFactory.GetRoundedRectSprite(24);
-                outline.GetComponent<Image>().type = Image.Type.Sliced;
-                outline.GetComponent<Image>().color = UiColorPalette.WithAlpha(UiColorPalette.Gold, 0.6f);
-                outline.GetComponent<Image>().raycastTarget = false;
-                
-                // Dim center to make it an outline
-                var innerMask = new GameObject("InnerMask", typeof(RectTransform), typeof(Image));
-                innerMask.transform.SetParent(outline.transform, false);
-                var innerRect = innerMask.GetComponent<RectTransform>();
-                innerRect.anchorMin = Vector2.zero;
-                innerRect.anchorMax = Vector2.one;
-                innerRect.offsetMin = new Vector2(4, 4);
-                innerRect.offsetMax = new Vector2(-4, -4);
-                innerMask.GetComponent<Image>().sprite = _iconFactory.GetRoundedRectSprite(20);
-                innerMask.GetComponent<Image>().type = Image.Type.Sliced;
-                innerMask.GetComponent<Image>().color = cardColor; // Match button color to hide center of outline
-                innerMask.GetComponent<Image>().raycastTarget = false;
-                
-                outline.transform.SetAsFirstSibling();
-            }
+            var outline = new GameObject("CurrentOutline", typeof(RectTransform), typeof(Image));
+            outline.transform.SetParent(button.transform, false);
+            var outRect = outline.GetComponent<RectTransform>();
+            outRect.anchorMin = Vector2.zero;
+            outRect.anchorMax = Vector2.one;
+            outRect.offsetMin = new Vector2(-4, -4);
+            outRect.offsetMax = new Vector2(4, 4);
+            outline.GetComponent<Image>().sprite = _iconFactory.GetRoundedRectSprite(24);
+            outline.GetComponent<Image>().type = Image.Type.Sliced;
+            outline.GetComponent<Image>().color = UiColorPalette.WithAlpha(UiColorPalette.Gold, 0.6f);
+            outline.GetComponent<Image>().raycastTarget = false;
+            
+            var innerMask = new GameObject("InnerMask", typeof(RectTransform), typeof(Image));
+            innerMask.transform.SetParent(outline.transform, false);
+            var innerRect = innerMask.GetComponent<RectTransform>();
+            innerRect.anchorMin = Vector2.zero;
+            innerRect.anchorMax = Vector2.one;
+            innerRect.offsetMin = new Vector2(4, 4);
+            innerRect.offsetMax = new Vector2(-4, -4);
+            innerMask.GetComponent<Image>().sprite = _iconFactory.GetRoundedRectSprite(20);
+            innerMask.GetComponent<Image>().type = Image.Type.Sliced;
+            innerMask.GetComponent<Image>().color = UiColorPalette.LevelCardUnlocked;
+            innerMask.GetComponent<Image>().raycastTarget = false;
+            
+            outline.transform.SetAsFirstSibling();
+            cardView.currentOutline = outline;
 
-            // Level number (large, with shadow)
-            var numberLabel = CreateLabel(button.transform, locked ? $"Lock\n{levelNumber}" : levelNumber.ToString(), locked ? 20 : 34, TextAnchor.MiddleCenter);
+            // Lock icon placeholder (just a text label "Lock")
+            var lockLabel = CreateLabel(button.transform, "Lock", 20, TextAnchor.MiddleCenter);
+            lockLabel.rectTransform.anchorMin = new Vector2(0, 0.5f);
+            lockLabel.rectTransform.anchorMax = new Vector2(1, 1);
+            lockLabel.rectTransform.offsetMin = Vector2.zero;
+            lockLabel.rectTransform.offsetMax = Vector2.zero;
+            lockLabel.color = UiColorPalette.TextMuted;
+            cardView.lockIcon = lockLabel.gameObject;
+
+            // Level number
+            var numberLabel = CreateLabel(button.transform, "1", 34, TextAnchor.MiddleCenter);
             numberLabel.rectTransform.anchorMin = new Vector2(0, 0.32f);
             numberLabel.rectTransform.anchorMax = new Vector2(1, 1);
             numberLabel.rectTransform.offsetMin = Vector2.zero;
             numberLabel.rectTransform.offsetMax = Vector2.zero;
-            numberLabel.color = locked ? UiColorPalette.TextMuted : UiColorPalette.TextPrimary;
-            if (!locked)
+            numberLabel.color = UiColorPalette.TextPrimary;
+            _themeAssets.AddHighValueTextShadow(numberLabel);
+            cardView.levelText = numberLabel;
+
+            // Star row
+            var starRow = new GameObject("Level Card Stars", typeof(RectTransform), typeof(LayoutElement));
+            starRow.transform.SetParent(button.transform, false);
+            var starRect = starRow.GetComponent<RectTransform>();
+            starRect.anchorMin = new Vector2(0, 0);
+            starRect.anchorMax = new Vector2(1, 0.34f);
+            starRect.offsetMin = Vector2.zero;
+            starRect.offsetMax = Vector2.zero;
+            starRow.GetComponent<LayoutElement>().ignoreLayout = true;
+            var starLayout = starRow.AddComponent<HorizontalLayoutGroup>();
+            starLayout.childAlignment = TextAnchor.MiddleCenter;
+            starLayout.spacing = 4;
+            cardView.stars = new Image[3];
+            for (var i = 0; i < 3; i++)
             {
-                _themeAssets.AddHighValueTextShadow(numberLabel);
+                cardView.stars[i] = CreateStarImage(starRow.transform, true, 24).GetComponent<Image>();
             }
 
-            // Star row with glow effect
-            if (!locked)
-            {
-                var starRow = new GameObject("Level Card Stars", typeof(RectTransform), typeof(LayoutElement));
-                starRow.transform.SetParent(button.transform, false);
-                var starRect = starRow.GetComponent<RectTransform>();
-                starRect.anchorMin = new Vector2(0, 0);
-                starRect.anchorMax = new Vector2(1, 0.34f);
-                starRect.offsetMin = Vector2.zero;
-                starRect.offsetMax = Vector2.zero;
-                starRow.GetComponent<LayoutElement>().ignoreLayout = true;
-                var starLayout = starRow.AddComponent<HorizontalLayoutGroup>();
-                starLayout.childAlignment = TextAnchor.MiddleCenter;
-                starLayout.spacing = 4;
-                for (var i = 1; i <= 3; i++)
-                {
-                    CreateStarImage(starRow.transform, i <= stars, 24);
-                }
-            }
+            // Golden top border
+            var border = CreatePanel(button.transform, "CardBorder", UiColorPalette.LevelCardBorder);
+            var borderRect = border.GetComponent<RectTransform>();
+            borderRect.anchorMin = new Vector2(0, 0.96f);
+            borderRect.anchorMax = new Vector2(1, 1);
+            borderRect.offsetMin = Vector2.zero;
+            borderRect.offsetMax = Vector2.zero;
+            border.GetComponent<Image>().raycastTarget = false;
+            border.AddComponent<LayoutElement>().ignoreLayout = true;
 
-            // Golden top border for unlocked cards
-            if (!locked)
-            {
-                var border = CreatePanel(button.transform, "CardBorder", UiColorPalette.LevelCardBorder);
-                var borderRect = border.GetComponent<RectTransform>();
-                borderRect.anchorMin = new Vector2(0, 0.96f);
-                borderRect.anchorMax = new Vector2(1, 1);
-                borderRect.offsetMin = Vector2.zero;
-                borderRect.offsetMax = Vector2.zero;
-                border.GetComponent<Image>().raycastTarget = false;
-                border.AddComponent<LayoutElement>().ignoreLayout = true;
-            }
+            return button.gameObject;
         }
 
         public void ShowSettings(bool musicEnabled, bool sfxEnabled, float musicVolume, float sfxVolume, bool vibrationEnabled)
@@ -866,9 +887,14 @@ namespace PotionPopQuest.Unity
             _messageText = CreateLabel(_game.transform, "", 24, TextAnchor.MiddleCenter);
             _messageText.rectTransform.sizeDelta = new Vector2(UiLayoutMetrics.MessageWidth, UiLayoutMetrics.GameMessageHeight());
 
-            _tutorialPanel = CreatePanel(_game.transform, "Tutorial Banner", UiColorPalette.TutorialBackground);
-            AddLayoutElement(_tutorialPanel, UiLayoutMetrics.TutorialWidth, UiLayoutMetrics.GameTutorialHeight());
-            _tutorialText = CreateLabel(_tutorialPanel.transform, "", 22, TextAnchor.MiddleCenter);
+            _tutorialPanel = CreatePanel(boardPanel.transform, "Tutorial Banner", UiColorPalette.WithAlpha(UiColorPalette.TutorialBackground, 0.9f));
+            var tutRect = _tutorialPanel.GetComponent<RectTransform>();
+            tutRect.anchorMin = new Vector2(0.05f, 0.35f);
+            tutRect.anchorMax = new Vector2(0.95f, 0.65f);
+            tutRect.offsetMin = Vector2.zero;
+            tutRect.offsetMax = Vector2.zero;
+            _tutorialText = CreateLabel(_tutorialPanel.transform, "", 26, TextAnchor.MiddleCenter);
+            _themeAssets.AddHighValueTextShadow(_tutorialText);
             _tutorialText.rectTransform.anchorMin = Vector2.zero;
             _tutorialText.rectTransform.anchorMax = Vector2.one;
             _tutorialText.rectTransform.offsetMin = new Vector2(18, 10);
