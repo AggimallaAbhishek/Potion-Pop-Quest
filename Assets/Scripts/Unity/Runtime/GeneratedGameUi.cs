@@ -39,6 +39,7 @@ namespace PotionPopQuest.Unity
         private Image _starProgressFill;
         private TextMeshProUGUI _starProgressText;
         private readonly List<Image> _starProgressIcons = new List<Image>();
+        private readonly List<Image> _hudStarIcons = new List<Image>();
         private GameObject _tutorialPanel;
         private TextMeshProUGUI _tutorialText;
         private RectTransform _floatingLayer;
