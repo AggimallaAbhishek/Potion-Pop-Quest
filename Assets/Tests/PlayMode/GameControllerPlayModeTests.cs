@@ -37,7 +37,7 @@ namespace PotionPopQuest.PlayMode.Tests
 
             Assert.That(GameObject.Find("Potion Pop Quest Canvas"), Is.Not.Null);
             Assert.That(GameObject.Find("Potion Lab Back Wall"), Is.Not.Null);
-            Assert.That(GameObject.Find("Potion Lab Cauldron"), Is.Not.Null);
+            Assert.That(GameObject.Find("Cloud Bottom Center"), Is.Not.Null);
             Assert.That(FindButton("Play"), Is.Not.Null);
             Assert.That(FindButton("Levels"), Is.Not.Null);
             Assert.That(FindButton("Settings"), Is.Not.Null);
@@ -99,7 +99,7 @@ namespace PotionPopQuest.PlayMode.Tests
             FindButton("Levels").onClick.Invoke();
             yield return null;
 
-            var grid = GameObject.Find("Levels Grid");
+            var grid = GameObject.Find("Levels Map");
             Assert.That(grid, Is.Not.Null);
             var pool = grid.GetComponent<LevelScrollPool>();
             Assert.That(pool, Is.Not.Null);
