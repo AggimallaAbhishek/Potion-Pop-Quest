@@ -13,6 +13,7 @@ namespace PotionPopQuest.Editor
     public static class PotionPopQuestSceneTools
     {
         private const string ScenePath = "Assets/Scenes/GameScene.unity";
+        private const string AppIconPath = "Assets/Sprites/UI/SPR_UI_AppIcon.png";
 
         [MenuItem("Potion Pop Quest/Create MVP Scene")]
         public static void CreateMvpScene()
@@ -48,6 +49,7 @@ namespace PotionPopQuest.Editor
             RegisterSceneInBuildSettings();
             PlayerSettings.companyName = "Potion Pop Quest";
             PlayerSettings.productName = "Potion Pop Quest";
+            PlayerSettings.bundleVersion = "1.0.0";
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.potionpopquest.game");
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
             PlayerSettings.allowedAutorotateToPortrait = true;
@@ -56,12 +58,28 @@ namespace PotionPopQuest.Editor
             PlayerSettings.allowedAutorotateToLandscapeRight = false;
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
+            PlayerSettings.Android.bundleVersionCode = 1;
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            ApplyAndroidIcon();
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
             PlayerSettings.WebGL.nameFilesAsHashes = true;
             QualitySettings.vSyncCount = 0;
             QualitySettings.antiAliasing = 0;
             AssetDatabase.SaveAssets();
             Debug.Log("[PotionPopQuest][Editor] Configured Android/WebGL build settings.");
+        }
+
+        private static void ApplyAndroidIcon()
+        {
+            var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(AppIconPath);
+            if (icon == null)
+            {
+                Debug.LogWarning($"[PotionPopQuest][Editor] App icon not found at {AppIconPath}.");
+                return;
+            }
+
+            PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Android, new[] { icon });
         }
 
         [MenuItem("Potion Pop Quest/QA/Unlock All MVP Levels")]

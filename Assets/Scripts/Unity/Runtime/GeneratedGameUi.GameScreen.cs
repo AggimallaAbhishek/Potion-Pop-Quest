@@ -200,7 +200,7 @@ namespace PotionPopQuest.Unity
             }
 
             _floatingLayer.SetAsLastSibling();
-            var cascadeText = cascades > 2 ? "\u2728 INCREDIBLE! \u2728" : cascades > 1 ? "\u2B50 AMAZING! \u2B50" : cascades > 0 ? $"Combo x{cascades + 1}" : "";
+            var cascadeText = cascades > 2 ? "Combo 4x+" : cascades > 1 ? "Combo 3x" : cascades > 0 ? "Combo 2x" : "";
             var displayText = string.IsNullOrEmpty(cascadeText) ? $"+{scoreGained}" : $"+{scoreGained}\n{cascadeText}";
             var fontSize = cascades > 2 ? 44 : cascades > 1 ? 40 : cascades > 0 ? 36 : 32;
             var label = CreateLabel(_floatingLayer, displayText, fontSize, TextAnchor.MiddleCenter);

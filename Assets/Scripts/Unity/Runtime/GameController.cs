@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PotionPopQuest.Core;
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace PotionPopQuest.Unity
 {
@@ -24,6 +25,9 @@ namespace PotionPopQuest.Unity
         [SerializeField] private AudioClip winSfx;
         [SerializeField] private AudioClip loseSfx;
         [SerializeField] private AudioClip musicLoop;
+        [Header("Audio Routing")]
+        [SerializeField] private AudioMixerGroup musicMixerGroup;
+        [SerializeField] private AudioMixerGroup sfxMixerGroup;
 
         private PPQLogger _logger;
         private IReadOnlyList<LevelData> _levels;
@@ -55,6 +59,7 @@ namespace PotionPopQuest.Unity
             _musicSource = gameObject.AddComponent<AudioSource>();
             _musicSource.playOnAwake = false;
             _musicSource.loop = true;
+            ApplyAudioRouting();
             LoadFallbackAudioClips();
             ApplyMusicState();
 
@@ -670,6 +675,19 @@ namespace PotionPopQuest.Unity
             winSfx = winSfx != null ? winSfx : Resources.Load<AudioClip>("Audio/SFX/win");
             loseSfx = loseSfx != null ? loseSfx : Resources.Load<AudioClip>("Audio/SFX/lose");
             musicLoop = musicLoop != null ? musicLoop : Resources.Load<AudioClip>("Audio/Music/potion_lab_loop");
+        }
+
+        private void ApplyAudioRouting()
+        {
+            if (_musicSource != null && musicMixerGroup != null)
+            {
+                _musicSource.outputAudioMixerGroup = musicMixerGroup;
+            }
+
+            if (_sfxSource != null && sfxMixerGroup != null)
+            {
+                _sfxSource.outputAudioMixerGroup = sfxMixerGroup;
+            }
         }
 
         private void ApplyMusicState()

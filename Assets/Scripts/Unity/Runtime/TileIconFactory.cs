@@ -12,17 +12,26 @@ namespace PotionPopQuest.Unity
 
         public Sprite GetIngredientSprite(IngredientType ingredient)
         {
-            return GetOrCreate($"ingredient-{ingredient}", texture => DrawIngredient(texture, ingredient));
+            return GetImportedOrCreate(
+                $"ingredient-{ingredient}",
+                IngredientResourcePath(ingredient),
+                texture => DrawIngredient(texture, ingredient));
         }
 
         public Sprite GetObstacleSprite(ObstacleType obstacle)
         {
-            return GetOrCreate($"obstacle-{obstacle}", texture => DrawObstacle(texture, obstacle));
+            return GetImportedOrCreate(
+                $"obstacle-{obstacle}",
+                ObstacleResourcePath(obstacle),
+                texture => DrawObstacle(texture, obstacle));
         }
 
         public Sprite GetPotionSprite(PotionType potion)
         {
-            return GetOrCreate($"potion-{potion}", texture => DrawPotion(texture, potion));
+            return GetImportedOrCreate(
+                $"potion-{potion}",
+                PotionResourcePath(potion),
+                texture => DrawPotion(texture, potion));
         }
 
         public Sprite GetRoundedRectSprite(int radius)
@@ -38,7 +47,10 @@ namespace PotionPopQuest.Unity
 
         public Sprite GetStarSprite(bool earned)
         {
-            return GetOrCreate(earned ? "star-earned" : "star-empty", texture => DrawStarIcon(texture, earned));
+            return GetImportedOrCreate(
+                earned ? "star-earned" : "star-empty",
+                earned ? "Sprites/UI/SPR_UI_Star_Earned" : "Sprites/UI/SPR_UI_Star_Empty",
+                texture => DrawStarIcon(texture, earned));
         }
 
         public Sprite GetBackgroundGradientSprite(Color top, Color bottom)
@@ -69,6 +81,98 @@ namespace PotionPopQuest.Unity
             sprite.name = key;
             _cache[key] = sprite;
             return sprite;
+        }
+
+        private Sprite GetImportedOrCreate(string key, string resourcePath, Action<Texture2D> draw, Vector4 border = default)
+        {
+            if (_cache.TryGetValue(key, out var sprite))
+            {
+                return sprite;
+            }
+
+            if (!string.IsNullOrEmpty(resourcePath))
+            {
+                var texture = Resources.Load<Texture2D>(resourcePath);
+                if (texture != null)
+                {
+                    sprite = CreateSpriteFromTexture(key, texture, border);
+                    _cache[key] = sprite;
+                    return sprite;
+                }
+            }
+
+            return GetOrCreate(key, draw, border);
+        }
+
+        private static Sprite CreateSpriteFromTexture(string key, Texture2D texture, Vector4 border = default)
+        {
+            var pivot = new Vector2(0.5f, 0.5f);
+            var rect = new Rect(0, 0, texture.width, texture.height);
+            var pixelsPerUnit = Mathf.Max(texture.width, texture.height);
+            var sprite = border == default
+                ? Sprite.Create(texture, rect, pivot, pixelsPerUnit)
+                : Sprite.Create(texture, rect, pivot, pixelsPerUnit, 0, SpriteMeshType.FullRect, border);
+            sprite.name = key;
+            return sprite;
+        }
+
+        private static string IngredientResourcePath(IngredientType ingredient)
+        {
+            switch (ingredient)
+            {
+                case IngredientType.RedHerb:
+                    return "Sprites/Ingredients/SPR_Ingredient_RedHerb_01";
+                case IngredientType.BlueCrystal:
+                    return "Sprites/Ingredients/SPR_Ingredient_BlueCrystal_01";
+                case IngredientType.GreenLeaf:
+                    return "Sprites/Ingredients/SPR_Ingredient_GreenLeaf_01";
+                case IngredientType.YellowStarDust:
+                    return "Sprites/Ingredients/SPR_Ingredient_YellowStarDust_01";
+                case IngredientType.PurpleMushroom:
+                    return "Sprites/Ingredients/SPR_Ingredient_PurpleMushroom_01";
+                case IngredientType.OrangeFireDrop:
+                    return "Sprites/Ingredients/SPR_Ingredient_OrangeFireDrop_01";
+                default:
+                    return null;
+            }
+        }
+
+        private static string PotionResourcePath(PotionType potion)
+        {
+            switch (potion)
+            {
+                case PotionType.LineHorizontal:
+                    return "Sprites/Potions/SPR_Potion_LineHorizontal_01";
+                case PotionType.LineVertical:
+                    return "Sprites/Potions/SPR_Potion_LineVertical_01";
+                case PotionType.Bomb:
+                    return "Sprites/Potions/SPR_Potion_Bomb_01";
+                case PotionType.Lightning:
+                    return "Sprites/Potions/SPR_Potion_Lightning_01";
+                case PotionType.Mega:
+                    return "Sprites/Potions/SPR_Potion_Mega_01";
+                default:
+                    return null;
+            }
+        }
+
+        private static string ObstacleResourcePath(ObstacleType obstacle)
+        {
+            switch (obstacle)
+            {
+                case ObstacleType.WoodenBox:
+                    return "Sprites/Obstacles/SPR_Obstacle_WoodenBox_01";
+                case ObstacleType.StoneBlock:
+                    return "Sprites/Obstacles/SPR_Obstacle_StoneBlock_01";
+                case ObstacleType.DarkTile:
+                    return "Sprites/Obstacles/SPR_Obstacle_DarkTile_01";
+                case ObstacleType.FrozenIngredient:
+                    return "Sprites/Obstacles/SPR_Obstacle_FrozenIngredient_01";
+                case ObstacleType.MagicChain:
+                    return "Sprites/Obstacles/SPR_Obstacle_MagicChain_01";
+                default:
+                    return null;
+            }
         }
 
         // ── Ingredient Drawing (Glossy Candy Style) ─────────────────
