@@ -17,7 +17,8 @@ namespace PotionPopQuest.Unity
         
         public void Bind(int levelNumber, int starCount, bool isLocked, bool isNext, Action<int> onStartLevel)
         {
-            levelText.text = isLocked ? "" : levelNumber.ToString();
+            levelText.text = levelNumber.ToString();
+            levelText.color = isLocked ? UiColorPalette.TextMuted : UiColorPalette.TextPrimary;
             
             backgroundImage.color = isLocked ? UiColorPalette.LevelCardLocked : UiColorPalette.LevelCardUnlocked;
             button.interactable = !isLocked;

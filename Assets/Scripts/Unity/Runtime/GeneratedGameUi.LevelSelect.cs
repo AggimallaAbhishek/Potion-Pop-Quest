@@ -14,16 +14,22 @@ namespace PotionPopQuest.Unity
             HideLevelIntro();
             ClearChildren(_levelSelect.transform);
 
-            CreateTitle(_levelSelect.transform, "Level Select", 44);
+            var title = CreateTitle(_levelSelect.transform, "Level Select", 42);
+            title.color = UiColorPalette.TextPrimary;
+            AddLayoutElement(title.gameObject, UiLayoutMetrics.MenuContentWidth(), 54);
+            var subtitle = CreateLabel(_levelSelect.transform, "Potion Lab Trials", 20, TextAnchor.MiddleCenter);
+            subtitle.color = UiColorPalette.TextSecondary;
+            AddLayoutElement(subtitle.gameObject, UiLayoutMetrics.MenuContentWidth(), 30);
+
             var scrollFrame = CreatePanel(_levelSelect.transform, "Levels Scroll View", UiColorPalette.LevelGridBackground);
             var columns = UiLayoutMetrics.LevelSelectColumnCount();
             var rows = Mathf.CeilToInt(levels.Count / (float)columns);
-            var cellSize = columns <= 3 ? 124f : columns == 4 ? 116f : 110f;
+            var cellSize = columns <= 3 ? 124f : columns == 4 ? 112f : 104f;
             var spacing = columns <= 3 ? 12f : 10f;
             var gridWidth = columns * cellSize + (columns - 1) * spacing + 40f;
             var gridHeight = rows * cellSize + Mathf.Max(0, rows - 1) * spacing + 40f;
             var frameWidth = Mathf.Min(UiLayoutMetrics.ScreenMaxWidth, gridWidth);
-            var frameHeight = Mathf.Min(680f, gridHeight);
+            var frameHeight = Mathf.Min(Screen.width > Screen.height ? 420f : 710f, gridHeight);
             AddLayoutElement(scrollFrame, frameWidth, frameHeight);
             var scrollRect = scrollFrame.AddComponent<ScrollRect>();
             scrollRect.horizontal = false;
@@ -113,10 +119,9 @@ namespace PotionPopQuest.Unity
             outline.transform.SetAsFirstSibling();
             cardView.currentOutline = outline;
 
-            // Lock icon placeholder (just a text label "Lock")
-            var lockLabel = CreateLabel(button.transform, "Lock", 20, TextAnchor.MiddleCenter);
-            lockLabel.rectTransform.anchorMin = new Vector2(0, 0.5f);
-            lockLabel.rectTransform.anchorMax = new Vector2(1, 1);
+            var lockLabel = CreateLabel(button.transform, "LOCKED", 15, TextAnchor.MiddleCenter);
+            lockLabel.rectTransform.anchorMin = new Vector2(0.08f, 0.08f);
+            lockLabel.rectTransform.anchorMax = new Vector2(0.92f, 0.34f);
             lockLabel.rectTransform.offsetMin = Vector2.zero;
             lockLabel.rectTransform.offsetMax = Vector2.zero;
             lockLabel.color = UiColorPalette.TextMuted;
@@ -124,8 +129,8 @@ namespace PotionPopQuest.Unity
 
             // Level number
             var numberLabel = CreateLabel(button.transform, "1", 34, TextAnchor.MiddleCenter);
-            numberLabel.rectTransform.anchorMin = new Vector2(0, 0.32f);
-            numberLabel.rectTransform.anchorMax = new Vector2(1, 1);
+            numberLabel.rectTransform.anchorMin = new Vector2(0, 0.30f);
+            numberLabel.rectTransform.anchorMax = new Vector2(1, 0.96f);
             numberLabel.rectTransform.offsetMin = Vector2.zero;
             numberLabel.rectTransform.offsetMax = Vector2.zero;
             numberLabel.color = UiColorPalette.TextPrimary;

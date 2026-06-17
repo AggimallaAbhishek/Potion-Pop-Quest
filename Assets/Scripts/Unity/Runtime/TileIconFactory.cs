@@ -59,6 +59,14 @@ namespace PotionPopQuest.Unity
             return GetOrCreate(key, texture => DrawVerticalGradient(texture, top, bottom));
         }
 
+        public Sprite GetSplashBackgroundSprite()
+        {
+            return GetImportedOrCreate(
+                "ui-splash-background",
+                "Sprites/UI/SPR_UI_SplashBackground",
+                texture => DrawVerticalGradient(texture, UiColorPalette.BackgroundTop, UiColorPalette.BackgroundBottom));
+        }
+
         private Sprite GetOrCreate(string key, Action<Texture2D> draw, Vector4 border = default)
         {
             if (_cache.TryGetValue(key, out var sprite))

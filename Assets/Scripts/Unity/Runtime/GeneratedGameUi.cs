@@ -136,8 +136,9 @@ namespace PotionPopQuest.Unity
 
             // Add the static background directly to the canvas so it's shared and behind safe area
             var bgImage = canvasObject.AddComponent<Image>();
-            bgImage.sprite = _iconFactory.GetBackgroundGradientSprite(UiColorPalette.BackgroundTop, UiColorPalette.BackgroundBottom);
+            bgImage.sprite = _iconFactory.GetSplashBackgroundSprite();
             bgImage.type = Image.Type.Simple;
+            bgImage.preserveAspect = false;
 
             _backdropView.Build(canvasObject.transform);
 
@@ -391,7 +392,7 @@ namespace PotionPopQuest.Unity
             var layout = screen.GetComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.spacing = 24;
-            layout.padding = new RectOffset(40, 40, 160, 80);
+            layout.padding = UiLayoutMetrics.ScreenPadding();
             layout.childControlWidth = false;
             layout.childControlHeight = false;
             layout.childForceExpandWidth = false;
@@ -452,15 +453,15 @@ namespace PotionPopQuest.Unity
         private GameObject CreateSettingsSection(Transform parent, string title, float height, Color? color = null)
         {
             var section = CreatePanel(parent, $"Settings {title} Section", color ?? UiColorPalette.WithAlpha(UiColorPalette.HudBackground, 0.86f));
-            AddLayoutElement(section, 680, height);
+            AddLayoutElement(section, Mathf.Min(720f, UiLayoutMetrics.MenuContentWidth()), height);
             var layout = section.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 6;
+            layout.spacing = 5;
             layout.padding = new RectOffset(24, 24, 14, 14);
 
             var heading = CreateLabel(section.transform, title, 22, TextAnchor.MiddleCenter);
             heading.color = UiColorPalette.GoldLight;
-            AddLayoutElement(heading.gameObject, 600, 30);
+            AddLayoutElement(heading.gameObject, 600, 28);
             return section;
         }
 

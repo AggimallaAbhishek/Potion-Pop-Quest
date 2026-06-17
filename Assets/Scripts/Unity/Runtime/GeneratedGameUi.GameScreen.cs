@@ -438,16 +438,16 @@ namespace PotionPopQuest.Unity
 
             _tutorialPanel = CreatePanel(boardPanel.transform, "Tutorial Banner", UiColorPalette.WithAlpha(UiColorPalette.TutorialBackground, 0.9f));
             var tutRect = _tutorialPanel.GetComponent<RectTransform>();
-            tutRect.anchorMin = new Vector2(0.05f, 0.35f);
-            tutRect.anchorMax = new Vector2(0.95f, 0.65f);
+            tutRect.anchorMin = new Vector2(0.06f, 0.03f);
+            tutRect.anchorMax = new Vector2(0.94f, 0.16f);
             tutRect.offsetMin = Vector2.zero;
             tutRect.offsetMax = Vector2.zero;
-            _tutorialText = CreateLabel(_tutorialPanel.transform, "", 26, TextAnchor.MiddleCenter);
+            _tutorialText = CreateLabel(_tutorialPanel.transform, "", 21, TextAnchor.MiddleCenter);
             _themeAssets.AddHighValueTextShadow(_tutorialText);
             _tutorialText.rectTransform.anchorMin = Vector2.zero;
             _tutorialText.rectTransform.anchorMax = Vector2.one;
-            _tutorialText.rectTransform.offsetMin = new Vector2(18, 10);
-            _tutorialText.rectTransform.offsetMax = new Vector2(-18, -10);
+            _tutorialText.rectTransform.offsetMin = new Vector2(16, 8);
+            _tutorialText.rectTransform.offsetMax = new Vector2(-16, -8);
             _tutorialPanel.SetActive(false);
 
             var touchHeight = UiLayoutMetrics.GameTouchHeight();
