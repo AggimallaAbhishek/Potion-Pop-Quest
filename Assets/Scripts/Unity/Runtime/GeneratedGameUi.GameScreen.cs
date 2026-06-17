@@ -336,41 +336,46 @@ namespace PotionPopQuest.Unity
             particleHost.GetComponent<LayoutElement>().ignoreLayout = true;
             particleHost.GetComponent<AmbientParticleView>().Initialize(particleRect);
 
-            var hud = CreatePanel(_game.transform, "HUD", UiColorPalette.HudBackground);
+            var hud = CreatePanel(_game.transform, "HUD", new Color(0, 0, 0, 0)); // Transparent so elements float
             var hudRect = hud.GetComponent<RectTransform>();
             var hudHeight = UiLayoutMetrics.GameHudHeight();
             hudRect.sizeDelta = new Vector2(UiLayoutMetrics.HudWidth, hudHeight);
             AddLayoutElement(hud, UiLayoutMetrics.HudWidth, hudHeight);
             var hudLayout = hud.AddComponent<HorizontalLayoutGroup>();
             hudLayout.childAlignment = TextAnchor.MiddleCenter;
-            hudLayout.spacing = 14;
+            hudLayout.spacing = 24; // More spacing between floating pills
             hudLayout.padding = new RectOffset(16, 16, 10, 10);
 
-            var movesBadge = _uiFactory.CreateGlowingBadge(hud.transform, "HUD Moves Badge", 138, UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.58f));
+            var movesBadge = CreateHudBadge(hud.transform, "HUD Moves Badge", 138, UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.85f));
+            movesBadge.GetComponent<Image>().sprite = _iconFactory.GetPillSprite(); // Pill shape
+
             AddLayoutElement(movesBadge, 138, Mathf.Max(76f, hudHeight - 20f));
             _movesBadgeImage = movesBadge.GetComponent<Image>();
             _movesText = CreateLabel(movesBadge.transform, "Moves\n0", 23, TextAnchor.MiddleCenter);
             StretchInside(_movesText.rectTransform, 8, 6);
             _themeAssets.AddHighValueTextShadow(_movesText);
 
-            var goalPanel = CreateHudBadge(hud.transform, "HUD Goal Panel", 540, UiColorPalette.WithAlpha(UiColorPalette.Amethyst, 0.42f));
+            var goalPanel = CreateHudBadge(hud.transform, "HUD Goal Panel", 540, UiColorPalette.WithAlpha(UiColorPalette.HudBackground, 0.85f));
+            goalPanel.GetComponent<Image>().sprite = _iconFactory.GetPillSprite(); // Pill shape
             var goalLayout = goalPanel.AddComponent<VerticalLayoutGroup>();
             goalLayout.childAlignment = TextAnchor.MiddleCenter;
             goalLayout.spacing = 4;
             goalLayout.padding = new RectOffset(12, 12, 8, 8);
-            _goalText = CreateLabel(goalPanel.transform, "Goal", 18, TextAnchor.MiddleCenter);
+            _goalText = CreateLabel(goalPanel.transform, "Goal", 20, TextAnchor.MiddleCenter);
             _goalText.color = UiColorPalette.GoldLight;
-            AddLayoutElement(_goalText.gameObject, 508, 22);
+            _themeAssets.AddHighValueTextShadow(_goalText);
+            AddLayoutElement(_goalText.gameObject, 508, 26);
             var goalStripObject = new GameObject("HUD Goal Strip", typeof(RectTransform));
             goalStripObject.transform.SetParent(goalPanel.transform, false);
             _goalStrip = goalStripObject.GetComponent<RectTransform>();
-            AddLayoutElement(goalStripObject, 508, Mathf.Max(44f, hudHeight - 54f));
+            AddLayoutElement(goalStripObject, 508, Mathf.Max(44f, hudHeight - 58f));
             var goalStripLayout = goalStripObject.AddComponent<VerticalLayoutGroup>();
             goalStripLayout.childAlignment = TextAnchor.MiddleCenter;
             goalStripLayout.spacing = 6;
             goalStripLayout.padding = new RectOffset(0, 0, 0, 0);
 
-            var scoreBadge = _uiFactory.CreateGlowingBadge(hud.transform, "HUD Score Badge", 138, UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.52f));
+            var scoreBadge = CreateHudBadge(hud.transform, "HUD Score Badge", 138, UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.85f));
+            scoreBadge.GetComponent<Image>().sprite = _iconFactory.GetPillSprite(); // Pill shape
             AddLayoutElement(scoreBadge, 138, Mathf.Max(76f, hudHeight - 20f));
             _scoreText = CreateLabel(scoreBadge.transform, "Score\n0", 23, TextAnchor.MiddleCenter);
             StretchInside(_scoreText.rectTransform, 8, 6);

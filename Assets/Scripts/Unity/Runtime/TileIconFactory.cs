@@ -45,6 +45,11 @@ namespace PotionPopQuest.Unity
             return GetOrCreate("pill", texture => DrawRoundedRect(texture, Size / 2), new Vector4(Size / 2, Size / 2, Size / 2, Size / 2));
         }
 
+        public Sprite GetCircleSprite()
+        {
+            return GetOrCreate("circle", DrawCircleSprite);
+        }
+
         public Sprite GetStarSprite(bool earned)
         {
             return GetImportedOrCreate(
@@ -414,25 +419,25 @@ namespace PotionPopQuest.Unity
             for (var y = 0; y < Size; y++)
             {
                 var pixelColor = Color.white;
-                // Top highlight for 3D button depth
-                if (y > Size - 10)
+                // Candy-Crush style thick top highlight
+                if (y > Size - 24)
                 {
-                    pixelColor = new Color(1.15f, 1.15f, 1.15f, 1f);
+                    pixelColor = new Color(1.3f, 1.3f, 1.3f, 1f); // Extra bright white highlight
                 }
-                else if (y > Size - 20)
+                else if (y > Size - 40)
                 {
-                    var gradT = (y - (Size - 20)) / 10f;
-                    pixelColor = Color.Lerp(Color.white, new Color(1.15f, 1.15f, 1.15f, 1f), gradT);
+                    var gradT = (y - (Size - 40)) / 16f;
+                    pixelColor = Color.Lerp(Color.white, new Color(1.3f, 1.3f, 1.3f, 1f), gradT);
                 }
-                // Bottom shadow
-                else if (y < 10)
+                // Candy-Crush style thick bottom shadow
+                else if (y < 24)
                 {
-                    pixelColor = new Color(0.72f, 0.72f, 0.72f, 1f);
+                    pixelColor = new Color(0.5f, 0.5f, 0.5f, 1f); // Deep shadow
                 }
-                else if (y < 20)
+                else if (y < 40)
                 {
-                    var gradT = (y - 10) / 10f;
-                    pixelColor = Color.Lerp(new Color(0.72f, 0.72f, 0.72f, 1f), Color.white, gradT);
+                    var gradT = (y - 24) / 16f;
+                    pixelColor = Color.Lerp(new Color(0.5f, 0.5f, 0.5f, 1f), Color.white, gradT);
                 }
 
                 for (var x = 0; x < Size; x++)
@@ -457,6 +462,60 @@ namespace PotionPopQuest.Unity
                             var alpha = 1f - (dist - radius) / 1.5f;
                             SetPixel(texture, x, y, new Color(pixelColor.r, pixelColor.g, pixelColor.b, Mathf.Clamp01(alpha)));
                         }
+                    }
+                    else
+                    {
+                        SetPixel(texture, x, y, pixelColor);
+                    }
+                }
+            }
+        }
+
+        private static void DrawCircleSprite(Texture2D texture)
+        {
+            var cx = Size / 2;
+            var cy = Size / 2;
+            var radius = Size / 2 - 2;
+
+            for (var y = 0; y < Size; y++)
+            {
+                for (var x = 0; x < Size; x++)
+                {
+                    var dx = x - cx;
+                    var dy = y - cy;
+                    var dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    if (dist > radius + 1)
+                    {
+                        continue;
+                    }
+
+                    var pixelColor = Color.white;
+                    // Faux 3D Sphere shading
+                    if (y > cy + radius * 0.4f)
+                    {
+                        pixelColor = new Color(1.3f, 1.3f, 1.3f, 1f);
+                    }
+                    else if (y < cy - radius * 0.4f)
+                    {
+                        pixelColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+                    }
+                    else if (y > cy)
+                    {
+                        var t = (y - cy) / (radius * 0.4f);
+                        pixelColor = Color.Lerp(Color.white, new Color(1.3f, 1.3f, 1.3f, 1f), t);
+                    }
+                    else
+                    {
+                        var t = (cy - y) / (radius * 0.4f);
+                        pixelColor = Color.Lerp(Color.white, new Color(0.5f, 0.5f, 0.5f, 1f), t);
+                    }
+
+                    // Anti-aliasing
+                    if (dist > radius - 1)
+                    {
+                        var alpha = 1f - (dist - (radius - 1)) / 2f;
+                        SetPixel(texture, x, y, new Color(pixelColor.r, pixelColor.g, pixelColor.b, Mathf.Clamp01(alpha)));
                     }
                     else
                     {

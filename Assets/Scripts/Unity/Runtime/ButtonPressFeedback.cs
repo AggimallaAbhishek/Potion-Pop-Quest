@@ -26,7 +26,7 @@ namespace PotionPopQuest.Unity
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            ScaleTo(new Vector3(0.98f, 0.92f, 1f), useEaseIn: true);
+            ScaleTo(new Vector3(0.85f, 0.85f, 1f), useEaseIn: true);
             if (_image != null && _colorCaptured)
             {
                 _image.color = Brighten(_originalColor, 0.12f);

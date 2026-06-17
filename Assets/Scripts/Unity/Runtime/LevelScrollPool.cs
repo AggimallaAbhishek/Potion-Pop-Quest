@@ -11,43 +11,45 @@ namespace PotionPopQuest.Unity
         public ScrollRect scrollRect;
         public RectTransform content;
         public int totalItems;
-        public int columns = 3;
         public float cellSize = 124f;
-        public float spacing = 12f;
-        
+        public float spacing = 40f; // More vertical spacing for the path
+        public float amplitude = 180f; // Horizontal swing of the winding path
+        public float frequency = 0.6f; // How fast the path winds
+
         public Action<int, Transform> onBindCell;
 
         private readonly List<RectTransform> _activeCells = new List<RectTransform>();
-        private int _visibleRows;
-        private int _totalRows;
-        private int _firstVisibleRow = -1;
+        private int _visibleItems;
+        private int _firstVisibleIndex = -1;
 
         public void Initialize(int itemCount, Func<Transform> createCell)
         {
             totalItems = itemCount;
-            _totalRows = Mathf.CeilToInt(totalItems / (float)columns);
             
-            var contentHeight = _totalRows * cellSize + Mathf.Max(0, _totalRows - 1) * spacing + 40f;
+            // Total height is items * (size + spacing)
+            var contentHeight = totalItems * (cellSize + spacing) + 120f;
             content.sizeDelta = new Vector2(content.sizeDelta.x, contentHeight);
 
             var viewportHeight = scrollRect.viewport.rect.height;
-            _visibleRows = Mathf.CeilToInt(viewportHeight / (cellSize + spacing)) + 1;
+            _visibleItems = Mathf.CeilToInt(viewportHeight / (cellSize + spacing)) + 2;
 
-            var poolSize = _visibleRows * columns;
-            
-            for (int i = 0; i < poolSize; i++)
+            for (int i = 0; i < _visibleItems; i++)
             {
                 var cell = createCell();
                 var rt = cell.GetComponent<RectTransform>();
-                rt.anchorMin = new Vector2(0.5f, 1);
-                rt.anchorMax = new Vector2(0.5f, 1);
-                rt.pivot = new Vector2(0.5f, 1);
+                rt.anchorMin = new Vector2(0.5f, 0f); // Anchor bottom to build upwards like Candy Crush!
+                rt.anchorMax = new Vector2(0.5f, 0f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(cellSize, cellSize);
                 _activeCells.Add(rt);
                 cell.gameObject.SetActive(false);
             }
 
             scrollRect.onValueChanged.AddListener(OnScroll);
+            
+            // Set scroll position to bottom (start of journey)
+            content.anchoredPosition = new Vector2(content.anchoredPosition.x, 0);
+            
             UpdateVisibleCells();
         }
 
@@ -58,31 +60,27 @@ namespace PotionPopQuest.Unity
 
         private void UpdateVisibleCells()
         {
+            // Because we anchor bottom (0), moving scroll up means contentY goes negative?
+            // Actually, for bottom-anchored content in Unity ScrollRect, content.anchoredPosition.y is positive as we scroll up.
             var contentY = content.anchoredPosition.y;
-            var startRow = Mathf.FloorToInt((contentY - 20f) / (cellSize + spacing));
-            startRow = Mathf.Clamp(startRow, 0, Mathf.Max(0, _totalRows - _visibleRows));
+            var startIndex = Mathf.FloorToInt((contentY - 60f) / (cellSize + spacing));
+            startIndex = Mathf.Clamp(startIndex, 0, Mathf.Max(0, totalItems - _visibleItems));
 
-            if (startRow == _firstVisibleRow) return;
-            _firstVisibleRow = startRow;
+            if (startIndex == _firstVisibleIndex) return;
+            _firstVisibleIndex = startIndex;
 
             for (int i = 0; i < _activeCells.Count; i++)
             {
-                var rowOffset = i / columns;
-                var col = i % columns;
-                var actualRow = startRow + rowOffset;
-                var index = actualRow * columns + col;
-
+                var index = startIndex + i;
                 var cell = _activeCells[i];
                 
                 if (index < totalItems)
                 {
                     cell.gameObject.SetActive(true);
                     
-                    var gridWidth = columns * cellSize + (columns - 1) * spacing;
-                    var startX = -gridWidth / 2f + cellSize / 2f;
-                    
-                    var x = startX + col * (cellSize + spacing);
-                    var y = -20f - actualRow * (cellSize + spacing);
+                    // Winding path math
+                    var x = Mathf.Sin(index * frequency) * amplitude;
+                    var y = 60f + index * (cellSize + spacing);
                     
                     cell.anchoredPosition = new Vector2(x, y);
                     onBindCell?.Invoke(index, cell);
