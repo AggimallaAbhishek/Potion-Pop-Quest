@@ -60,10 +60,13 @@ namespace PotionPopQuest.Unity
 
         private void UpdateVisibleCells()
         {
-            // Because we anchor bottom (0), moving scroll up means contentY goes negative?
-            // Actually, for bottom-anchored content in Unity ScrollRect, content.anchoredPosition.y is positive as we scroll up.
-            var contentY = content.anchoredPosition.y;
-            var startIndex = Mathf.FloorToInt((contentY - 60f) / (cellSize + spacing));
+            var contentHeight = content.rect.height;
+            var viewportHeight = scrollRect.viewport.rect.height;
+            var maxScroll = Mathf.Max(0, contentHeight - viewportHeight);
+            
+            // normalizedPosition.y goes from 0 (bottom) to 1 (top)
+            var scrollDistance = scrollRect.normalizedPosition.y * maxScroll;
+            var startIndex = Mathf.FloorToInt((scrollDistance - 60f) / (cellSize + spacing));
             startIndex = Mathf.Clamp(startIndex, 0, Mathf.Max(0, totalItems - _visibleItems));
 
             if (startIndex == _firstVisibleIndex) return;

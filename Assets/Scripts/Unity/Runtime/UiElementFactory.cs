@@ -124,11 +124,12 @@ namespace PotionPopQuest.Unity
             var image = buttonObject.GetComponent<Image>();
             image.sprite = _iconFactory.GetPillSprite();
             image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 2f;
+            image.pixelsPerUnitMultiplier = 256f / rect.sizeDelta.y; // Perfectly scales the 128px corners to form semi-circles exactly matching the button height
             image.color = color;
 
             var button = buttonObject.GetComponent<Button>();
             button.targetGraphic = image;
+            button.transition = Selectable.Transition.None; // Prevent default dark color tint
             button.onClick.AddListener(() => action?.Invoke());
 
             var feedback = buttonObject.GetComponent<ButtonPressFeedback>();
