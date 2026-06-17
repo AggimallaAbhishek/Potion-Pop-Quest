@@ -24,6 +24,16 @@ namespace PotionPopQuest.Unity
             }
         }
 
+        public void SetOriginalColor(Color color)
+        {
+            _originalColor = color;
+            _colorCaptured = true;
+            if (_image != null)
+            {
+                _image.color = color;
+            }
+        }
+
         public void OnPointerDown(PointerEventData eventData)
         {
             ScaleTo(new Vector3(0.85f, 0.85f, 1f), useEaseIn: true);

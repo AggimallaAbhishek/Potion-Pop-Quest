@@ -131,6 +131,12 @@ namespace PotionPopQuest.Unity
             button.targetGraphic = image;
             button.onClick.AddListener(() => action?.Invoke());
 
+            var feedback = buttonObject.GetComponent<ButtonPressFeedback>();
+            if (feedback != null)
+            {
+                feedback.SetOriginalColor(color);
+            }
+
 
 
             var labelSize = rect.sizeDelta.y <= 58f ? 22 : rect.sizeDelta.y <= 70f ? 24 : 26;

@@ -54,6 +54,12 @@ namespace PotionPopQuest.Unity
             _levels = new LevelCatalogLoader(_logger).LoadLevels(levelDefinitions).OrderBy(level => level.LevelNumber).ToArray();
             _saveRepository = new PlayerPrefsSaveRepository(_logger);
             _saveData = _saveRepository.Load();
+
+            if (UnityEngine.Object.FindFirstObjectByType<AudioListener>() == null)
+            {
+                gameObject.AddComponent<AudioListener>();
+            }
+
             _sfxSource = gameObject.AddComponent<AudioSource>();
             _sfxSource.playOnAwake = false;
             _musicSource = gameObject.AddComponent<AudioSource>();
