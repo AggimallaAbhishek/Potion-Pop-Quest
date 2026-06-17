@@ -162,8 +162,9 @@ namespace PotionPopQuest.Core
         // Level 6 Layout
         private static IEnumerable<ObstacleSpawnData> CheckerboardDarkTiles()
         {
+            // Spawn exactly 16 Dark Tiles in a checkerboard pattern
             for (var r = 2; r <= 5; r++)
-            for (var c = 2; c <= 5; c++)
+            for (var c = 0; c < 8; c++)
             {
                 if ((r + c) % 2 == 0)
                 {
