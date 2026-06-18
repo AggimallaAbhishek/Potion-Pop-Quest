@@ -71,10 +71,22 @@ namespace PotionPopQuest.Unity
         private GameObject CreateLevelCardPrefab(Transform parent)
         {
             var button = CreateButton(parent, "", null, UiColorPalette.LevelCardUnlocked);
-            // Override the button's background to be a perfect circle
-            var buttonImage = button.GetComponent<Image>();
-            buttonImage.sprite = _iconFactory.GetCircleSprite();
-            buttonImage.type = Image.Type.Simple;
+            
+            var buttonImage = button.transform.Find("ButtonGraphic")?.GetComponent<Image>();
+            if (buttonImage == null) buttonImage = button.GetComponent<Image>();
+
+            if (buttonImage != null)
+            {
+                buttonImage.sprite = _iconFactory.GetCircleSprite();
+                buttonImage.type = Image.Type.Simple;
+            }
+
+            var shadowImage = button.transform.Find("ButtonShadow")?.GetComponent<Image>();
+            if (shadowImage != null)
+            {
+                shadowImage.sprite = _iconFactory.GetCircleSprite();
+                shadowImage.type = Image.Type.Simple;
+            }
 
             var cardView = button.gameObject.AddComponent<LevelCardView>();
             cardView.button = button;

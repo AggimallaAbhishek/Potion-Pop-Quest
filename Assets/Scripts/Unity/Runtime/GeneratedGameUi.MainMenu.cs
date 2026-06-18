@@ -36,6 +36,7 @@ namespace PotionPopQuest.Unity
             var spacerLayout = spacer.AddComponent<LayoutElement>();
             spacerLayout.flexibleWidth = 1;
 
+            CreateButton(topBar.transform, "Map", _showLevels, UiColorPalette.WithAlpha(Color.white, 0.15f), new Vector2(80, 52));
             CreateButton(topBar.transform, "⚙", _showSettings, UiColorPalette.WithAlpha(Color.white, 0.15f), new Vector2(52, 52));
 
             // Hero Section
@@ -84,7 +85,7 @@ namespace PotionPopQuest.Unity
             var bottomLayout = bottomActions.GetComponent<VerticalLayoutGroup>();
             bottomLayout.childAlignment = TextAnchor.MiddleCenter;
 
-            CreateButton(bottomActions.transform, "Play Journey", _showLevels, UiColorPalette.Emerald, new Vector2(320, 72));
+            CreateButton(bottomActions.transform, "Play Journey", _play, UiColorPalette.Emerald, new Vector2(320, 72));
         }
     }
 }
