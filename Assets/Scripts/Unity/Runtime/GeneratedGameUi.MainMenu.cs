@@ -1,5 +1,6 @@
 using System;
 using PotionPopQuest.Core;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 

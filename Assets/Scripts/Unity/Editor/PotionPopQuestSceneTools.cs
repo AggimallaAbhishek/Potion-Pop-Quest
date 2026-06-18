@@ -79,7 +79,7 @@ namespace PotionPopQuest.Editor
                 return;
             }
 
-            PlayerSettings.SetIconsForTargetGroup(BuildTargetGroup.Android, new[] { icon });
+            PlayerSettings.SetIcons(NamedBuildTarget.Android, new[] { icon }, IconKind.Any);
         }
 
         [MenuItem("Potion Pop Quest/QA/Unlock All MVP Levels")]
