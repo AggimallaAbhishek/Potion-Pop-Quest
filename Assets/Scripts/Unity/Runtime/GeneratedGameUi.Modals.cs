@@ -48,15 +48,23 @@ namespace PotionPopQuest.Unity
 
             var starLabels = CreateStarRow(panel.transform, session.Stars);
             CreateGoalSummary(panel.transform, session.GoalTracker.Goals, false);
-            CreateButton(panel.transform, hasNextLevel ? "\u25B6  Next" : "\u2606  Levels", hasNextLevel ? _nextLevel : _showLevels, UiColorPalette.Emerald, new Vector2(300, 64));
-            CreateButton(panel.transform, "Replay", _restart, UiColorPalette.Sapphire, new Vector2(300, 56));
+            
+            var actionsPanel = new GameObject("Modal Actions", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            actionsPanel.transform.SetParent(panel.transform, false);
+            AddLayoutElement(actionsPanel, 600, 80);
+            var actionsLayout = actionsPanel.GetComponent<HorizontalLayoutGroup>();
+            actionsLayout.childAlignment = TextAnchor.MiddleCenter;
+            actionsLayout.spacing = 20;
+
             if (hasNextLevel)
             {
-                CreateButton(panel.transform, "Levels", _showLevels, UiColorPalette.Amethyst, new Vector2(300, 56));
+                CreateButton(actionsPanel.transform, "\u2606  Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(260, 64));
+                CreateButton(actionsPanel.transform, "\u25B6  Next", _nextLevel, UiColorPalette.Emerald, new Vector2(260, 64));
             }
             else
             {
-                CreateButton(panel.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(300, 56));
+                CreateButton(actionsPanel.transform, "Replay", _restart, UiColorPalette.Sapphire, new Vector2(260, 64));
+                CreateButton(actionsPanel.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(260, 64));
             }
 
             var rect = panel.GetComponent<RectTransform>();
@@ -82,9 +90,17 @@ namespace PotionPopQuest.Unity
             body.color = UiColorPalette.TextSecondary;
             AddLayoutElement(body.gameObject, 560, 48);
             CreateGoalSummary(panel.transform, session.GoalTracker.Goals, true);
-            CreateButton(panel.transform, "\u21BB  Retry", _restart, UiColorPalette.Emerald, new Vector2(300, 64));
-            CreateButton(panel.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(300, 56));
-            CreateButton(panel.transform, "Menu", _mainMenuAction, UiColorPalette.Amethyst, new Vector2(300, 56));
+            
+            var actionsPanel = new GameObject("Modal Actions", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            actionsPanel.transform.SetParent(panel.transform, false);
+            AddLayoutElement(actionsPanel, 600, 80);
+            var actionsLayout = actionsPanel.GetComponent<HorizontalLayoutGroup>();
+            actionsLayout.childAlignment = TextAnchor.MiddleCenter;
+            actionsLayout.spacing = 20;
+
+            CreateButton(actionsPanel.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(260, 64));
+            CreateButton(actionsPanel.transform, "\u21BB  Retry", _restart, UiColorPalette.Emerald, new Vector2(260, 64));
+
             _feedbackAnimator.PlayModalIntro(panel.GetComponent<RectTransform>());
         }
 
@@ -282,10 +298,7 @@ namespace PotionPopQuest.Unity
 
         private void BuildShopModal()
         {
-            var content = CreatePanel(_shopModal.transform, "Content", UiColorPalette.HudBackground);
-            var rect = content.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(600, 500);
-            
+            var content = _uiFactory.CreateGlassPanel(_shopModal.transform, "Content", 600, 500);
             var layout = content.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(40, 40, 40, 40);
             layout.spacing = 20;
@@ -304,17 +317,14 @@ namespace PotionPopQuest.Unity
 
         private void BuildDailyRewardModal()
         {
-            var content = CreatePanel(_dailyRewardModal.transform, "Content", UiColorPalette.HudBackground);
-            var rect = content.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(500, 400);
-            
+            var content = _uiFactory.CreateGlassPanel(_dailyRewardModal.transform, "Content", 500, 400);
             var layout = content.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(40, 40, 40, 40);
             layout.spacing = 30;
             layout.childAlignment = TextAnchor.MiddleCenter;
 
             var title = CreateLabel(content.transform, "Daily Reward!", 48, TextAnchor.MiddleCenter);
-            title.color = UiColorPalette.TextPrimary;
+            title.color = UiColorPalette.Gold;
             var subtitle = CreateLabel(content.transform, "Log in every day for bigger rewards!", 24, TextAnchor.MiddleCenter);
             subtitle.color = UiColorPalette.TextSecondary;
 

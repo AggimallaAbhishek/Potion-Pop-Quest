@@ -16,41 +16,75 @@ namespace PotionPopQuest.Unity
 
         private void BuildMainMenu()
         {
-            // Animated title with glow effects
-            var titleText = CreateTitle(_mainMenu.transform, "Potion Pop Quest", 56);
-            titleText.color = UiColorPalette.Gold;
-            _themeAssets.AddTitleTextEffects(titleText);
-            AddLayoutElement(titleText.gameObject, UiLayoutMetrics.MenuContentWidth(), 82);
+            // Top Bar
+            var topBar = new GameObject("Top Bar", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            topBar.transform.SetParent(_mainMenu.transform, false);
+            AddLayoutElement(topBar, UiLayoutMetrics.MenuContentWidth(), 64);
+            var topLayout = topBar.GetComponent<HorizontalLayoutGroup>();
+            topLayout.childAlignment = TextAnchor.MiddleCenter;
+            topLayout.spacing = 16;
+            topLayout.childControlWidth = false;
+            topLayout.childControlHeight = false;
 
-            var subtitleLabel = CreateLabel(_mainMenu.transform, "2D Match-3 Potion Puzzle", 24, TextAnchor.MiddleCenter);
-            subtitleLabel.color = UiColorPalette.TextSecondary;
-            AddLayoutElement(subtitleLabel.gameObject, 560, 36);
+            var currencyPill = CreatePanel(topBar.transform, "Currency Pill", new Color(0, 0, 0, 0.35f));
+            AddLayoutElement(currencyPill, 140, 44);
+            var currencyText = CreateLabel(currencyPill.transform, "⭐ 1,240", 18, TextAnchor.MiddleCenter);
+            StretchInside(currencyText.rectTransform, 0, 0);
 
-            // Decorative potion icon between title and buttons
+            var spacer = new GameObject("Spacer", typeof(RectTransform));
+            spacer.transform.SetParent(topBar.transform, false);
+            var spacerLayout = spacer.AddComponent<LayoutElement>();
+            spacerLayout.flexibleWidth = 1;
+
+            CreateButton(topBar.transform, "⚙", _showSettings, UiColorPalette.WithAlpha(Color.white, 0.15f), new Vector2(52, 52));
+
+            // Hero Section
+            var heroSection = new GameObject("Hero Section", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            heroSection.transform.SetParent(_mainMenu.transform, false);
+            AddLayoutElement(heroSection, UiLayoutMetrics.MenuContentWidth(), 340);
+            var heroLayout = heroSection.GetComponent<VerticalLayoutGroup>();
+            heroLayout.childAlignment = TextAnchor.MiddleCenter;
+            heroLayout.spacing = 8;
+            heroLayout.childControlWidth = false;
+            heroLayout.childControlHeight = false;
+
             var potionIcon = new GameObject("Menu Potion Icon", typeof(RectTransform), typeof(Image));
-            potionIcon.transform.SetParent(_mainMenu.transform, false);
-            AddLayoutElement(potionIcon, 82, 82);
+            potionIcon.transform.SetParent(heroSection.transform, false);
+            AddLayoutElement(potionIcon, 180, 180);
             var potionImage = potionIcon.GetComponent<Image>();
             potionImage.sprite = _iconFactory.GetPotionSprite(PotionType.Mega);
             potionImage.preserveAspect = true;
-            potionImage.raycastTarget = false;
 
-            CreateButton(_mainMenu.transform, "Play", _play, UiColorPalette.Emerald, new Vector2(380, 72));
+            var titleText = CreateTitle(heroSection.transform, "Potion Pop Quest", 36);
+            titleText.color = UiColorPalette.TextPrimary;
+            _themeAssets.AddTitleTextEffects(titleText);
+            AddLayoutElement(titleText.gameObject, UiLayoutMetrics.MenuContentWidth(), 46);
 
-            var secondaryActions = new GameObject("Main Menu Secondary Actions", typeof(RectTransform), typeof(HorizontalLayoutGroup));
-            secondaryActions.transform.SetParent(_mainMenu.transform, false);
-            AddLayoutElement(secondaryActions, 520, 62);
-            var actionsLayout = secondaryActions.GetComponent<HorizontalLayoutGroup>();
-            actionsLayout.childAlignment = TextAnchor.MiddleCenter;
-            actionsLayout.spacing = 16;
-            actionsLayout.childControlWidth = false;
-            actionsLayout.childControlHeight = false;
-            actionsLayout.childForceExpandWidth = false;
-            actionsLayout.childForceExpandHeight = false;
-            CreateButton(secondaryActions.transform, "Levels", _showLevels, UiColorPalette.Sapphire, new Vector2(240, 58));
-            CreateButton(secondaryActions.transform, "Settings", _showSettings, UiColorPalette.Amethyst, new Vector2(240, 58));
+            var badgePanel = CreatePanel(heroSection.transform, "Level Badge", UiColorPalette.Amethyst);
+            AddLayoutElement(badgePanel, 120, 32);
+            var badgeText = CreateLabel(badgePanel.transform, "Level 42", 16, TextAnchor.MiddleCenter);
+            StretchInside(badgeText.rectTransform, 0, 0);
 
-            CreateButton(_mainMenu.transform, "Exit", _quit, UiColorPalette.Ruby, new Vector2(180, 48));
+            // Cards Section
+            var dailyCard = _uiFactory.CreateGlassPanel(_mainMenu.transform, "Daily Reward", Mathf.Min(400, UiLayoutMetrics.MenuContentWidth()), 80);
+            var dailyText = CreateLabel(dailyCard.transform, "🎁 Daily Reward Ready!", 20, TextAnchor.MiddleCenter);
+            dailyText.color = UiColorPalette.Gold;
+            StretchInside(dailyText.rectTransform, 0, 0);
+
+            // Bottom Spacer
+            var bottomSpacer = new GameObject("Spacer", typeof(RectTransform));
+            bottomSpacer.transform.SetParent(_mainMenu.transform, false);
+            var bottomSpacerLayout = bottomSpacer.AddComponent<LayoutElement>();
+            bottomSpacerLayout.flexibleHeight = 1;
+
+            // Bottom Actions
+            var bottomActions = new GameObject("Bottom Actions", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            bottomActions.transform.SetParent(_mainMenu.transform, false);
+            AddLayoutElement(bottomActions, UiLayoutMetrics.MenuContentWidth(), 100);
+            var bottomLayout = bottomActions.GetComponent<VerticalLayoutGroup>();
+            bottomLayout.childAlignment = TextAnchor.MiddleCenter;
+
+            CreateButton(bottomActions.transform, "Play Journey", _showLevels, UiColorPalette.Emerald, new Vector2(320, 72));
         }
     }
 }

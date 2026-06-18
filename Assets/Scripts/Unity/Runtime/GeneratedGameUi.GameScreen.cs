@@ -320,10 +320,8 @@ namespace PotionPopQuest.Unity
         {
             ClearChildren(_game.transform);
             var screenLayout = _game.GetComponent<VerticalLayoutGroup>();
-            screenLayout.spacing = UiLayoutMetrics.GameScreenSpacing();
-            screenLayout.padding = UiLayoutMetrics.GameScreenPadding();
-
-            ClearChildren(_game.transform);
+            screenLayout.spacing = 0;
+            screenLayout.padding = new RectOffset(0, 0, 0, 0);
 
             // Ambient floating particles behind the board
             var particleHost = new GameObject("AmbientParticles", typeof(RectTransform), typeof(AmbientParticleView), typeof(LayoutElement));
@@ -336,98 +334,104 @@ namespace PotionPopQuest.Unity
             particleHost.GetComponent<LayoutElement>().ignoreLayout = true;
             particleHost.GetComponent<AmbientParticleView>().Initialize(particleRect);
 
-            var hud = CreatePanel(_game.transform, "HUD", new Color(0, 0, 0, 0)); // Transparent so elements float
-            var hudRect = hud.GetComponent<RectTransform>();
-            var hudHeight = UiLayoutMetrics.GameHudHeight();
-            hudRect.sizeDelta = new Vector2(UiLayoutMetrics.HudWidth, hudHeight);
-            AddLayoutElement(hud, UiLayoutMetrics.HudWidth, hudHeight);
-            var hudLayout = hud.AddComponent<HorizontalLayoutGroup>();
+            // 1. HUD (Top Row + Star Meter)
+            var hud = CreatePanel(_game.transform, "HUD", UiColorPalette.WithAlpha(UiColorPalette.BackgroundBottom, 0.85f));
+            AddLayoutElement(hud, UiLayoutMetrics.ScreenMaxWidth, 150);
+            var hudLayout = hud.AddComponent<VerticalLayoutGroup>();
             hudLayout.childAlignment = TextAnchor.MiddleCenter;
-            hudLayout.spacing = 24; // More spacing between floating pills
-            hudLayout.padding = new RectOffset(16, 16, 10, 10);
+            hudLayout.spacing = 12;
+            hudLayout.padding = new RectOffset(16, 16, 32, 16);
 
-            var movesBadge = CreateHudBadge(hud.transform, "HUD Moves Badge", 138, UiColorPalette.WithAlpha(UiColorPalette.Sapphire, 0.85f));
-            movesBadge.GetComponent<Image>().sprite = _iconFactory.GetPillSprite(); // Pill shape
+            var topRow = new GameObject("Top Row", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            topRow.transform.SetParent(hud.transform, false);
+            AddLayoutElement(topRow, UiLayoutMetrics.ScreenMaxWidth - 32, 60);
+            var topLayout = topRow.GetComponent<HorizontalLayoutGroup>();
+            topLayout.childAlignment = TextAnchor.MiddleCenter;
 
-            AddLayoutElement(movesBadge, 138, Mathf.Max(76f, hudHeight - 20f));
-            _movesBadgeImage = movesBadge.GetComponent<Image>();
-            _movesText = CreateLabel(movesBadge.transform, "Moves\n0", 23, TextAnchor.MiddleCenter);
-            StretchInside(_movesText.rectTransform, 8, 6);
-            _themeAssets.AddHighValueTextShadow(_movesText);
+            _pauseButtonObject = CreateButton(topRow.transform, "II", _pauseRequested, UiColorPalette.WithAlpha(Color.white, 0.15f), new Vector2(52, 52)).gameObject;
 
-            var goalPanel = CreateHudBadge(hud.transform, "HUD Goal Panel", 540, UiColorPalette.WithAlpha(UiColorPalette.HudBackground, 0.85f));
-            goalPanel.GetComponent<Image>().sprite = _iconFactory.GetPillSprite(); // Pill shape
-            var goalLayout = goalPanel.AddComponent<VerticalLayoutGroup>();
+            var leftSpacer = new GameObject("Spacer", typeof(RectTransform));
+            leftSpacer.transform.SetParent(topRow.transform, false);
+            leftSpacer.AddComponent<LayoutElement>().flexibleWidth = 1;
+
+            var movesCenter = new GameObject("Moves Center", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            movesCenter.transform.SetParent(topRow.transform, false);
+            AddLayoutElement(movesCenter, 100, 60);
+            var movesCenterLayout = movesCenter.GetComponent<VerticalLayoutGroup>();
+            movesCenterLayout.childAlignment = TextAnchor.MiddleCenter;
+            movesCenterLayout.spacing = -6;
+
+            _movesText = CreateLabel(movesCenter.transform, "24", 36, TextAnchor.MiddleCenter);
+            _movesText.color = UiColorPalette.Gold;
+            _movesText.fontStyle = FontStyles.Bold;
+            AddLayoutElement(_movesText.gameObject, 100, 40);
+
+            var movesLabel = CreateLabel(movesCenter.transform, "MOVES", 12, TextAnchor.MiddleCenter);
+            movesLabel.color = UiColorPalette.TextSecondary;
+            AddLayoutElement(movesLabel.gameObject, 100, 16);
+
+            var rightSpacer = new GameObject("Spacer", typeof(RectTransform));
+            rightSpacer.transform.SetParent(topRow.transform, false);
+            rightSpacer.AddComponent<LayoutElement>().flexibleWidth = 1;
+
+            var badgePanel = CreatePanel(topRow.transform, "Level Badge", UiColorPalette.Amethyst);
+            AddLayoutElement(badgePanel, 100, 36);
+            _scoreText = CreateLabel(badgePanel.transform, "Score 0", 14, TextAnchor.MiddleCenter);
+            StretchInside(_scoreText.rectTransform, 0, 0);
+
+            var starMeter = new GameObject("Star Meter", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            starMeter.transform.SetParent(hud.transform, false);
+            AddLayoutElement(starMeter, UiLayoutMetrics.ScreenMaxWidth - 32, 24);
+            var starLayout = starMeter.GetComponent<HorizontalLayoutGroup>();
+            starLayout.childAlignment = TextAnchor.MiddleCenter;
+            starLayout.spacing = 8;
+
+            _starProgressIcons.Clear();
+            _starProgressIcons.Add(CreateStarImage(starMeter.transform, false, 24));
+
+            var track = CreatePanel(starMeter.transform, "Track", UiColorPalette.StarBarBackground);
+            AddLayoutElement(track, UiLayoutMetrics.ScreenMaxWidth - 120, 12);
+            var fill = CreatePanel(track.transform, "Fill", UiColorPalette.StarBarFill);
+            _starProgressFill = fill.GetComponent<Image>();
+            var fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = new Vector2(0, 0);
+            fillRect.anchorMax = new Vector2(0, 1);
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            
+            // Dummy text for star progress
+            _starProgressText = CreateLabel(track.transform, "", 0, TextAnchor.MiddleCenter);
+
+            _starProgressIcons.Add(CreateStarImage(starMeter.transform, false, 24));
+
+            // 2. Goal Panel
+            var goalPanel = CreatePanel(_game.transform, "Goal Panel", new Color(0, 0, 0, 0.3f));
+            AddLayoutElement(goalPanel, UiLayoutMetrics.ScreenMaxWidth, 90);
+            var goalLayout = goalPanel.AddComponent<HorizontalLayoutGroup>();
             goalLayout.childAlignment = TextAnchor.MiddleCenter;
-            goalLayout.spacing = 4;
+            goalLayout.spacing = 8;
             goalLayout.padding = new RectOffset(12, 12, 8, 8);
-            _goalText = CreateLabel(goalPanel.transform, "Goal", 20, TextAnchor.MiddleCenter);
-            _goalText.color = UiColorPalette.GoldLight;
-            _themeAssets.AddHighValueTextShadow(_goalText);
-            AddLayoutElement(_goalText.gameObject, 508, 26);
+
             var goalStripObject = new GameObject("HUD Goal Strip", typeof(RectTransform));
             goalStripObject.transform.SetParent(goalPanel.transform, false);
             _goalStrip = goalStripObject.GetComponent<RectTransform>();
-            AddLayoutElement(goalStripObject, 508, Mathf.Max(44f, hudHeight - 58f));
-            var goalStripLayout = goalStripObject.AddComponent<VerticalLayoutGroup>();
+            AddLayoutElement(goalStripObject, UiLayoutMetrics.ScreenMaxWidth - 24, 74);
+            var goalStripLayout = goalStripObject.AddComponent<HorizontalLayoutGroup>();
             goalStripLayout.childAlignment = TextAnchor.MiddleCenter;
-            goalStripLayout.spacing = 6;
-            goalStripLayout.padding = new RectOffset(0, 0, 0, 0);
+            goalStripLayout.spacing = 10;
+            _goalText = CreateLabel(goalPanel.transform, "", 0, TextAnchor.MiddleCenter); // Dummy
 
-            var scoreBadge = CreateHudBadge(hud.transform, "HUD Score Badge", 138, UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.85f));
-            scoreBadge.GetComponent<Image>().sprite = _iconFactory.GetPillSprite(); // Pill shape
-            AddLayoutElement(scoreBadge, 138, Mathf.Max(76f, hudHeight - 20f));
-            _scoreText = CreateLabel(scoreBadge.transform, "Score\n0", 23, TextAnchor.MiddleCenter);
-            StretchInside(_scoreText.rectTransform, 8, 6);
-            _themeAssets.AddHighValueTextShadow(_scoreText);
+            var midSpacer = new GameObject("Spacer", typeof(RectTransform));
+            midSpacer.transform.SetParent(_game.transform, false);
+            midSpacer.AddComponent<LayoutElement>().flexibleHeight = 1;
 
-            // Star progress bar with shimmer
-            var starProgress = CreatePanel(_game.transform, "Star Progress", new Color(0.09f, 0.11f, 0.16f, 0.90f));
-            starProgress.SetActive(false); // Hide to save space
-            AddLayoutElement(starProgress, UiLayoutMetrics.StarProgressWidth, UiLayoutMetrics.GameStarProgressHeight());
-            var starBarBackground = CreatePanel(starProgress.transform, "Star Bar Background", UiColorPalette.StarBarBackground);
-            var starBarRect = starBarBackground.GetComponent<RectTransform>();
-            starBarRect.anchorMin = new Vector2(0.04f, 0.22f);
-            starBarRect.anchorMax = new Vector2(0.96f, 0.78f);
-            starBarRect.offsetMin = Vector2.zero;
-            starBarRect.offsetMax = Vector2.zero;
-            var starFillObject = CreatePanel(starBarBackground.transform, "Star Bar Fill", UiColorPalette.StarBarFill);
-            _starProgressFill = starFillObject.GetComponent<Image>();
-            var starFillRect = starFillObject.GetComponent<RectTransform>();
-            starFillRect.anchorMin = new Vector2(0f, 0f);
-            starFillRect.anchorMax = new Vector2(0f, 1f);
-            starFillRect.offsetMin = Vector2.zero;
-            starFillRect.offsetMax = Vector2.zero;
-            _starProgressText = CreateLabel(starProgress.transform, "Stars 0/3", 20, TextAnchor.MiddleCenter);
-            _starProgressText.rectTransform.anchorMin = Vector2.zero;
-            _starProgressText.rectTransform.anchorMax = Vector2.one;
-            _starProgressText.rectTransform.offsetMin = Vector2.zero;
-            _starProgressText.rectTransform.offsetMax = Vector2.zero;
-            _starProgressText.raycastTarget = false;
-            _themeAssets.AddHighValueTextShadow(_starProgressText);
-            _starProgressIcons.Clear();
-            var starIconRow = new GameObject("Star Progress Stars", typeof(RectTransform), typeof(LayoutElement));
-            starIconRow.transform.SetParent(starProgress.transform, false);
-            var starIconRect = starIconRow.GetComponent<RectTransform>();
-            starIconRect.anchorMin = new Vector2(0.04f, 0.14f);
-            starIconRect.anchorMax = new Vector2(0.24f, 0.86f);
-            starIconRect.offsetMin = Vector2.zero;
-            starIconRect.offsetMax = Vector2.zero;
-            starIconRow.GetComponent<LayoutElement>().ignoreLayout = true;
-            var starIconLayout = starIconRow.AddComponent<HorizontalLayoutGroup>();
-            starIconLayout.childAlignment = TextAnchor.MiddleLeft;
-            starIconLayout.spacing = 3;
-            for (var i = 0; i < 3; i++)
-            {
-                _starProgressIcons.Add(CreateStarImage(starIconRow.transform, false, 26));
-            }
-
-            // Board panel
-            var boardPanel = CreatePanel(_game.transform, "Board Panel", new Color(0.14f, 0.16f, 0.20f, 0.95f));
+            // 3. Board
+            var boardPanel = new GameObject("Board Wrap", typeof(RectTransform));
+            boardPanel.transform.SetParent(_game.transform, false);
             _boardRoot = boardPanel.GetComponent<RectTransform>();
             var boardSize = UiLayoutMetrics.GameBoardSize();
-            _boardRoot.sizeDelta = new Vector2(boardSize, boardSize);
             AddLayoutElement(boardPanel, boardSize, boardSize);
+
             var floatingLayerObject = new GameObject("Floating Feedback Layer", typeof(RectTransform), typeof(LayoutElement));
             floatingLayerObject.transform.SetParent(boardPanel.transform, false);
             _floatingLayer = floatingLayerObject.GetComponent<RectTransform>();
@@ -438,37 +442,33 @@ namespace PotionPopQuest.Unity
             floatingLayerObject.GetComponent<LayoutElement>().ignoreLayout = true;
             _boardPresenter.Configure(_boardRoot, _floatingLayer, _tilePressed, _playSfx);
 
-            _messageText = CreateLabel(_game.transform, "", 24, TextAnchor.MiddleCenter);
-            _messageText.rectTransform.sizeDelta = new Vector2(UiLayoutMetrics.MessageWidth, UiLayoutMetrics.GameMessageHeight());
+            var midSpacer2 = new GameObject("Spacer", typeof(RectTransform));
+            midSpacer2.transform.SetParent(_game.transform, false);
+            midSpacer2.AddComponent<LayoutElement>().flexibleHeight = 1;
 
-            _tutorialPanel = CreatePanel(boardPanel.transform, "Tutorial Banner", UiColorPalette.WithAlpha(UiColorPalette.TutorialBackground, 0.9f));
-            var tutRect = _tutorialPanel.GetComponent<RectTransform>();
-            tutRect.anchorMin = new Vector2(0.06f, 0.03f);
-            tutRect.anchorMax = new Vector2(0.94f, 0.16f);
-            tutRect.offsetMin = Vector2.zero;
-            tutRect.offsetMax = Vector2.zero;
+            _tutorialPanel = CreatePanel(_game.transform, "Tutorial Banner", UiColorPalette.WithAlpha(UiColorPalette.TutorialBackground, 0.9f));
+            AddLayoutElement(_tutorialPanel, UiLayoutMetrics.ScreenMaxWidth, 50);
             _tutorialText = CreateLabel(_tutorialPanel.transform, "", 21, TextAnchor.MiddleCenter);
-            _themeAssets.AddHighValueTextShadow(_tutorialText);
-            _tutorialText.rectTransform.anchorMin = Vector2.zero;
-            _tutorialText.rectTransform.anchorMax = Vector2.one;
-            _tutorialText.rectTransform.offsetMin = new Vector2(16, 8);
-            _tutorialText.rectTransform.offsetMax = new Vector2(-16, -8);
+            StretchInside(_tutorialText.rectTransform, 16, 8);
             _tutorialPanel.SetActive(false);
 
-            var touchHeight = UiLayoutMetrics.GameTouchHeight();
-            var boosters = CreatePanel(_game.transform, "Game Boosters", new Color(0, 0, 0, 0));
-            AddLayoutElement(boosters, UiLayoutMetrics.ActionsWidth, UiLayoutMetrics.GameActionsHeight());
-            var boostersLayout = boosters.AddComponent<HorizontalLayoutGroup>();
-            boostersLayout.childAlignment = TextAnchor.MiddleCenter;
-            boostersLayout.spacing = 14;
-            
-            CreateButton(boosters.transform, "Hint", _hintRequested, UiColorPalette.Sapphire, new Vector2(150, touchHeight));
+            // 4. Game Toolbar (Boosters)
+            var toolbar = CreatePanel(_game.transform, "Toolbar", UiColorPalette.WithAlpha(UiColorPalette.BackgroundTop, 0.98f));
+            AddLayoutElement(toolbar, UiLayoutMetrics.ScreenMaxWidth, 100);
+            var toolbarLayout = toolbar.AddComponent<HorizontalLayoutGroup>();
+            toolbarLayout.childAlignment = TextAnchor.MiddleCenter;
+            toolbarLayout.spacing = 16;
+            toolbarLayout.padding = new RectOffset(16, 16, 16, 28);
 
-            var hammerBtn = CreateButton(boosters.transform, "Smash 0", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(150, touchHeight));
+            CreateButton(toolbar.transform, "Hint", _hintRequested, UiColorPalette.Sapphire, new Vector2(100, 56));
+            var hammerBtn = CreateButton(toolbar.transform, "Smash", _hammerBoosterPressed, UiColorPalette.Gold, new Vector2(100, 56));
             _hammerText = hammerBtn.GetComponentInChildren<TextMeshProUGUI>();
-            
-            var shuffleBtn = CreateButton(boosters.transform, "Shuffle 0", _shuffleBoosterPressed, UiColorPalette.Gold, new Vector2(150, touchHeight));
+            var shuffleBtn = CreateButton(toolbar.transform, "Shuffle", _shuffleBoosterPressed, UiColorPalette.Amethyst, new Vector2(100, 56));
             _shuffleText = shuffleBtn.GetComponentInChildren<TextMeshProUGUI>();
+
+            _messageText = CreateLabel(_game.transform, "", 24, TextAnchor.MiddleCenter);
+            _messageText.rectTransform.sizeDelta = new Vector2(0, 0);
+            _messageText.gameObject.SetActive(false);
         }
 
         private void UpdateHud(GameSession session, string message)
@@ -573,26 +573,30 @@ namespace PotionPopQuest.Unity
 
         private void CreateHudGoalRow(Transform parent, GoalProgress progress)
         {
-            var row = CreatePanel(parent, "HUD Goal Row", progress.IsComplete
-                ? UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.35f)
-                : UiColorPalette.WithAlpha(UiColorPalette.BackgroundSolid, 0.20f));
-            AddLayoutElement(row, 504, 36);
-            var layout = row.AddComponent<HorizontalLayoutGroup>();
+            var row = CreatePanel(parent, "HUD Goal Row", UiColorPalette.WithAlpha(Color.white, 0.07f));
+            var layoutElement = AddLayoutElement(row, 64, 72);
+            var layout = row.AddComponent<VerticalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 8;
-            layout.padding = new RectOffset(8, 8, 3, 3);
+            layout.spacing = 4;
+            layout.padding = new RectOffset(4, 4, 8, 8);
 
             var iconObject = new GameObject("HUD Goal Icon", typeof(RectTransform), typeof(Image));
             iconObject.transform.SetParent(row.transform, false);
-            AddLayoutElement(iconObject, 30, 30);
+            AddLayoutElement(iconObject, 28, 28);
             var icon = iconObject.GetComponent<Image>();
             icon.sprite = GoalSprite(progress.Goal);
             icon.preserveAspect = true;
             icon.raycastTarget = false;
 
-            var label = CreateLabel(row.transform, $"{GoalName(progress.Goal)}  {progress.CurrentAmount}/{progress.Goal.Amount}", 18, TextAnchor.MiddleLeft);
+            var label = CreateLabel(row.transform, $"{progress.CurrentAmount}/{progress.Goal.Amount}", 14, TextAnchor.MiddleCenter);
             label.color = progress.IsComplete ? UiColorPalette.TextSuccess : UiColorPalette.TextPrimary;
-            AddLayoutElement(label.gameObject, 452, 32);
+            label.fontStyle = FontStyles.Bold;
+            AddLayoutElement(label.gameObject, 60, 20);
+
+            if (progress.IsComplete)
+            {
+                row.GetComponent<Image>().color = UiColorPalette.WithAlpha(UiColorPalette.EmeraldDark, 0.15f);
+            }
         }
 
 

@@ -28,6 +28,21 @@ namespace PotionPopQuest.Unity
             image.pixelsPerUnitMultiplier = 3f;
             image.color = color;
 
+            // Border Glow
+            var border = new GameObject("PanelBorderGlow", typeof(RectTransform), typeof(Image));
+            border.transform.SetParent(panel.transform, false);
+            var borderRect = border.GetComponent<RectTransform>();
+            borderRect.anchorMin = Vector2.zero;
+            borderRect.anchorMax = Vector2.one;
+            borderRect.offsetMin = Vector2.zero;
+            borderRect.offsetMax = Vector2.zero;
+            var borderImage = border.GetComponent<Image>();
+            borderImage.sprite = _iconFactory.GetRoundedRectSprite(32);
+            borderImage.type = Image.Type.Sliced;
+            borderImage.pixelsPerUnitMultiplier = 3f;
+            borderImage.color = UiColorPalette.SubtleBorder;
+            borderImage.raycastTarget = false;
+
             return panel;
         }
 
@@ -110,7 +125,7 @@ namespace PotionPopQuest.Unity
 
         public Button CreateButton(Transform parent, string text, Action action, Color color, Vector2? size = null)
         {
-            var buttonObject = new GameObject($"Button - {text}", typeof(RectTransform), typeof(Image), typeof(Button));
+            var buttonObject = new GameObject($"Button - {text}", typeof(RectTransform), typeof(Button));
             buttonObject.transform.SetParent(parent, false);
             buttonObject.AddComponent<ButtonPressFeedback>();
             var rect = buttonObject.GetComponent<RectTransform>();
@@ -121,10 +136,33 @@ namespace PotionPopQuest.Unity
             layoutElement.flexibleWidth = 0;
             layoutElement.flexibleHeight = 0;
 
-            var image = buttonObject.GetComponent<Image>();
+            // Background Shadow Layer
+            var shadowObject = new GameObject("ButtonShadow", typeof(RectTransform), typeof(Image));
+            shadowObject.transform.SetParent(buttonObject.transform, false);
+            var shadowRect = shadowObject.GetComponent<RectTransform>();
+            shadowRect.anchorMin = Vector2.zero;
+            shadowRect.anchorMax = Vector2.one;
+            shadowRect.offsetMin = new Vector2(0, -6);
+            shadowRect.offsetMax = new Vector2(0, -6);
+            var shadowImage = shadowObject.GetComponent<Image>();
+            shadowImage.sprite = _iconFactory.GetPillSprite();
+            shadowImage.type = Image.Type.Sliced;
+            shadowImage.pixelsPerUnitMultiplier = 256f / rect.sizeDelta.y;
+            shadowImage.color = UiColorPalette.Darken(color, 0.4f);
+            shadowImage.raycastTarget = false;
+
+            // Foreground Graphic Layer
+            var graphicObject = new GameObject("ButtonGraphic", typeof(RectTransform), typeof(Image));
+            graphicObject.transform.SetParent(buttonObject.transform, false);
+            var graphicRect = graphicObject.GetComponent<RectTransform>();
+            graphicRect.anchorMin = Vector2.zero;
+            graphicRect.anchorMax = Vector2.one;
+            graphicRect.offsetMin = Vector2.zero;
+            graphicRect.offsetMax = Vector2.zero;
+            var image = graphicObject.GetComponent<Image>();
             image.sprite = _iconFactory.GetPillSprite();
             image.type = Image.Type.Sliced;
-            image.pixelsPerUnitMultiplier = 256f / rect.sizeDelta.y; // Perfectly scales the 128px corners to form semi-circles exactly matching the button height
+            image.pixelsPerUnitMultiplier = 256f / rect.sizeDelta.y;
             image.color = color;
 
             var button = buttonObject.GetComponent<Button>();
@@ -141,7 +179,7 @@ namespace PotionPopQuest.Unity
 
 
             var labelSize = rect.sizeDelta.y <= 58f ? 22 : rect.sizeDelta.y <= 70f ? 24 : 26;
-            var label = CreateLabel(buttonObject.transform, text, labelSize, TextAnchor.MiddleCenter);
+            var label = CreateLabel(graphicObject.transform, text, labelSize, TextAnchor.MiddleCenter);
             label.rectTransform.anchorMin = Vector2.zero;
             label.rectTransform.anchorMax = Vector2.one;
             label.rectTransform.offsetMin = new Vector2(8, 6);

@@ -18,9 +18,9 @@ namespace PotionPopQuest.Unity
         public const float ActionsHeight = 62f;
         public const float TouchHeight = 56f;
         public const float ModalWidth = 740f;
-        public const float TileCornerRadius = 14f;
-        public const float ButtonCornerRadius = 16f;
-        public const float PanelCornerRadius = 12f;
+        public const float TileCornerRadius = 10f;
+        public const float ButtonCornerRadius = 50f;
+        public const float PanelCornerRadius = 20f;
 
         public static float GameHudHeight()
         {
