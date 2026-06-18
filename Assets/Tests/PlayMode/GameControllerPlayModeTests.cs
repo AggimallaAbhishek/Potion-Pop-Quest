@@ -40,7 +40,7 @@ namespace PotionPopQuest.PlayMode.Tests
             Assert.That(GameObject.Find("Cloud Bottom Center"), Is.Not.Null);
             Assert.That(FindButton("Play"), Is.Not.Null);
             Assert.That(FindButton("Map"), Is.Not.Null);
-            Assert.That(FindButton("⚙"), Is.Not.Null);
+            Assert.That(FindButton("Settings"), Is.Not.Null);
         }
 
         [UnityTest]
@@ -77,7 +77,7 @@ namespace PotionPopQuest.PlayMode.Tests
             DismissDailyRewardIfVisible();
             yield return null;
 
-            FindButton("⚙").onClick.Invoke();
+            FindButton("Settings").onClick.Invoke();
             yield return null;
 
             Assert.That(GameObject.Find("Slider - Music Volume"), Is.Not.Null);
@@ -159,7 +159,7 @@ namespace PotionPopQuest.PlayMode.Tests
             DismissDailyRewardIfVisible();
             yield return null;
 
-            FindButton("⚙").onClick.Invoke();
+            FindButton("Settings").onClick.Invoke();
             yield return null;
 
             var musicSlider = GameObject.Find("Slider - Music Volume").GetComponentInChildren<Slider>();
@@ -176,7 +176,7 @@ namespace PotionPopQuest.PlayMode.Tests
             yield return null;
             DismissDailyRewardIfVisible();
             yield return null;
-            FindButton("⚙").onClick.Invoke();
+            FindButton("Settings").onClick.Invoke();
             yield return null;
 
             musicSlider = GameObject.Find("Slider - Music Volume").GetComponentInChildren<Slider>();

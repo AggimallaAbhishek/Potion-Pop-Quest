@@ -354,7 +354,7 @@ namespace PotionPopQuest.Unity
             leftSpacer.transform.SetParent(topRow.transform, false);
             leftSpacer.AddComponent<LayoutElement>().flexibleWidth = 1;
 
-            var movesCenter = new GameObject("Moves Center", typeof(RectTransform), typeof(VerticalLayoutGroup));
+            var movesCenter = new GameObject("HUD Moves Badge", typeof(RectTransform), typeof(VerticalLayoutGroup));
             movesCenter.transform.SetParent(topRow.transform, false);
             AddLayoutElement(movesCenter, 100, 60);
             var movesCenterLayout = movesCenter.GetComponent<VerticalLayoutGroup>();
@@ -374,20 +374,17 @@ namespace PotionPopQuest.Unity
             rightSpacer.transform.SetParent(topRow.transform, false);
             rightSpacer.AddComponent<LayoutElement>().flexibleWidth = 1;
 
-            var badgePanel = CreatePanel(topRow.transform, "Level Badge", UiColorPalette.Amethyst);
+            var badgePanel = CreatePanel(topRow.transform, "HUD Score Badge", UiColorPalette.Amethyst);
             AddLayoutElement(badgePanel, 100, 36);
             _scoreText = CreateLabel(badgePanel.transform, "Score 0", 14, TextAnchor.MiddleCenter);
             StretchInside(_scoreText.rectTransform, 0, 0);
 
-            var starMeter = new GameObject("Star Meter", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            var starMeter = new GameObject("Star Progress", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             starMeter.transform.SetParent(hud.transform, false);
             AddLayoutElement(starMeter, UiLayoutMetrics.ScreenMaxWidth - 32, 24);
             var starLayout = starMeter.GetComponent<HorizontalLayoutGroup>();
             starLayout.childAlignment = TextAnchor.MiddleCenter;
             starLayout.spacing = 8;
-
-            _starProgressIcons.Clear();
-            _starProgressIcons.Add(CreateStarImage(starMeter.transform, false, 24));
 
             var track = CreatePanel(starMeter.transform, "Track", UiColorPalette.StarBarBackground);
             AddLayoutElement(track, UiLayoutMetrics.ScreenMaxWidth - 120, 12);
@@ -402,7 +399,15 @@ namespace PotionPopQuest.Unity
             // Dummy text for star progress
             _starProgressText = CreateLabel(track.transform, "", 0, TextAnchor.MiddleCenter);
 
-            _starProgressIcons.Add(CreateStarImage(starMeter.transform, false, 24));
+            var starContainer = new GameObject("Star Progress Stars", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            starContainer.transform.SetParent(starMeter.transform, false);
+            var starContainerLayout = starContainer.GetComponent<HorizontalLayoutGroup>();
+            starContainerLayout.spacing = 4;
+            
+            _starProgressIcons.Clear();
+            _starProgressIcons.Add(CreateStarImage(starContainer.transform, false, 24));
+            _starProgressIcons.Add(CreateStarImage(starContainer.transform, false, 24));
+            _starProgressIcons.Add(CreateStarImage(starContainer.transform, false, 24));
 
             // 2. Goal Panel
             var goalPanel = CreatePanel(_game.transform, "Goal Panel", new Color(0, 0, 0, 0.3f));
@@ -426,7 +431,7 @@ namespace PotionPopQuest.Unity
             midSpacer.AddComponent<LayoutElement>().flexibleHeight = 1;
 
             // 3. Board
-            var boardPanel = new GameObject("Board Wrap", typeof(RectTransform));
+            var boardPanel = new GameObject("Board Panel", typeof(RectTransform));
             boardPanel.transform.SetParent(_game.transform, false);
             _boardRoot = boardPanel.GetComponent<RectTransform>();
             var boardSize = UiLayoutMetrics.GameBoardSize();

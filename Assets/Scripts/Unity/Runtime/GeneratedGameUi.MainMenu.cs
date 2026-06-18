@@ -7,10 +7,15 @@ namespace PotionPopQuest.Unity
 {
     public sealed partial class GeneratedGameUi
     {
-        public void ShowMainMenu()
+        private TextMeshProUGUI _menuLevelBadgeText;
+        private TextMeshProUGUI _menuCurrencyText;
+
+        public void ShowMainMenu(int highestUnlocked = 1, int coins = 0)
         {
             ClearHint();
             HideLevelIntro();
+            if (_menuLevelBadgeText != null) _menuLevelBadgeText.text = $"Level {highestUnlocked}";
+            if (_menuCurrencyText != null) _menuCurrencyText.text = $"Coins {coins}";
             TransitionTo(_mainMenu);
         }
 
@@ -28,8 +33,8 @@ namespace PotionPopQuest.Unity
 
             var currencyPill = CreatePanel(topBar.transform, "Currency Pill", new Color(0, 0, 0, 0.35f));
             AddLayoutElement(currencyPill, 140, 44);
-            var currencyText = CreateLabel(currencyPill.transform, "⭐ 1,240", 18, TextAnchor.MiddleCenter);
-            StretchInside(currencyText.rectTransform, 0, 0);
+            _menuCurrencyText = CreateLabel(currencyPill.transform, "Coins 0", 18, TextAnchor.MiddleCenter);
+            StretchInside(_menuCurrencyText.rectTransform, 0, 0);
 
             var spacer = new GameObject("Spacer", typeof(RectTransform));
             spacer.transform.SetParent(topBar.transform, false);
@@ -37,7 +42,7 @@ namespace PotionPopQuest.Unity
             spacerLayout.flexibleWidth = 1;
 
             CreateButton(topBar.transform, "Map", _showLevels, UiColorPalette.WithAlpha(Color.white, 0.15f), new Vector2(80, 52));
-            CreateButton(topBar.transform, "⚙", _showSettings, UiColorPalette.WithAlpha(Color.white, 0.15f), new Vector2(52, 52));
+            CreateButton(topBar.transform, "Settings", _showSettings, UiColorPalette.WithAlpha(Color.white, 0.15f), new Vector2(100, 52));
 
             // Hero Section
             var heroSection = new GameObject("Hero Section", typeof(RectTransform), typeof(VerticalLayoutGroup));
@@ -63,12 +68,12 @@ namespace PotionPopQuest.Unity
 
             var badgePanel = CreatePanel(heroSection.transform, "Level Badge", UiColorPalette.Amethyst);
             AddLayoutElement(badgePanel, 120, 32);
-            var badgeText = CreateLabel(badgePanel.transform, "Level 42", 16, TextAnchor.MiddleCenter);
-            StretchInside(badgeText.rectTransform, 0, 0);
+            _menuLevelBadgeText = CreateLabel(badgePanel.transform, "Level 1", 16, TextAnchor.MiddleCenter);
+            StretchInside(_menuLevelBadgeText.rectTransform, 0, 0);
 
             // Cards Section
             var dailyCard = _uiFactory.CreateGlassPanel(_mainMenu.transform, "Daily Reward", Mathf.Min(400, UiLayoutMetrics.MenuContentWidth()), 80);
-            var dailyText = CreateLabel(dailyCard.transform, "🎁 Daily Reward Ready!", 20, TextAnchor.MiddleCenter);
+            var dailyText = CreateLabel(dailyCard.transform, "Daily Reward Ready!", 20, TextAnchor.MiddleCenter);
             dailyText.color = UiColorPalette.Gold;
             StretchInside(dailyText.rectTransform, 0, 0);
 

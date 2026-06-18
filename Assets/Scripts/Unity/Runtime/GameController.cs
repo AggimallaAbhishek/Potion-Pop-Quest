@@ -147,7 +147,7 @@ namespace PotionPopQuest.Unity
         {
             ClearHintState();
             _selectedTile = null;
-            _ui.ShowMainMenu();
+            _ui.ShowMainMenu(_saveData?.highestUnlockedLevel ?? 1, _saveData?.coins ?? 0);
             CheckAndShowDailyReward();
         }
 
